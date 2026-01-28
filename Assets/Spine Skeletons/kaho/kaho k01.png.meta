@@ -1,0 +1,2340 @@
+fileFormatVersion: 2
+guid: 53e1f920611e79d4eaee7a36adf27980
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -5386776604213811593
+    second: kaho k01_0
+  - first:
+      213: 8109740536553139156
+    second: kaho k01_1
+  - first:
+      213: -141550206692883220
+    second: kaho k01_2
+  - first:
+      213: 4024221700608264862
+    second: kaho k01_3
+  - first:
+      213: 6772187183370247921
+    second: kaho k01_4
+  - first:
+      213: -2592200662390842970
+    second: kaho k01_5
+  - first:
+      213: -2724387063130949293
+    second: kaho k01_6
+  - first:
+      213: -2313528536939425876
+    second: kaho k01_7
+  - first:
+      213: 6086374052101400407
+    second: kaho k01_8
+  - first:
+      213: -3074228698647891301
+    second: kaho k01_9
+  - first:
+      213: 4697494963144326121
+    second: kaho k01_10
+  - first:
+      213: -3382914288241139421
+    second: kaho k01_11
+  - first:
+      213: 4558204081569896158
+    second: kaho k01_12
+  - first:
+      213: 7570442756068681459
+    second: kaho k01_13
+  - first:
+      213: 3932327965475817427
+    second: kaho k01_14
+  - first:
+      213: -2250052337535446460
+    second: kaho k01_15
+  - first:
+      213: -2997901665150837367
+    second: kaho k01_16
+  - first:
+      213: 6978704951766469084
+    second: kaho k01_17
+  - first:
+      213: 3966506551512364913
+    second: kaho k01_18
+  - first:
+      213: 2785354482272934230
+    second: kaho k01_19
+  - first:
+      213: -1203804099002005688
+    second: kaho k01_20
+  - first:
+      213: -6254451959808316285
+    second: kaho k01_21
+  - first:
+      213: -8144935007713829847
+    second: kaho k01_22
+  - first:
+      213: 8384094893263313813
+    second: kaho k01_23
+  - first:
+      213: -2244608322208210583
+    second: kaho k01_24
+  - first:
+      213: 5353012706782892391
+    second: kaho k01_25
+  - first:
+      213: -5475333047038609984
+    second: kaho k01_26
+  - first:
+      213: -3600798330983594870
+    second: kaho k01_27
+  - first:
+      213: 5930495942190032075
+    second: kaho k01_28
+  - first:
+      213: -9081346135645537336
+    second: kaho k01_29
+  - first:
+      213: -1029432010280073771
+    second: kaho k01_30
+  - first:
+      213: 1377272446454690353
+    second: kaho k01_31
+  - first:
+      213: 6812123931754666276
+    second: kaho k01_32
+  - first:
+      213: 2644659925483432597
+    second: kaho k01_33
+  - first:
+      213: -5860462798298767380
+    second: kaho k01_34
+  - first:
+      213: 5907801668855611650
+    second: kaho k01_35
+  - first:
+      213: 1892537897073401677
+    second: kaho k01_36
+  - first:
+      213: 8202718619446158523
+    second: kaho k01_37
+  - first:
+      213: -343879601534994225
+    second: kaho k01_38
+  - first:
+      213: 857018034768959486
+    second: kaho k01_39
+  - first:
+      213: 6928065678624988897
+    second: kaho k01_40
+  - first:
+      213: -7433662374997841639
+    second: kaho k01_41
+  - first:
+      213: 8244094365009322308
+    second: kaho k01_42
+  - first:
+      213: -6221943497804593818
+    second: kaho k01_43
+  - first:
+      213: -1598948775523765270
+    second: kaho k01_44
+  - first:
+      213: 2558601658755237286
+    second: kaho k01_45
+  - first:
+      213: 5487432214781114833
+    second: kaho k01_46
+  - first:
+      213: -5490463150745499185
+    second: kaho k01_47
+  - first:
+      213: 316453255814304618
+    second: kaho k01_48
+  - first:
+      213: -3742802781127122137
+    second: kaho k01_49
+  - first:
+      213: 2860711073635132015
+    second: kaho k01_50
+  - first:
+      213: 8320408988272345132
+    second: kaho k01_51
+  - first:
+      213: 184455398114110325
+    second: kaho k01_52
+  - first:
+      213: 5395432178299604189
+    second: kaho k01_53
+  - first:
+      213: -8906036027731453298
+    second: kaho k01_54
+  - first:
+      213: 5910950587947065858
+    second: kaho k01_55
+  - first:
+      213: 7979601702711930175
+    second: kaho k01_56
+  - first:
+      213: -6032114802345385814
+    second: kaho k01_57
+  - first:
+      213: -4084928862385668867
+    second: kaho k01_58
+  - first:
+      213: -8044579910398274849
+    second: kaho k01_59
+  - first:
+      213: -3716019947301202727
+    second: kaho k01_60
+  - first:
+      213: 3901008757305211758
+    second: kaho k01_61
+  - first:
+      213: -4854735196600168033
+    second: kaho k01_62
+  - first:
+      213: 122963445390630277
+    second: kaho k01_63
+  - first:
+      213: 2707645348510964691
+    second: kaho k01_64
+  - first:
+      213: 7621940086001561450
+    second: kaho k01_65
+  - first:
+      213: -4164452118494142009
+    second: kaho k01_66
+  - first:
+      213: -9108034250760009236
+    second: kaho k01_67
+  - first:
+      213: 6256552457051594833
+    second: kaho k01_68
+  - first:
+      213: 7660251462517386957
+    second: kaho k01_69
+  - first:
+      213: -382746575934488341
+    second: kaho k01_70
+  - first:
+      213: 9041191801186998906
+    second: kaho k01_71
+  - first:
+      213: 6650091430734479977
+    second: kaho k01_72
+  - first:
+      213: -7331552577515849455
+    second: kaho k01_73
+  - first:
+      213: 4414595998498985315
+    second: kaho k01_74
+  - first:
+      213: -3937559907184106129
+    second: kaho k01_75
+  - first:
+      213: 2333812532431221809
+    second: kaho k01_76
+  - first:
+      213: -3373693015345503609
+    second: kaho k01_77
+  - first:
+      213: -8449738283128127322
+    second: kaho k01_78
+  - first:
+      213: 1485119696239897033
+    second: kaho k01_79
+  - first:
+      213: -3218465029349937025
+    second: kaho k01_80
+  - first:
+      213: 8418338085544538496
+    second: kaho k01_81
+  - first:
+      213: -6345092275436568385
+    second: kaho k01_82
+  - first:
+      213: 2179693445257464616
+    second: kaho k01_83
+  - first:
+      213: 1374245035624798515
+    second: kaho k01_84
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 0
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: kaho k01_0
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 1232
+        width: 586
+        height: 317
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 776637508335e35b0800000000000000
+      internalID: -5386776604213811593
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_1
+      rect:
+        serializedVersion: 2
+        x: 590
+        y: 1441
+        width: 638
+        height: 321
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4dbe5ddfc069b8070800000000000000
+      internalID: 8109740536553139156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_2
+      rect:
+        serializedVersion: 2
+        x: 1230
+        y: 1480
+        width: 573
+        height: 345
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ce4003446dc190ef0800000000000000
+      internalID: -141550206692883220
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_3
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 975
+        width: 896
+        height: 255
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e9a8c22c058e8d730800000000000000
+      internalID: 4024221700608264862
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_4
+      rect:
+        serializedVersion: 2
+        x: 899
+        y: 1138
+        width: 576
+        height: 301
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1fe9c39dc54abfd50800000000000000
+      internalID: 6772187183370247921
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_5
+      rect:
+        serializedVersion: 2
+        x: 1477
+        y: 1138
+        width: 504
+        height: 340
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6a959ab4b37a60cd0800000000000000
+      internalID: -2592200662390842970
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_6
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 719
+        width: 898
+        height: 254
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 359f8678668013ad0800000000000000
+      internalID: -2724387063130949293
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_7
+      rect:
+        serializedVersion: 2
+        x: 902
+        y: 881
+        width: 841
+        height: 255
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: caf0ff1ad02b4efd0800000000000000
+      internalID: -2313528536939425876
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_8
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 383
+        width: 432
+        height: 315
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 757a8a114f4277450800000000000000
+      internalID: 6086374052101400407
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_9
+      rect:
+        serializedVersion: 2
+        x: 436
+        y: 463
+        width: 844
+        height: 254
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b92f7ca59452655d0800000000000000
+      internalID: -3074228698647891301
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_10
+      rect:
+        serializedVersion: 2
+        x: 1282
+        y: 600
+        width: 647
+        height: 279
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9eb7764d7cad03140800000000000000
+      internalID: 4697494963144326121
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_11
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 280
+        width: 22
+        height: 90
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3212bc7d0697d01d0800000000000000
+      internalID: -3382914288241139421
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_12
+      rect:
+        serializedVersion: 2
+        x: 113
+        y: 339
+        width: 20
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ed695b7367ef14f30800000000000000
+      internalID: 4558204081569896158
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_13
+      rect:
+        serializedVersion: 2
+        x: 117
+        y: 332
+        width: 13
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3f627e3a39d9f0960800000000000000
+      internalID: 7570442756068681459
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_14
+      rect:
+        serializedVersion: 2
+        x: 180
+        y: 206
+        width: 284
+        height: 175
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d74582437f629630800000000000000
+      internalID: 3932327965475817427
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_15
+      rect:
+        serializedVersion: 2
+        x: 466
+        y: 206
+        width: 362
+        height: 240
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 442992ff15536c0e0800000000000000
+      internalID: -2250052337535446460
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_16
+      rect:
+        serializedVersion: 2
+        x: 830
+        y: 229
+        width: 458
+        height: 232
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 98dd121b1505566d0800000000000000
+      internalID: -2997901665150837367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_17
+      rect:
+        serializedVersion: 2
+        x: 1290
+        y: 252
+        width: 338
+        height: 262
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cd9cc4acd2759d060800000000000000
+      internalID: 6978704951766469084
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_18
+      rect:
+        serializedVersion: 2
+        x: 1629
+        y: 270
+        width: 366
+        height: 329
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 177772271bcdb0730800000000000000
+      internalID: 3966506551512364913
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_19
+      rect:
+        serializedVersion: 2
+        x: 114
+        y: 324
+        width: 17
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6599b69e42197a620800000000000000
+      internalID: 2785354482272934230
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_20
+      rect:
+        serializedVersion: 2
+        x: 135
+        y: 223
+        width: 44
+        height: 92
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 84783dbcc8a3b4fe0800000000000000
+      internalID: -1203804099002005688
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_21
+      rect:
+        serializedVersion: 2
+        x: 1368
+        y: 109
+        width: 266
+        height: 141
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 38c21ee7419b339a0800000000000000
+      internalID: -6254451959808316285
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_22
+      rect:
+        serializedVersion: 2
+        x: 1636
+        y: 238
+        width: 65
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 92cd292a3c067fe80800000000000000
+      internalID: -8144935007713829847
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_23
+      rect:
+        serializedVersion: 2
+        x: 1739
+        y: 247
+        width: 90
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 59b502472e94a5470800000000000000
+      internalID: 8384094893263313813
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_24
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 177
+        width: 31
+        height: 65
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 961e4e69f9c89d0e0800000000000000
+      internalID: -2244608322208210583
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_25
+      rect:
+        serializedVersion: 2
+        x: 103
+        y: 239
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 76152f102b8b94a40800000000000000
+      internalID: 5353012706782892391
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_26
+      rect:
+        serializedVersion: 2
+        x: 1739
+        y: 170
+        width: 81
+        height: 71
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0c57e407a95b304b0800000000000000
+      internalID: -5475333047038609984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_27
+      rect:
+        serializedVersion: 2
+        x: 116
+        y: 205
+        width: 17
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a8447edeef4670ec0800000000000000
+      internalID: -3600798330983594870
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_28
+      rect:
+        serializedVersion: 2
+        x: 118
+        y: 198
+        width: 12
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc4e12863aa5d4250800000000000000
+      internalID: 5930495942190032075
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_29
+      rect:
+        serializedVersion: 2
+        x: 881
+        y: 92
+        width: 228
+        height: 133
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8cb3b7efdc398f180800000000000000
+      internalID: -9081346135645537336
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_30
+      rect:
+        serializedVersion: 2
+        x: 1111
+        y: 92
+        width: 255
+        height: 135
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5d507d27a09b6b1f0800000000000000
+      internalID: -1029432010280073771
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_31
+      rect:
+        serializedVersion: 2
+        x: 1640
+        y: 170
+        width: 57
+        height: 63
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1327dd13efd0d1310800000000000000
+      internalID: 1377272446454690353
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_32
+      rect:
+        serializedVersion: 2
+        x: 1928
+        y: 113
+        width: 28
+        height: 96
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4299c2eaf96898e50800000000000000
+      internalID: 6812123931754666276
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_33
+      rect:
+        serializedVersion: 2
+        x: 112
+        y: 190
+        width: 20
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 59aa622b038b3b420800000000000000
+      internalID: 2644659925483432597
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_34
+      rect:
+        serializedVersion: 2
+        x: 181
+        y: 66
+        width: 227
+        height: 131
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cef920092247baea0800000000000000
+      internalID: -5860462798298767380
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_35
+      rect:
+        serializedVersion: 2
+        x: 410
+        y: 87
+        width: 469
+        height: 117
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2014993215abcf150800000000000000
+      internalID: 5907801668855611650
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_36
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 106
+        width: 57
+        height: 63
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d4f5607b035a34a10800000000000000
+      internalID: 1892537897073401677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_37
+      rect:
+        serializedVersion: 2
+        x: 100
+        y: 106
+        width: 81
+        height: 71
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bb42290ef19e5d170800000000000000
+      internalID: 8202718619446158523
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_38
+      rect:
+        serializedVersion: 2
+        x: 1698
+        y: 158
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc8f009035b4a3bf0800000000000000
+      internalID: -343879601534994225
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_39
+      rect:
+        serializedVersion: 2
+        x: 1982
+        y: 166
+        width: 20
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef7d188ac5db4eb00800000000000000
+      internalID: 857018034768959486
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_40
+      rect:
+        serializedVersion: 2
+        x: 1986
+        y: 159
+        width: 13
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1ee940b370f652060800000000000000
+      internalID: 6928065678624988897
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_41
+      rect:
+        serializedVersion: 2
+        x: 1649
+        y: 138
+        width: 9
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9192116847356d890800000000000000
+      internalID: -7433662374997841639
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_42
+      rect:
+        serializedVersion: 2
+        x: 1657
+        y: 140
+        width: 7
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4412e295528e86270800000000000000
+      internalID: 8244094365009322308
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_43
+      rect:
+        serializedVersion: 2
+        x: 1664
+        y: 137
+        width: 8
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6654ec0aa5737a9a0800000000000000
+      internalID: -6221943497804593818
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_44
+      rect:
+        serializedVersion: 2
+        x: 1783
+        y: 139
+        width: 7
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ae33cdc6f846fc9e0800000000000000
+      internalID: -1598948775523765270
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_45
+      rect:
+        serializedVersion: 2
+        x: 1791
+        y: 140
+        width: 7
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6a5c4df07aaf18320800000000000000
+      internalID: 2558601658755237286
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_46
+      rect:
+        serializedVersion: 2
+        x: 1798
+        y: 137
+        width: 8
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1d930139686472c40800000000000000
+      internalID: 5487432214781114833
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_47
+      rect:
+        serializedVersion: 2
+        x: 1983
+        y: 151
+        width: 17
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc94177aad4fdc3b0800000000000000
+      internalID: -5490463150745499185
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_48
+      rect:
+        serializedVersion: 2
+        x: 1688
+        y: 109
+        width: 83
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a63d3dc3f84446400800000000000000
+      internalID: 316453255814304618
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_49
+      rect:
+        serializedVersion: 2
+        x: 2010
+        y: 64
+        width: 21
+        height: 69
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 723e29663b4ee0cc0800000000000000
+      internalID: -3742802781127122137
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_50
+      rect:
+        serializedVersion: 2
+        x: 10
+        y: 74
+        width: 9
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f626c05909943b720800000000000000
+      internalID: 2860711073635132015
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_51
+      rect:
+        serializedVersion: 2
+        x: 59
+        y: 94
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c20c0f334e7087370800000000000000
+      internalID: 8320408988272345132
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_52
+      rect:
+        serializedVersion: 2
+        x: 1404
+        y: 1
+        width: 123
+        height: 99
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 57bae7115315f8200800000000000000
+      internalID: 184455398114110325
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_53
+      rect:
+        serializedVersion: 2
+        x: 1528
+        y: 2
+        width: 181
+        height: 105
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ddc824ddafc60ea40800000000000000
+      internalID: 5395432178299604189
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_54
+      rect:
+        serializedVersion: 2
+        x: 1711
+        y: 2
+        width: 181
+        height: 105
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e8a5c324b67676480800000000000000
+      internalID: -8906036027731453298
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_55
+      rect:
+        serializedVersion: 2
+        x: 18
+        y: 76
+        width: 7
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 202a87ffd3ae70250800000000000000
+      internalID: 5910950587947065858
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_56
+      rect:
+        serializedVersion: 2
+        x: 25
+        y: 73
+        width: 8
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f3d2f3b887d3dbe60800000000000000
+      internalID: 7979601702711930175
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_57
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 21
+        width: 70
+        height: 56
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aa0e3d9fb8f994ca0800000000000000
+      internalID: -6032114802345385814
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_58
+      rect:
+        serializedVersion: 2
+        x: 144
+        y: 75
+        width: 7
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dfcf2c0b7da6f47c0800000000000000
+      internalID: -4084928862385668867
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_59
+      rect:
+        serializedVersion: 2
+        x: 152
+        y: 76
+        width: 7
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fd297798139eb5090800000000000000
+      internalID: -8044579910398274849
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_60
+      rect:
+        serializedVersion: 2
+        x: 159
+        y: 73
+        width: 8
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d498d6db8b0e6cc0800000000000000
+      internalID: -3716019947301202727
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_61
+      rect:
+        serializedVersion: 2
+        x: 431
+        y: 2
+        width: 159
+        height: 77
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e6b7ddcdbca232630800000000000000
+      internalID: 3901008757305211758
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_62
+      rect:
+        serializedVersion: 2
+        x: 592
+        y: 2
+        width: 160
+        height: 79
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f919f086f0480acb0800000000000000
+      internalID: -4854735196600168033
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_63
+      rect:
+        serializedVersion: 2
+        x: 753
+        y: 1
+        width: 116
+        height: 84
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 58dddd22a9ad4b100800000000000000
+      internalID: 122963445390630277
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_64
+      rect:
+        serializedVersion: 2
+        x: 870
+        y: 2
+        width: 121
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3db1cb7491d739520800000000000000
+      internalID: 2707645348510964691
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_65
+      rect:
+        serializedVersion: 2
+        x: 992
+        y: 1
+        width: 56
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a6fee6d102296c960800000000000000
+      internalID: 7621940086001561450
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_66
+      rect:
+        serializedVersion: 2
+        x: 1097
+        y: 2
+        width: 101
+        height: 89
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7c1a809ccd4e436c0800000000000000
+      internalID: -4164452118494142009
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_67
+      rect:
+        serializedVersion: 2
+        x: 1198
+        y: 1
+        width: 56
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ce9cb59fa13c99180800000000000000
+      internalID: -9108034250760009236
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_68
+      rect:
+        serializedVersion: 2
+        x: 1303
+        y: 2
+        width: 101
+        height: 89
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1506821af4db3d650800000000000000
+      internalID: 6256552457051594833
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_69
+      rect:
+        serializedVersion: 2
+        x: 322
+        y: 57
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dcee3819e1eae4a60800000000000000
+      internalID: 7660251462517386957
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_70
+      rect:
+        serializedVersion: 2
+        x: 1972
+        y: 66
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: be08d6e540630baf0800000000000000
+      internalID: -382746575934488341
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_71
+      rect:
+        serializedVersion: 2
+        x: 207
+        y: 1
+        width: 66
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a7adce77a04c87d70800000000000000
+      internalID: 9041191801186998906
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_72
+      rect:
+        serializedVersion: 2
+        x: 273
+        y: 37
+        width: 9
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9624ccc2ceed94c50800000000000000
+      internalID: 6650091430734479977
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_73
+      rect:
+        serializedVersion: 2
+        x: 281
+        y: 39
+        width: 7
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 119711566c7114a90800000000000000
+      internalID: -7331552577515849455
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_74
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 36
+        width: 8
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 365946dcbabc34d30800000000000000
+      internalID: 4414595998498985315
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_75
+      rect:
+        serializedVersion: 2
+        x: 407
+        y: 38
+        width: 7
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f65a872602afa59c0800000000000000
+      internalID: -3937559907184106129
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_76
+      rect:
+        serializedVersion: 2
+        x: 415
+        y: 39
+        width: 7
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 134fae7122e536020800000000000000
+      internalID: 2333812532431221809
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_77
+      rect:
+        serializedVersion: 2
+        x: 422
+        y: 36
+        width: 8
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7826d1fb31c3e21d0800000000000000
+      internalID: -3373693015345503609
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_78
+      rect:
+        serializedVersion: 2
+        x: 1893
+        y: 1
+        width: 83
+        height: 56
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6a00125dccf7cba80800000000000000
+      internalID: -8449738283128127322
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_79
+      rect:
+        serializedVersion: 2
+        x: 1985
+        y: 32
+        width: 17
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9c9a057ce743c9410800000000000000
+      internalID: 1485119696239897033
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_80
+      rect:
+        serializedVersion: 2
+        x: 1981
+        y: 17
+        width: 20
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f707493ab17b553d0800000000000000
+      internalID: -3218465029349937025
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_81
+      rect:
+        serializedVersion: 2
+        x: 1987
+        y: 25
+        width: 12
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0813604f2e1f3d470800000000000000
+      internalID: 8418338085544538496
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_82
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 1
+        width: 61
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fb047877134b1f7a0800000000000000
+      internalID: -6345092275436568385
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_83
+      rect:
+        serializedVersion: 2
+        x: 121
+        y: 3
+        width: 86
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 82b81d3d3a3df3e10800000000000000
+      internalID: 2179693445257464616
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: kaho k01_84
+      rect:
+        serializedVersion: 2
+        x: 322
+        y: 1
+        width: 33
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 33992ce249c421310800000000000000
+      internalID: 1374245035624798515
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      kaho k01_0: -5386776604213811593
+      kaho k01_1: 8109740536553139156
+      kaho k01_10: 4697494963144326121
+      kaho k01_11: -3382914288241139421
+      kaho k01_12: 4558204081569896158
+      kaho k01_13: 7570442756068681459
+      kaho k01_14: 3932327965475817427
+      kaho k01_15: -2250052337535446460
+      kaho k01_16: -2997901665150837367
+      kaho k01_17: 6978704951766469084
+      kaho k01_18: 3966506551512364913
+      kaho k01_19: 2785354482272934230
+      kaho k01_2: -141550206692883220
+      kaho k01_20: -1203804099002005688
+      kaho k01_21: -6254451959808316285
+      kaho k01_22: -8144935007713829847
+      kaho k01_23: 8384094893263313813
+      kaho k01_24: -2244608322208210583
+      kaho k01_25: 5353012706782892391
+      kaho k01_26: -5475333047038609984
+      kaho k01_27: -3600798330983594870
+      kaho k01_28: 5930495942190032075
+      kaho k01_29: -9081346135645537336
+      kaho k01_3: 4024221700608264862
+      kaho k01_30: -1029432010280073771
+      kaho k01_31: 1377272446454690353
+      kaho k01_32: 6812123931754666276
+      kaho k01_33: 2644659925483432597
+      kaho k01_34: -5860462798298767380
+      kaho k01_35: 5907801668855611650
+      kaho k01_36: 1892537897073401677
+      kaho k01_37: 8202718619446158523
+      kaho k01_38: -343879601534994225
+      kaho k01_39: 857018034768959486
+      kaho k01_4: 6772187183370247921
+      kaho k01_40: 6928065678624988897
+      kaho k01_41: -7433662374997841639
+      kaho k01_42: 8244094365009322308
+      kaho k01_43: -6221943497804593818
+      kaho k01_44: -1598948775523765270
+      kaho k01_45: 2558601658755237286
+      kaho k01_46: 5487432214781114833
+      kaho k01_47: -5490463150745499185
+      kaho k01_48: 316453255814304618
+      kaho k01_49: -3742802781127122137
+      kaho k01_5: -2592200662390842970
+      kaho k01_50: 2860711073635132015
+      kaho k01_51: 8320408988272345132
+      kaho k01_52: 184455398114110325
+      kaho k01_53: 5395432178299604189
+      kaho k01_54: -8906036027731453298
+      kaho k01_55: 5910950587947065858
+      kaho k01_56: 7979601702711930175
+      kaho k01_57: -6032114802345385814
+      kaho k01_58: -4084928862385668867
+      kaho k01_59: -8044579910398274849
+      kaho k01_6: -2724387063130949293
+      kaho k01_60: -3716019947301202727
+      kaho k01_61: 3901008757305211758
+      kaho k01_62: -4854735196600168033
+      kaho k01_63: 122963445390630277
+      kaho k01_64: 2707645348510964691
+      kaho k01_65: 7621940086001561450
+      kaho k01_66: -4164452118494142009
+      kaho k01_67: -9108034250760009236
+      kaho k01_68: 6256552457051594833
+      kaho k01_69: 7660251462517386957
+      kaho k01_7: -2313528536939425876
+      kaho k01_70: -382746575934488341
+      kaho k01_71: 9041191801186998906
+      kaho k01_72: 6650091430734479977
+      kaho k01_73: -7331552577515849455
+      kaho k01_74: 4414595998498985315
+      kaho k01_75: -3937559907184106129
+      kaho k01_76: 2333812532431221809
+      kaho k01_77: -3373693015345503609
+      kaho k01_78: -8449738283128127322
+      kaho k01_79: 1485119696239897033
+      kaho k01_8: 6086374052101400407
+      kaho k01_80: -3218465029349937025
+      kaho k01_81: 8418338085544538496
+      kaho k01_82: -6345092275436568385
+      kaho k01_83: 2179693445257464616
+      kaho k01_84: 1374245035624798515
+      kaho k01_9: -3074228698647891301
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -1,0 +1,69 @@
+
+Pmacho.png
+size: 1291,1099
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+L_chest
+  rotate: true
+  xy: 327, 8
+  size: 205, 199
+  orig: 207, 201
+  offset: 1, 1
+  index: -1
+L_hand
+  rotate: true
+  xy: 570, 870
+  size: 227, 719
+  orig: 229, 721
+  offset: 1, 1
+  index: -1
+L_leg
+  rotate: false
+  xy: 296, 215
+  size: 272, 882
+  orig: 274, 884
+  offset: 1, 1
+  index: -1
+R_chest
+  rotate: true
+  xy: 916, 2
+  size: 131, 168
+  orig: 133, 170
+  offset: 1, 1
+  index: -1
+R_hand
+  rotate: true
+  xy: 570, 617
+  size: 251, 696
+  orig: 253, 698
+  offset: 1, 1
+  index: -1
+R_leg
+  rotate: false
+  xy: 2, 212
+  size: 292, 885
+  orig: 294, 887
+  offset: 1, 1
+  index: -1
+body
+  rotate: false
+  xy: 570, 26
+  size: 344, 589
+  orig: 346, 591
+  offset: 1, 1
+  index: -1
+head
+  rotate: false
+  xy: 916, 135
+  size: 304, 480
+  orig: 306, 482
+  offset: 1, 1
+  index: -1
+pants
+  rotate: false
+  xy: 2, 2
+  size: 323, 208
+  orig: 325, 210
+  offset: 1, 1
+  index: -1

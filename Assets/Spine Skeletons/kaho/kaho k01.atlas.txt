@@ -1,0 +1,292 @@
+
+kaho k01.png
+size: 2032,1827
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+HairBF
+  rotate: true
+  xy: 754, 1743
+  size: 82, 114
+  orig: 84, 116
+  offset: 1, 1
+  index: -1
+HairBase
+  rotate: false
+  xy: 2, 1129
+  size: 432, 315
+  orig: 432, 315
+  offset: 0, 0
+  index: -1
+HairBaseShadow
+  rotate: false
+  xy: 180, 1446
+  size: 284, 175
+  orig: 284, 175
+  offset: 0, 0
+  index: -1
+HairF1
+  rotate: true
+  xy: 592, 1746
+  size: 79, 160
+  orig: 79, 160
+  offset: 0, 0
+  index: -1
+HairF1Shadow
+  rotate: true
+  xy: 431, 1748
+  size: 77, 159
+  orig: 77, 159
+  offset: 0, 0
+  index: -1
+HairSide
+  rotate: true
+  xy: 182, 1630
+  size: 130, 226
+  orig: 133, 229
+  offset: 3, 0
+  index: -1
+HairSideL
+  rotate: true
+  xy: 1368, 1577
+  size: 141, 266
+  orig: 141, 266
+  offset: 0, 0
+  index: -1
+HairSideR
+  rotate: true
+  xy: 1111, 1600
+  size: 135, 255
+  orig: 135, 255
+  offset: 0, 0
+  index: -1
+HairSideShadow
+  rotate: true
+  xy: 881, 1602
+  size: 133, 228
+  orig: 133, 228
+  offset: 0, 0
+  index: -1
+HandL
+  rotate: true
+  xy: 1282, 948
+  size: 279, 647
+  orig: 279, 647
+  offset: 0, 0
+  index: -1
+HandLnew
+  rotate: true
+  xy: 590, 65
+  size: 321, 638
+  orig: 321, 638
+  offset: 0, 0
+  index: -1
+HandR
+  rotate: true
+  xy: 2, 278
+  size: 317, 586
+  orig: 317, 586
+  offset: 0, 0
+  index: -1
+HandRnew
+  rotate: true
+  xy: 1230, 2
+  size: 345, 573
+  orig: 345, 573
+  offset: 0, 0
+  index: -1
+Head
+  rotate: true
+  xy: 1630, 1229
+  size: 327, 364
+  orig: 329, 366
+  offset: 1, 1
+  index: -1
+L_leg
+  rotate: true
+  xy: 902, 691
+  size: 255, 841
+  orig: 255, 841
+  offset: 0, 0
+  index: -1
+L_leg_n
+  rotate: true
+  xy: 2, 597
+  size: 255, 895
+  orig: 255, 928
+  offset: 0, 0
+  index: -1
+R_leg
+  rotate: true
+  xy: 436, 1110
+  size: 254, 844
+  orig: 254, 844
+  offset: 0, 0
+  index: -1
+R_leg_n
+  rotate: true
+  xy: 2, 854
+  size: 254, 898
+  orig: 254, 898
+  offset: 0, 0
+  index: -1
+WingL
+  rotate: false
+  xy: 1528, 1720
+  size: 181, 105
+  orig: 181, 105
+  offset: 0, 0
+  index: -1
+WingR
+  rotate: false
+  xy: 1711, 1720
+  size: 181, 105
+  orig: 181, 105
+  offset: 0, 0
+  index: -1
+back
+  rotate: true
+  xy: 1477, 349
+  size: 340, 504
+  orig: 340, 504
+  offset: 0, 0
+  index: -1
+back_coat
+  rotate: true
+  xy: 830, 1366
+  size: 232, 458
+  orig: 232, 458
+  offset: 0, 0
+  index: -1
+body
+  rotate: true
+  xy: 899, 388
+  size: 301, 576
+  orig: 301, 576
+  offset: 0, 0
+  index: -1
+body_triangle
+  rotate: true
+  xy: 870, 1742
+  size: 83, 121
+  orig: 83, 121
+  offset: 0, 0
+  index: -1
+body_upper
+  rotate: true
+  xy: 410, 1623
+  size: 117, 469
+  orig: 117, 469
+  offset: 0, 0
+  index: -1
+eyebrows
+  rotate: false
+  xy: 2, 1807
+  size: 204, 18
+  orig: 206, 20
+  offset: 1, 1
+  index: -1
+eyes
+  rotate: false
+  xy: 993, 1737
+  size: 204, 88
+  orig: 206, 90
+  offset: 1, 1
+  index: -1
+eyes-02
+  rotate: false
+  xy: 1199, 1737
+  size: 204, 88
+  orig: 206, 90
+  offset: 1, 1
+  index: -1
+face
+  rotate: false
+  xy: 274, 1762
+  size: 155, 63
+  orig: 157, 65
+  offset: 1, 1
+  index: -1
+face-02
+  rotate: false
+  xy: 2, 1651
+  size: 178, 154
+  orig: 180, 156
+  offset: 1, 1
+  index: -1
+face-03
+  rotate: false
+  xy: 1636, 1558
+  size: 193, 160
+  orig: 193, 160
+  offset: 0, 0
+  index: -1
+face-04
+  rotate: true
+  xy: 2, 1458
+  size: 191, 176
+  orig: 193, 178
+  offset: 1, 1
+  index: -1
+face-05
+  rotate: true
+  xy: 1894, 1619
+  size: 206, 136
+  orig: 208, 138
+  offset: 1, 1
+  index: -1
+patch
+  rotate: true
+  xy: 208, 1765
+  size: 60, 64
+  orig: 62, 66
+  offset: 1, 1
+  index: -1
+sp_1
+  rotate: true
+  xy: 1405, 1728
+  size: 97, 121
+  orig: 99, 123
+  offset: 1, 1
+  index: -1
+sp_2
+  rotate: true
+  xy: 466, 1381
+  size: 240, 362
+  orig: 240, 362
+  offset: 0, 0
+  index: -1
+sp_3
+  rotate: true
+  xy: 1290, 1313
+  size: 262, 338
+  orig: 262, 338
+  offset: 0, 0
+  index: -1
+
+kaho k012.png
+size: 1563,601
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+Hair_back
+  rotate: true
+  xy: 569, 3
+  size: 596, 490
+  orig: 596, 490
+  offset: 0, 0
+  index: -1
+Hair_back_2
+  rotate: true
+  xy: 2, 2
+  size: 597, 565
+  orig: 597, 565
+  offset: 0, 0
+  index: -1
+Head_side
+  rotate: false
+  xy: 1061, 30
+  size: 500, 569
+  orig: 502, 571
+  offset: 1, 1
+  index: -1
