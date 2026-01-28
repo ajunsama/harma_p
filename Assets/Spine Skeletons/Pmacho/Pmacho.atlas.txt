@@ -1,0 +1,83 @@
+
+Pmacho.png
+size: 1944,912
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+L_chest
+  rotate: false
+  xy: 574, 13
+  size: 207, 174
+  orig: 207, 201
+  offset: 0, 0
+  index: -1
+L_hand
+  rotate: false
+  xy: 574, 189
+  size: 229, 721
+  orig: 229, 721
+  offset: 0, 0
+  index: -1
+L_hand_fist
+  rotate: false
+  xy: 1060, 236
+  size: 229, 674
+  orig: 229, 674
+  offset: 0, 0
+  index: -1
+L_leg
+  rotate: false
+  xy: 298, 26
+  size: 274, 884
+  orig: 274, 884
+  offset: 0, 0
+  index: -1
+R_chest
+  rotate: false
+  xy: 783, 19
+  size: 131, 168
+  orig: 133, 170
+  offset: 1, 1
+  index: -1
+R_hand
+  rotate: false
+  xy: 805, 212
+  size: 253, 698
+  orig: 253, 698
+  offset: 0, 0
+  index: -1
+R_hand_fist
+  rotate: true
+  xy: 1291, 656
+  size: 254, 651
+  orig: 254, 651
+  offset: 0, 0
+  index: -1
+R_leg
+  rotate: false
+  xy: 2, 23
+  size: 294, 887
+  orig: 294, 887
+  offset: 0, 0
+  index: -1
+body
+  rotate: true
+  xy: 1291, 308
+  size: 346, 591
+  orig: 346, 591
+  offset: 0, 0
+  index: -1
+head
+  rotate: true
+  xy: 1291, 2
+  size: 304, 480
+  orig: 306, 482
+  offset: 1, 1
+  index: -1
+pants
+  rotate: false
+  xy: 916, 2
+  size: 323, 208
+  orig: 325, 210
+  offset: 1, 1
+  index: -1

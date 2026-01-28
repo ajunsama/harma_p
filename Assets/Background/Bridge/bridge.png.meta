@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 5f89792230e14ab4aa80406f11ceb1ba
+guid: fcb81f9c453a6194eb812cfe80ac00ea
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6265054668056534801
-    second: bridge_0
+      213: -9084149176029018482
+    second: bridge 1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,7 +113,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: bridge_0
+      name: bridge 1_0
       rect:
         serializedVersion: 2
         x: 0
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: fe0661c19fd0e09a0800000000000000
-      internalID: -6265054668056534801
+      spriteID: e86022c447e9ee180800000000000000
+      internalID: -9084149176029018482
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      bridge_0: -6265054668056534801
+      bridge 1_0: -9084149176029018482
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -71,6 +71,7 @@
   <ItemGroup>
     <None Include="Assets\Spine\version.txt" />
     <None Include="Assets\Spine Skeletons\muscle_p\Pmacho.atlas.txt" />
+    <None Include="Assets\Spine Skeletons\Pmacho\Pmacho.atlas.txt" />
     <None Include="Assets\Spine Skeletons\kaho\kaho k01.atlas.txt" />
   </ItemGroup>
   <ItemGroup>

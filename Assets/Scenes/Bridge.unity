@@ -1003,12 +1003,12 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: -9999
-  m_Sprite: {fileID: -6265054668056534801, guid: 5f89792230e14ab4aa80406f11ceb1ba, type: 3}
+  m_Sprite: {fileID: -9084149176029018482, guid: fcb81f9c453a6194eb812cfe80ac00ea, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 27.3, y: 15.35625}
+  m_Size: {x: 81.72, y: 10.813536}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -1992,12 +1992,12 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: -19999
-  m_Sprite: {fileID: -2691526193057411252, guid: 9779ad76afd262b42b70b7bdead00192, type: 3}
+  m_Sprite: {fileID: -6452874009013392731, guid: 73d462cf1c184af4f8c35315425606f0, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 19.2, y: 10.8}
+  m_Size: {x: 19.2, y: 7.44}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -2012,7 +2012,7 @@ Transform:
   m_GameObject: {fileID: 1438586618}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.88, z: 0}
+  m_LocalPosition: {x: 0, y: 1.63, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2032,7 +2032,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraFixedObject
   targetCamera: {fileID: 291194712}
   maintainCurrentOffset: 0
-  manualOffset: {x: 0, y: 2.88, z: 10}
+  manualOffset: {x: 0, y: 0, z: 10}
 --- !u!1 &1506509196
 GameObject:
   m_ObjectHideFlags: 0
