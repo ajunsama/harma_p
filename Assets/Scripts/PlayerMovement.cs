@@ -218,16 +218,16 @@ public class PlayerMovement : MonoBehaviour
         float effectiveRightBound = rightBound;
         
         // 如果有相机，使用屏幕边界
-        Camera mainCam = Camera.main;
-        if (mainCam != null)
-        {
-            float cameraHalfWidth = mainCam.orthographicSize * mainCam.aspect;
-            float cameraX = mainCam.transform.position.x;
+        // Camera mainCam = Camera.main;
+        // if (mainCam != null)
+        // {
+        //     float cameraHalfWidth = mainCam.orthographicSize * mainCam.aspect;
+        //     float cameraX = mainCam.transform.position.x;
             
-            // 默认屏幕边界（留一点边距防止完全贴边）
-            effectiveLeftBound = cameraX - cameraHalfWidth + 0.5f;
-            effectiveRightBound = cameraX + cameraHalfWidth - 0.5f;
-        }
+        //     // 默认屏幕边界（留一点边距防止完全贴边）
+        //     effectiveLeftBound = cameraX - cameraHalfWidth + 0.5f;
+        //     effectiveRightBound = cameraX + cameraHalfWidth - 0.5f;
+        // }
         
         // [修改] 不再使用战斗区域限制玩家，只使用相机视野限制
         /*

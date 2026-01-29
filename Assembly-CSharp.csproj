@@ -66,6 +66,7 @@
     <Compile Include="Assets\Scripts\EnemySpawner.cs" />
     <Compile Include="Assets\Scripts\LevelManager.cs" />
     <Compile Include="Assets\Scripts\YSortSprite.cs" />
+    <Compile Include="Assets\Scripts\SpineDanceSequence.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\BattleWaveManager.cs" />
   </ItemGroup>
   <ItemGroup>

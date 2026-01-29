@@ -1,130 +1,133 @@
 using UnityEngine;
-using UnityEngine.UI;
+using Spine.Unity;
+using System.Collections;
 
 public class Enemy : MonoBehaviour
 {
-    [Header("----- 血条 -----")]
-    // public Slider hpBar;        // 把做好的 Slider 拖进来
-    public int maxHp = 5;       // 主角打5下就死
+    [Header("----- 基础属性 -----")]
+    public int maxHp = 5;
 
-    [Header("----- 受击范围 -----")]
-    public float checkRadius = 0.8f;   // 主角得在敌人前方 0.8 米内
-    public float yTolerance = 0.3f;    // Y 轴允许误差
+    [Header("----- Spine动画 -----")]
+    [SerializeField] SkeletonAnimation skeletonAnimation;
+    [SpineAnimation] public string hitAnimName = "hit";     // 受击动画名
+    [SpineAnimation] public string idleAnimName = "idle";   // 待机动画名
 
-    Animator anim;      // 新增
-    int hitHash;        // 新增
+    [Header("----- 闪烁参数 -----")]
+    [SerializeField] float blinkDuration = 0.6f;
+    [SerializeField] float blinkInterval = 0.1f;
+
+    // 运行时变量
     int curHp;
-    Collider2D col;     // 用于获取脚底位置
-    
-    public bool IsHit { get; private set; } // 是否处于受击状态
-
-    SpriteRenderer sr;
+    MeshRenderer meshRenderer;      // Spine使用MeshRenderer
     EnemySimpleAI2D ai;
-    MuscleP_AI_Movement muscleAi; // 新增：支持 MuscleP AI
-    Rigidbody2D rb;
+    MuscleP_AI_Movement muscleAi;
 
-    // 定义死亡事件
+    public bool IsHit { get; private set; }
+
+    // 死亡事件
     public static event System.Action OnEnemyDied;
 
     void Awake()
     {
         curHp = maxHp;
-        // hpBar.maxValue = maxHp;
-        // hpBar.value = maxHp;
-        anim = GetComponent<Animator>();   // 新增
-        hitHash = Animator.StringToHash("hit"); // 新增
-        col = GetComponent<Collider2D>(); // 获取碰撞体
-        
-        sr = GetComponent<SpriteRenderer>();
+        meshRenderer = GetComponentInChildren<MeshRenderer>();
         ai = GetComponent<EnemySimpleAI2D>();
-        muscleAi = GetComponent<MuscleP_AI_Movement>(); // 获取 MuscleP AI
-        rb = GetComponent<Rigidbody2D>();
+        muscleAi = GetComponent<MuscleP_AI_Movement>();
+
+        // 如果没有手动指定，尝试自动获取 SkeletonAnimation
+        if (skeletonAnimation == null)
+            skeletonAnimation = GetComponentInChildren<SkeletonAnimation>();
     }
 
-    // 踩踏伤害
+    /// <summary>
+    /// 受到踩踏伤害
+    /// </summary>
     public void TakeJumpDamage(Vector2 sourcePos)
     {
-        Debug.Log($"[Enemy] 受到踩踏伤害! 当前HP: {curHp}");
-        curHp--;
-        
-        if (curHp <= 0)
-        {
-            Debug.Log("[Enemy] HP归零，死亡");
-            // 触发死亡事件
-            OnEnemyDied?.Invoke();
-            Destroy(gameObject);
-            return;
-        }
+        if (IsHit) return; // 受击中不重复受伤
 
-        StartCoroutine(HitReactionCoroutine(sourcePos));
+        curHp--;
+        Debug.Log($"[Enemy] 受到踩踏伤害! 剩余HP: {curHp}");
+
+        bool isDead = curHp <= 0;
+        StartCoroutine(HitReactionCoroutine(sourcePos, isDead));
     }
 
-    System.Collections.IEnumerator HitReactionCoroutine(Vector2 sourcePos)
+    /// <summary>
+    /// 受击反应协程
+    /// </summary>
+    IEnumerator HitReactionCoroutine(Vector2 sourcePos, bool isDead)
     {
         IsHit = true;
-        Debug.Log("[Enemy] 开始受伤反应 (击退+闪烁)");
-        
+
         // 1. 暂停 AI
-        if (ai != null) ai.isKnockedBack = true;
-        if (muscleAi != null) muscleAi.isKnockedBack = true; 
-        
-        // 2. 击退：立即施加力
-        float dirX = Mathf.Sign(transform.position.x - sourcePos.x);
-        if (rb != null) 
+        SetAIKnockedBack(true);
+
+        // 2. 播放受击动画（不循环）
+        Spine.TrackEntry hitTrack = PlaySpineAnimation(hitAnimName, false);
+
+        // 3. 等待受击动画播放完毕
+        if (hitTrack != null)
         {
-            rb.linearVelocity = new Vector2(dirX * 12f, 6f); 
+            while (!hitTrack.IsComplete)
+                yield return null;
         }
 
-        // 3. 并行闪烁 & 击飞计时
-        float totalDuration = 1.0f; // 总受击时间 (0.4s 击飞 + 0.6s 硬直)
-        float flyTime = 0.4f;       // 击飞时间
-        float elapsed = 0f;
-        
-        while (elapsed < totalDuration)
+        // 4. 判断死亡或存活
+        if (isDead)
         {
-            // 闪烁逻辑
-            if (sr != null) sr.enabled = !sr.enabled;
-            
-            // 击飞结束逻辑：超过飞行时间后停止移动
-            if (elapsed >= flyTime)
-            {
-                if (rb != null)
-                {
-                    rb.linearVelocity = Vector2.zero;
-                }
-            }
-            
-            yield return new WaitForSeconds(0.1f); // 闪烁频率
-            elapsed += 0.1f;
+            Debug.Log("[Enemy] 死亡");
+            OnEnemyDied?.Invoke();
+            Destroy(gameObject);
+            yield break;
         }
-        
-        // 结束状态：确保显示出来，且速度归零
-        if (sr != null) sr.enabled = true;
-        if (rb != null) rb.linearVelocity = Vector2.zero;
 
-        // 4. 恢复 AI
-        if (ai != null) ai.isKnockedBack = false;
-        if (muscleAi != null) muscleAi.isKnockedBack = false; 
+        // 5. 存活：闪烁效果
+        yield return StartCoroutine(BlinkCoroutine());
+
+        // 6. 恢复正常
+        SetAIKnockedBack(false);
+        PlaySpineAnimation(idleAnimName, true);
         IsHit = false;
-        Debug.Log("[Enemy] 受伤反应结束，恢复AI");
     }
 
-    // 由主角调用：当主角挥拳时把敌人自己传进来
-    // public void TryTakeDamage(Transform player) // 已移除
-    // {
-    //     // ...
-    // }
-
-    // 获取角色脚底的Y坐标
-
-    // 获取角色脚底的Y坐标
-    float GetBottomY(Transform target)
+    /// <summary>
+    /// 闪烁协程
+    /// </summary>
+    IEnumerator BlinkCoroutine()
     {
-        Collider2D targetCol = target.GetComponent<Collider2D>();
-        if (targetCol != null)
+        float elapsed = 0f;
+        while (elapsed < blinkDuration)
         {
-            return targetCol.bounds.min.y;  // 使用碰撞体底部
+            if (meshRenderer != null)
+                meshRenderer.enabled = !meshRenderer.enabled;
+
+            yield return new WaitForSeconds(blinkInterval);
+            elapsed += blinkInterval;
         }
-        return target.position.y;  // 如果没有碰撞体，使用中心点
+
+        // 确保最终可见
+        if (meshRenderer != null)
+            meshRenderer.enabled = true;
+    }
+
+    /// <summary>
+    /// 播放Spine动画
+    /// </summary>
+    Spine.TrackEntry PlaySpineAnimation(string animName, bool loop, int trackIndex = 0)
+    {
+        if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
+            return null;
+
+        return skeletonAnimation.AnimationState.SetAnimation(trackIndex, animName, loop);
+    }
+
+    /// <summary>
+    /// 设置AI击退状态
+    /// </summary>
+    void SetAIKnockedBack(bool value)
+    {
+        if (ai != null) ai.isKnockedBack = value;
+        if (muscleAi != null) muscleAi.isKnockedBack = value;
     }
 }

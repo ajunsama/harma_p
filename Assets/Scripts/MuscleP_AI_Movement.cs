@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using UnityEngine;
+using Spine.Unity;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class MuscleP_AI_Movement : MonoBehaviour
@@ -10,6 +11,7 @@ public class MuscleP_AI_Movement : MonoBehaviour
     [Header("参数")]
     public float speed = 1.2f;          // 移动速度
     public float stopDistance = 1.5f;   // 离玩家多远就站着不动
+    public float startDelay = 0f;       // 初始化后延迟多少秒再开始行动
 
     public float minMoveTime = 0.8f;    // 最少走多久
     public float maxMoveTime = 2.0f;    // 最多走多久
@@ -43,8 +45,17 @@ public class MuscleP_AI_Movement : MonoBehaviour
     public float playerBodyWidth = 2f;  // 玩家身位宽度（增加冲刺距离）
     public float postAttackDelay = 0.3f; // 攻击后延迟（缩短以便更快恢复）
 
+    [Header("Spine动画")]
+    [SerializeField] SkeletonAnimation skeletonAnimation;
+    
+    // Spine动画名称
+    [SpineAnimation] public string idleAnimName = "idle";
+    [SpineAnimation] public string walkAnimName = "walk";
+    [SpineAnimation] public string attackAnimName = "attack";
+    
+    private Spine.TrackEntry currentTrack;
+
     Rigidbody2D rb;
-    Animator animator;
     bool isAttacking = false;           // 是否正在攻击（用于禁止转头）
     bool isDashing = false;             // 是否正在冲刺（用于碰撞检测）
 
@@ -69,7 +80,6 @@ public class MuscleP_AI_Movement : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        animator = GetComponent<Animator>();
         lastAttackTime = Time.time;
     }
 
@@ -130,6 +140,13 @@ public class MuscleP_AI_Movement : MonoBehaviour
         while (player == null)
         {
             yield return new WaitForSeconds(0.1f);
+        }
+        
+        // 初始延迟：在开始行动前等待指定时间
+        if (startDelay > 0f)
+        {
+            PlayAnimation(idleAnimName, true); // 延迟期间播放待机动画
+            yield return new WaitForSeconds(startDelay);
         }
         
         while (true)
@@ -627,13 +644,14 @@ public class MuscleP_AI_Movement : MonoBehaviour
         // 1. 蓄力阶段：面向玩家
         Vector3 scale = transform.localScale;
         if (player.position.x > transform.position.x)
-            scale.x = Mathf.Abs(scale.x);  // 面向右侧
+            scale.x = -Mathf.Abs(scale.x);  // 面向右侧（负值）
         else
-            scale.x = -Mathf.Abs(scale.x); // 面向左侧
+            scale.x = Mathf.Abs(scale.x); // 面向左侧（正值）
         transform.localScale = scale;
         
         Debug.Log("MuscleP 蓄力中...");
-        // animator.SetTrigger("Charge"); // 可选：播放蓄力动画
+        // 播放攻击动画（不循环）
+        ForcePlayAnimation(attackAnimName, false);
         yield return new WaitForSeconds(chargeTime);
         
         // 2. 冲刺阶段：计算冲刺方向和距离
@@ -652,7 +670,6 @@ public class MuscleP_AI_Movement : MonoBehaviour
         targetPos.x = Mathf.Clamp(targetPos.x, leftBound, rightBound);
         
         Debug.Log($"MuscleP 发起攻击冲刺！方向: {dashDirection}, 距离: {dashDistance}");
-        // animator.SetTrigger("Dash"); // 可选：播放冲刺动画
         
         // 执行冲刺
         isDashing = true; // 标记为正在冲刺（用于碰撞检测）
@@ -719,8 +736,46 @@ public class MuscleP_AI_Movement : MonoBehaviour
     // 更新动画参数
     void UpdateAnimator()
     {
-        if (animator != null)
-            animator.SetFloat("speed", rb.linearVelocity.magnitude);
+        if (rb.linearVelocity.magnitude > 0.01f)
+        {
+            PlayAnimation(walkAnimName, true);
+        }
+        else
+        {
+            PlayAnimation(idleAnimName, true);
+        }
+    }
+    
+    /// <summary>
+    /// 播放Spine动画
+    /// </summary>
+    /// <param name="animName">动画名称</param>
+    /// <param name="loop">是否循环播放</param>
+    /// <param name="trackIndex">轨道索引，默认为0</param>
+    void PlayAnimation(string animName, bool loop, int trackIndex = 0)
+    {
+        if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
+            return;
+            
+        // 检查当前动画是否已经是目标动画（避免重复设置）
+        if (currentTrack != null && currentTrack.Animation != null && 
+            currentTrack.Animation.Name == animName && !currentTrack.IsComplete)
+        {
+            return;
+        }
+        
+        currentTrack = skeletonAnimation.AnimationState.SetAnimation(trackIndex, animName, loop);
+    }
+    
+    /// <summary>
+    /// 强制播放Spine动画（不检查是否已在播放）
+    /// </summary>
+    void ForcePlayAnimation(string animName, bool loop, int trackIndex = 0)
+    {
+        if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
+            return;
+        
+        currentTrack = skeletonAnimation.AnimationState.SetAnimation(trackIndex, animName, loop);
     }
     
     // 限制位置在边界内
