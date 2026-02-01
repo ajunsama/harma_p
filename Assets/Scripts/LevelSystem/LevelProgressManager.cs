@@ -44,6 +44,9 @@ public class LevelProgressManager : MonoBehaviour
     private float targetCameraX;
     private bool needSmoothTransition = false;
     
+    // 摄像机绑定控制：玩家越过屏幕中心后才开始跟随
+    private bool cameraBindingEnabled = false;
+    
     [Header("事件")]
     public UnityEvent OnLevelStart;
     public UnityEvent OnLevelComplete;
@@ -131,6 +134,7 @@ public class LevelProgressManager : MonoBehaviour
         currentState = LevelState.Playing;
         levelStartTime = Time.time;
         defeatedEnemies = 0;
+        cameraBindingEnabled = false;  // 重置摄像机绑定状态
         
         // 设置相机边界
         // if (levelData != null)
@@ -148,17 +152,7 @@ public class LevelProgressManager : MonoBehaviour
         
         OnLevelStart?.Invoke();
         
-        // 初始化相机位置
-        if (mainCamera != null)
-        {
-            // 计算初始相机位置（以玩家为中心，不限制边界）
-            // float cameraHalfWidth = mainCamera.orthographicSize * mainCamera.aspect;
-            // float initialX = Mathf.Clamp(levelData.playerStartPosition.x, 
-            //     cameraLeftLimit + cameraHalfWidth, 
-            //     cameraRightLimit - cameraHalfWidth);
-            
-            mainCamera.transform.position = new Vector3(levelData.playerStartPosition.x, cameraFixedY, cameraZ);
-        }
+        // 摄像机保持原位置不动，直到玩家走过屏幕中心才开始跟随
     }
     
     /// <summary>
@@ -189,6 +183,22 @@ public class LevelProgressManager : MonoBehaviour
         float playerX = playerTransform.position.x;
         float cameraHalfWidth = mainCamera.orthographicSize * mainCamera.aspect;
         float currentCameraX = mainCamera.transform.position.x;
+        
+        // 检查是否需要激活摄像机绑定：玩家从左边越过屏幕中心时激活
+        if (!cameraBindingEnabled)
+        {
+            // 玩家位置超过摄像机中心位置时，激活绑定
+            if (playerX >= currentCameraX)
+            {
+                cameraBindingEnabled = true;
+                Debug.Log("[LevelProgressManager] 玩家越过屏幕中心，摄像机开始跟随");
+            }
+            else
+            {
+                // 尚未激活绑定，摄像机保持不动
+                return;
+            }
+        }
         
         // 战斗中：记录需要平滑过渡（战斗结束后使用）
         if (battleWaveManager != null && battleWaveManager.IsInBattle)

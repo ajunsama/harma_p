@@ -57,6 +57,7 @@
     <Compile Include="Assets\Scripts\EnemyAttackCollider.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\LevelUI.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\LevelProgressManager.cs" />
+    <Compile Include="Assets\Scripts\EnemyChargeAttack.cs" />
     <Compile Include="Assets\Scripts\MuscleP_AI_Movement.cs" />
     <Compile Include="Assets\Scripts\PlayerAttack.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\LevelData.cs" />

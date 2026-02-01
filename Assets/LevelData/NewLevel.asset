@@ -15,7 +15,7 @@ MonoBehaviour:
   levelName: NewLevel
   difficulty: 1
   levelLength: 50
-  playerStartPosition: {x: -8, y: -3.5}
+  playerStartPosition: {x: -13.49, y: -1.19}
   levelEndPositionX: 72.3
   defaultEnemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
   battleWaves:
@@ -28,24 +28,22 @@ MonoBehaviour:
     enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
     enemyYSpacing: 1
     mustClearToProceed: 1
-    battleAreaLeftOffset: -5
-    battleAreaRightOffset: 5
     enemies:
     - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: 6.86, y: -2.1}
+      spawnOffset: {x: -3, y: -3.83}
+      spawnDelay: 0
+      fromLeft: 1
+    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
+      spawnOffset: {x: -4.5, y: -2.83}
+      spawnDelay: 0.2
+      fromLeft: 1
+    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
+      spawnOffset: {x: 3, y: -4}
       spawnDelay: 0
       fromLeft: 0
     - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: -11.21, y: -3.52}
-      spawnDelay: 0
-      fromLeft: 0
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: 9.05, y: -0.54}
-      spawnDelay: 0
-      fromLeft: 0
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: -10.33, y: -1.74}
-      spawnDelay: 0
+      spawnOffset: {x: 4.5, y: -3}
+      spawnDelay: 0.2
       fromLeft: 0
   - waveName: "\u6CE2\u6B212"
     triggerPositionX: 25.33
@@ -53,18 +51,12 @@ MonoBehaviour:
     leftEnemyY: -3.5
     rightEnemyCount: 1
     rightEnemyY: -3.5
-    enemyPrefab: {fileID: 0}
+    enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
     enemyYSpacing: 1
     mustClearToProceed: 1
-    battleAreaLeftOffset: -4.2
-    battleAreaRightOffset: 3.92
     enemies:
     - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: 10.79, y: -3.5}
-      spawnDelay: 0
-      fromLeft: 0
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: -10.07, y: -3.5}
+      spawnOffset: {x: 3, y: -3.5}
       spawnDelay: 0
       fromLeft: 0
   - waveName: "\u6CE2\u6B213"
@@ -76,18 +68,16 @@ MonoBehaviour:
     enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
     enemyYSpacing: 1
     mustClearToProceed: 1
-    battleAreaLeftOffset: -5
-    battleAreaRightOffset: 5
     enemies:
     - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: 6.45, y: -3.5}
+      spawnOffset: {x: -3, y: -4}
       spawnDelay: 0
-      fromLeft: 0
+      fromLeft: 1
     - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: -8.99, y: -3.5}
-      spawnDelay: 0
-      fromLeft: 0
+      spawnOffset: {x: -4.5, y: -3}
+      spawnDelay: 0.2
+      fromLeft: 1
     - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: 6.08, y: -3.5}
+      spawnOffset: {x: 3, y: -3.5}
       spawnDelay: 0
       fromLeft: 0
