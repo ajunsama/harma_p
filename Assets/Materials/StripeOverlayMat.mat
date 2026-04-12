@@ -49,7 +49,7 @@ Material:
     - _StencilOp: 0
     - _StencilReadMask: 255
     - _StencilWriteMask: 255
-    - _StripeAngle: 315
+    - _StripeAngle: 135
     - _StripeGap: 80
     - _StripeWidth: 80
     - _UseUIAlphaClip: 0

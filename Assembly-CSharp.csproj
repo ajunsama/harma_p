@@ -63,6 +63,7 @@
     <Compile Include="Assets\Scripts\StorySystem\StoryAvatarTemplate.cs" />
     <Compile Include="Assets\Scripts\EnemyChargeAttack.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryUI.cs" />
+    <Compile Include="Assets\Scripts\UI\SpeakerNameAligner.cs" />
     <Compile Include="Assets\Scripts\MuscleP_AI_Movement.cs" />
     <Compile Include="Assets\Scripts\PlayerAttack.cs" />
     <Compile Include="Assets\Scripts\UI\TMPLongShadow.cs" />

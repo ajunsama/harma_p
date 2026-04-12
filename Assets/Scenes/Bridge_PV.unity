@@ -611,6 +611,7 @@ GameObject:
   - component: {fileID: 69769198}
   - component: {fileID: 69769199}
   - component: {fileID: 69769200}
+  - component: {fileID: 69769201}
   m_Layer: 6
   m_Name: DialogBox
   m_TagString: Untagged
@@ -732,6 +733,23 @@ MonoBehaviour:
   gatherDuration: 0.25
   gatherEase: 5
   scatterGatherGap: 0.04
+--- !u!114 &69769201
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 69769194}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07d19145500ef8a49ae15278f56e12d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpeakerNameAligner
+  dialogBoxRect: {fileID: 69769195}
+  dialogBox: {fileID: 69769198}
+  nameController: {fileID: 1874179175}
+  leftOffset: 0
+  rightOffset: 0
 --- !u!1001 &92620316
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6363,6 +6381,7 @@ GameObject:
   - component: {fileID: 1874179173}
   - component: {fileID: 1874179174}
   - component: {fileID: 1874179175}
+  - component: {fileID: 1874179176}
   m_Layer: 6
   m_Name: SpeakerName
   m_TagString: Untagged
@@ -6388,8 +6407,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0.0024414062, y: -460.5}
-  m_SizeDelta: {x: -600.01, y: -951}
+  m_AnchoredPosition: {x: 0.00036621094, y: -460.5}
+  m_SizeDelta: {x: -50, y: -951}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1874179171
 MonoBehaviour:
@@ -6470,15 +6489,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SpeakerNameController
   nameTextA: {fileID: 1021173724}
   nameTextB: {fileID: 97901189}
-  leftPositionX: 150
-  rightPositionX: -150
+  leftPositionX: 310.99963
+  rightPositionX: -321.00037
   charInterval: 0.05
-  slideDuration: 0.25
   slideOffset: 900
   slideEase: 6
-  fadeDuration: 0.15
   leftAngle: 45
   rightAngle: 135
+--- !u!114 &1874179176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1874179169}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07d19145500ef8a49ae15278f56e12d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpeakerNameAligner
+  dialogBoxRect: {fileID: 69769195}
+  dialogBox: {fileID: 69769198}
+  nameController: {fileID: 1874179175}
+  leftOffset: -0.15
+  rightOffset: -0.05
 --- !u!1 &1902002445
 GameObject:
   m_ObjectHideFlags: 0
