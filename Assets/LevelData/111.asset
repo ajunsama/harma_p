@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2eb526b989e8d6b43b8cf14428e0cc84, type: 3}
+  m_Name: 111
+  m_EditorClassIdentifier: Assembly-CSharp::LevelData
+  levelName: 111
+  difficulty: 1
+  levelLength: 50
+  playerStartPosition: {x: -8, y: -3.5}
+  levelEndPositionX: 45
+  defaultEnemyPrefab: {fileID: 8719242390527254228, guid: b00447cd54b8d2345a2da53c105c5503, type: 3}
+  battleWaves:
+  - waveName: "\u7B2C\u4E00\u6CE2"
+    triggerPositionX: 5
+    leftEnemyCount: 3
+    leftEnemyY: -3.5
+    rightEnemyCount: 3
+    rightEnemyY: -3.5
+    enemyPrefab: {fileID: 8719242390527254228, guid: b00447cd54b8d2345a2da53c105c5503, type: 3}
+    enemyYSpacing: 1
+    mustClearToProceed: 1
+    enemies: []
+  - waveName: "\u6CE2\u6B212"
+    triggerPositionX: 22.85
+    leftEnemyCount: 3
+    leftEnemyY: -3.5
+    rightEnemyCount: 2
+    rightEnemyY: -3.5
+    enemyPrefab: {fileID: 8719242390527254228, guid: b00447cd54b8d2345a2da53c105c5503, type: 3}
+    enemyYSpacing: -0.08
+    mustClearToProceed: 1
+    enemies: []
+  - waveName: "\u6CE2\u6B213"
+    triggerPositionX: 40.1
+    leftEnemyCount: 0
+    leftEnemyY: -3.5
+    rightEnemyCount: 2
+    rightEnemyY: -3.5
+    enemyPrefab: {fileID: 8719242390527254228, guid: b00447cd54b8d2345a2da53c105c5503, type: 3}
+    enemyYSpacing: 1
+    mustClearToProceed: 1
+    enemies: []

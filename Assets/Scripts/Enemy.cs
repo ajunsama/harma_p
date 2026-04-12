@@ -24,8 +24,8 @@ public class Enemy : MonoBehaviour
 
     public bool IsHit { get; private set; }
 
-    // 死亡事件
-    public static event System.Action OnEnemyDied;
+    // 死亡事件（传递死亡的敌人实例）
+    public static event System.Action<Enemy> OnEnemyDied;
 
     void Awake()
     {
@@ -77,7 +77,7 @@ public class Enemy : MonoBehaviour
         if (isDead)
         {
             Debug.Log("[Enemy] 死亡");
-            OnEnemyDied?.Invoke();
+            OnEnemyDied?.Invoke(this);
             Destroy(gameObject);
             yield break;
         }

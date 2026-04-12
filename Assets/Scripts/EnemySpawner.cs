@@ -45,7 +45,7 @@ public class EnemySpawner : MonoBehaviour
         Enemy.OnEnemyDied -= HandleEnemyDeath;
     }
 
-    void HandleEnemyDeath()
+    void HandleEnemyDeath(Enemy _)
     {
         currentEnemyCount--;
         // 启动协程生成新敌人

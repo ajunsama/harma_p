@@ -1,0 +1,172 @@
+{
+    "stories": [
+        {
+            "storyId": "level1_opening",
+            "chapterId": "chapter_1",
+            "sectionId": "section_1",
+            "dialogues": [
+                {
+                    "id": 1,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "这里就是传说中的危险地带了...",
+                    "styleId": "protagonist",
+                    "playSpeed": 0.05,
+                    "avatarPosition": "left",
+                    "avatarId": "kaho",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "小宫果穗",
+                    "extraJson": ""
+                },
+                {
+                    "id": 2,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "终于来了吗...我等你很久了。",
+                    "styleId": "boss",
+                    "playSpeed": 0.03,
+                    "avatarPosition": "right",
+                    "avatarId": "muscle_p",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "杜野凛世",
+                    "extraJson": ""
+                },
+                {
+                    "id": 3,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "前方似乎有不少敌人，要小心了。",
+                    "styleId": "protagonist",
+                    "playSpeed": 0.05,
+                    "avatarPosition": "left",
+                    "avatarId": "kaho",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "小宫果穗",
+                    "extraJson": ""
+                }
+            ]
+        },
+        {
+            "storyId": "boss_encounter",
+            "chapterId": "chapter_1",
+            "sectionId": "section_3",
+            "dialogues": [
+                {
+                    "id": 1,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_3",
+                    "content": "终于来了吗...我等你很久了。",
+                    "styleId": "boss",
+                    "playSpeed": 0.03,
+                    "avatarPosition": "right",
+                    "avatarId": "muscle_p",
+                    "showImage": false,
+                    "imageId": "bg_sunset",
+                    "speakerName": "Muscle P",
+                    "extraJson": ""
+                },
+                {
+                    "id": 2,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_3",
+                    "content": "你就是那个一路打过来的家伙？",
+                    "styleId": "boss",
+                    "playSpeed": 0.03,
+                    "avatarPosition": "right",
+                    "avatarId": "muscle_p",
+                    "showImage": false,
+                    "imageId": "bg_sunset",
+                    "speakerName": "Muscle P",
+                    "extraJson": ""
+                },
+                {
+                    "id": 3,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_3",
+                    "content": "没错，我不会让你继续为所欲为！",
+                    "styleId": "protagonist",
+                    "playSpeed": 0.05,
+                    "avatarPosition": "left",
+                    "avatarId": "kaho",
+                    "showImage": false,
+                    "imageId": "bg_sunset",
+                    "speakerName": "小宫果穗",
+                    "extraJson": ""
+                },
+                {
+                    "id": 4,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_3",
+                    "content": "哈哈哈！那就来吧！让我看看你的实力！",
+                    "styleId": "boss",
+                    "playSpeed": 0.02,
+                    "avatarPosition": "right",
+                    "avatarId": "muscle_p",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "Muscle P",
+                    "extraJson": ""
+                }
+            ]
+        },
+        {
+            "storyId": "boss_defeated",
+            "chapterId": "chapter_1",
+            "sectionId": "section_4",
+            "dialogues": [
+                {
+                    "id": 1,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_4",
+                    "content": "不可能...我怎么会输...",
+                    "styleId": "boss",
+                    "playSpeed": 0.06,
+                    "avatarPosition": "right",
+                    "avatarId": "muscle_p",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "Muscle P",
+                    "extraJson": ""
+                },
+                {
+                    "id": 2,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_4",
+                    "content": "结束了。这条街道，恢复和平了。",
+                    "styleId": "protagonist",
+                    "playSpeed": 0.05,
+                    "avatarPosition": "left",
+                    "avatarId": "kaho",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "小宫果穗",
+                    "extraJson": ""
+                }
+            ]
+        },
+        {
+            "storyId": "minion_taunt",
+            "chapterId": "chapter_1",
+            "sectionId": "section_2",
+            "dialogues": [
+                {
+                    "id": 1,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_2",
+                    "content": "嘿嘿嘿...你以为你能过去？",
+                    "styleId": "minion",
+                    "playSpeed": 0.04,
+                    "avatarPosition": "right",
+                    "avatarId": "muscle_p",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "小混混",
+                    "extraJson": ""
+                }
+            ]
+        }
+    ]
+}

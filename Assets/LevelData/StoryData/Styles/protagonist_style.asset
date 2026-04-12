@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ce6e28059b351b4c91ceba3448f0f9c, type: 3}
+  m_Name: protagonist_style
+  m_EditorClassIdentifier: Assembly-CSharp::StoryStyleTemplate
+  styleId: protagonist
+  displayName: "\u4E3B\u4EBA\u516C\u6837\u5F0F"
+  fontSize: 36
+  textColor: {r: 1, g: 1, b: 1, a: 1}
+  font: {fileID: 0}
+  dialogueBoxColor: {r: 0.8980393, g: 0.27450982, b: 0.10980393, a: 1}
+  dialogueBoxSprite: {fileID: 0}
+  defaultSpeakerName: "\u4E3B\u4EBA\u516C"
+  speakerNameColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  speakerNameFontSize: 28
+  enableOutline: 1
+  outlineColor: {r: 0, g: 0, b: 0, a: 1}
+  outlineWidth: 0.3

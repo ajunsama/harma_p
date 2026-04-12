@@ -20,7 +20,7 @@ public class InfiniteScrollBackground : MonoBehaviour
     
     [Header("调试")]
     [Tooltip("开启后在关键位置打印详细日志，便于排查为何不能滚动背景")] 
-    public bool verboseLogging = true;
+    public bool verboseLogging = false;
     
     // 内部变量
     private float spriteWidth;

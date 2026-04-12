@@ -364,7 +364,7 @@ public class LevelProgressManager : MonoBehaviour
         Debug.Log("[LevelProgressManager] 所有波次完成，前往终点!");
     }
     
-    void OnEnemyDefeated()
+    void OnEnemyDefeated(Enemy _)
     {
         defeatedEnemies++;
     }

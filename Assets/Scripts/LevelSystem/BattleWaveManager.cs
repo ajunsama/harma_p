@@ -292,7 +292,7 @@ public class BattleWaveManager : MonoBehaviour
     /// <summary>
     /// 处理敌人死亡
     /// </summary>
-    void HandleEnemyDeath()
+    void HandleEnemyDeath(Enemy _)
     {
         if (!isInBattle) return;
         
