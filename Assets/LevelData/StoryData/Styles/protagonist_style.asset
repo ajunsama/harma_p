@@ -20,8 +20,7 @@ MonoBehaviour:
   dialogueBoxColor: {r: 0.8980393, g: 0.27450982, b: 0.10980393, a: 1}
   dialogueBoxSprite: {fileID: 0}
   defaultSpeakerName: "\u4E3B\u4EBA\u516C"
-  speakerNameColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  speakerNameFontSize: 28
+  speakerNameFontSize: 90
   enableOutline: 1
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   outlineWidth: 0.3
