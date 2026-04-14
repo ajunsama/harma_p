@@ -27,21 +27,9 @@ public class StoryAnimator : MonoBehaviour
     [Tooltip("左侧角色起始位置偏移（相对于最终位置）")]
     public Vector2 leftStartOffset = new Vector2(-300f, 0f);
 
-    [Tooltip("左侧角色起始旋转角度（Z轴）")]
-    public float leftStartRotation = -30f;
-
-    [Tooltip("左侧角色起始缩放（相对于最终缩放的比例，0.5表示从一半大小开始）")]
-    public float leftStartScaleRatio = 0.5f;
-
     [Header("角色入场 - 右侧")]
     [Tooltip("右侧角色起始位置偏移（相对于最终位置）")]
     public Vector2 rightStartOffset = new Vector2(300f, 0f);
-
-    [Tooltip("右侧角色起始旋转角度（Z轴）")]
-    public float rightStartRotation = 30f;
-
-    [Tooltip("右侧角色起始缩放（相对于最终缩放的比例）")]
-    public float rightStartScaleRatio = 0.5f;
 
     // ==============================
     // 对话框入场
@@ -82,13 +70,15 @@ public class StoryAnimator : MonoBehaviour
     /// 所有 RT 由调用方传入
     /// </summary>
     public Coroutine PlayFullEntrance(RectTransform leftRT, RectTransform rightRT,
-        RectTransform dialogueBoxRT, bool firstSpeakerIsLeft)
+        RectTransform dialogueBoxRT, bool firstSpeakerIsLeft,
+        Color leftTargetColor, Color rightTargetColor)
     {
-        return StartCoroutine(FullEntranceCoroutine(leftRT, rightRT, dialogueBoxRT, firstSpeakerIsLeft));
+        return StartCoroutine(FullEntranceCoroutine(leftRT, rightRT, dialogueBoxRT, firstSpeakerIsLeft, leftTargetColor, rightTargetColor));
     }
 
     IEnumerator FullEntranceCoroutine(RectTransform leftRT, RectTransform rightRT,
-        RectTransform dialogueBoxRT, bool firstSpeakerIsLeft)
+        RectTransform dialogueBoxRT, bool firstSpeakerIsLeft,
+        Color leftTargetColor, Color rightTargetColor)
     {
         // 收集需要入场的角色
         Image leftImg = leftRT != null ? leftRT.GetComponent<Image>() : null;
@@ -125,12 +115,12 @@ public class StoryAnimator : MonoBehaviour
         if (hasLeft)
         {
             SetupAndStartEntrance(leftRT, leftImg,
-                leftStartOffset, leftStartRotation, leftStartScaleRatio);
+                leftStartOffset, leftTargetColor);
         }
         if (hasRight)
         {
             SetupAndStartEntrance(rightRT, rightImg,
-                rightStartOffset, rightStartRotation, rightStartScaleRatio);
+                rightStartOffset, rightTargetColor);
         }
 
         if (dialogueBoxRT != null)
@@ -145,28 +135,16 @@ public class StoryAnimator : MonoBehaviour
     }
 
     void SetupAndStartEntrance(RectTransform rt, Image img,
-        Vector2 startOffset, float startRot, float startScaleRatio)
+        Vector2 startOffset, Color targetColor)
     {
         Vector2 finalPos = rt.anchoredPosition;
-        Vector3 finalScale = rt.localScale;
-        Color finalColor = new Color(img.color.r, img.color.g, img.color.b, 1f);
 
         rt.anchoredPosition = finalPos + startOffset;
-        rt.localRotation = Quaternion.Euler(0, 0, startRot);
-        rt.localScale = finalScale * startScaleRatio;
-        img.color = finalColor;
+        img.color = targetColor;
 
         rt.DOKill();
 
         rt.DOAnchorPos(finalPos, characterEntranceDuration)
-            .SetEase(characterEntranceEase)
-            .SetUpdate(true);
-
-        rt.DOLocalRotate(Vector3.zero, characterEntranceDuration)
-            .SetEase(characterEntranceEase)
-            .SetUpdate(true);
-
-        rt.DOScale(finalScale, characterEntranceDuration)
             .SetEase(characterEntranceEase)
             .SetUpdate(true);
     }

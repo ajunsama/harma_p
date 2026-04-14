@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StoryAvatarTemplate
   avatarId: kaho
   displayName: kaho
-  avatarSprite: {fileID: -5436698941986156381, guid: 97814913d3947864f929af220f996459, type: 3}
+  avatarSprite: {fileID: -1797211533725557106, guid: 43a6919ee54da9f49b49f5bfd2024ca8, type: 3}
   scale: 1

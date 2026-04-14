@@ -2401,8 +2401,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -299.99988, y: 0}
-  m_SizeDelta: {x: 1400, y: 750}
+  m_AnchoredPosition: {x: 100, y: 0}
+  m_SizeDelta: {x: 400, y: 400}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &379204324
 MonoBehaviour:
@@ -6484,8 +6484,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SpeakerNameController
   nameTextA: {fileID: 1021173724}
   nameTextB: {fileID: 97901189}
-  leftPositionX: 576.4995
-  rightPositionX: -593.5005
+  leftPositionX: 233.16621
+  rightPositionX: -240.72275
   charInterval: 0.05
   slideOffset: 900
   slideEase: 6
@@ -7124,8 +7124,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 400, y: 0}
-  m_SizeDelta: {x: 1400, y: 750}
+  m_AnchoredPosition: {x: -100, y: 0}
+  m_SizeDelta: {x: 400, y: 400}
   m_Pivot: {x: 1, y: 0}
 --- !u!114 &2023359512
 MonoBehaviour:

@@ -42,10 +42,6 @@ public class StoryUI : MonoBehaviour
     [Tooltip("图片展示Image")]
     public Image displayImage;
 
-    [Header("提示")]
-    [Tooltip("'点击继续'提示标记")]
-    public GameObject continueIndicator;
-
     [Header("动画设置")]
     [Tooltip("UI出现/消失的过渡时间")]
     public float fadeTime = 0.3f;
@@ -58,7 +54,7 @@ public class StoryUI : MonoBehaviour
     public DialogBoxEffectController effectController;
 
     [Tooltip("非活跃说话者的暗化颜色")]
-    public Color inactiveSpeakerColor = new Color(0.5f, 0.5f, 0.5f, 0.8f);
+    public Color inactiveSpeakerColor = new Color(0.5f, 0.5f, 0.5f, 1f);
 
     private CanvasGroup _canvasGroup;
     private Coroutine _typewriterCoroutine;
@@ -68,6 +64,14 @@ public class StoryUI : MonoBehaviour
     private string _fullText;
     private string _currentSpeakerSide;
     private float _pendingNameSyncDuration = -1f;
+
+    // 头像展示区域的原始尺寸和位置（编辑器中设定的 RectTransform）
+    private Vector2 _avatarLeftContainerSize;
+    private Vector2 _avatarCenterContainerSize;
+    private Vector2 _avatarRightContainerSize;
+    private Vector2 _avatarLeftOriginalPos;
+    private Vector2 _avatarCenterOriginalPos;
+    private Vector2 _avatarRightOriginalPos;
 
     /// <summary>
     /// 文字是否正在打字中
@@ -91,6 +95,26 @@ public class StoryUI : MonoBehaviour
         {
             _canvasGroup = storyRoot.AddComponent<CanvasGroup>();
         }
+
+        // 缓存头像展示区域的初始尺寸和位置，后续用于等比缩放和顶部对齐
+        if (avatarLeft != null)
+        {
+            _avatarLeftContainerSize = avatarLeft.rectTransform.sizeDelta;
+            _avatarLeftOriginalPos = avatarLeft.rectTransform.anchoredPosition;
+        }
+        if (avatarCenter != null)
+        {
+            _avatarCenterContainerSize = avatarCenter.rectTransform.sizeDelta;
+            _avatarCenterOriginalPos = avatarCenter.rectTransform.anchoredPosition;
+        }
+        if (avatarRight != null)
+        {
+            _avatarRightContainerSize = avatarRight.rectTransform.sizeDelta;
+            _avatarRightOriginalPos = avatarRight.rectTransform.anchoredPosition;
+        }
+
+        // 确保头像在对话框后面渲染（sibling index 越小越先渲染，即在后面）
+        EnsureAvatarsBehindDialogueBox();
     }
 
     /// <summary>
@@ -109,7 +133,6 @@ public class StoryUI : MonoBehaviour
 
         HideAllAvatars();
         HideImage();
-        HideContinueIndicator();
         ClearContent();
     }
 
@@ -251,8 +274,7 @@ public class StoryUI : MonoBehaviour
         {
             targetAvatar.gameObject.SetActive(true);
             targetAvatar.sprite = sprite;
-            targetAvatar.SetNativeSize();
-            targetAvatar.rectTransform.localScale = Vector3.one * scale;
+            FitAvatarToContainer(targetAvatar);
         }
     }
 
@@ -311,7 +333,6 @@ public class StoryUI : MonoBehaviour
     IEnumerator TypewriterCoroutine(string text, float charInterval)
     {
         _isTypewriting = true;
-        HideContinueIndicator();
 
         if (contentText != null)
             contentText.text = "";
@@ -335,19 +356,6 @@ public class StoryUI : MonoBehaviour
         }
 
         _isTypewriting = false;
-        ShowContinueIndicator();
-    }
-
-    public void ShowContinueIndicator()
-    {
-        if (continueIndicator != null)
-            continueIndicator.SetActive(true);
-    }
-
-    public void HideContinueIndicator()
-    {
-        if (continueIndicator != null)
-            continueIndicator.SetActive(false);
     }
 
     // ====================
@@ -361,24 +369,16 @@ public class StoryUI : MonoBehaviour
     {
         // 只设置精灵和尺寸，不激活 GameObject
         // 入场动画会在设好起始位置后再激活，避免在最终位置闪现一帧
-        if (avatarLeft != null)
+        if (avatarLeft != null && leftSprite != null)
         {
-            if (leftSprite != null)
-            {
-                avatarLeft.sprite = leftSprite;
-                avatarLeft.SetNativeSize();
-                avatarLeft.rectTransform.localScale = Vector3.one * leftScale;
-            }
+            avatarLeft.sprite = leftSprite;
+            FitAvatarToContainer(avatarLeft);
         }
 
-        if (avatarRight != null)
+        if (avatarRight != null && rightSprite != null)
         {
-            if (rightSprite != null)
-            {
-                avatarRight.sprite = rightSprite;
-                avatarRight.SetNativeSize();
-                avatarRight.rectTransform.localScale = Vector3.one * rightScale;
-            }
+            avatarRight.sprite = rightSprite;
+            FitAvatarToContainer(avatarRight);
         }
     }
 
@@ -393,8 +393,7 @@ public class StoryUI : MonoBehaviour
         {
             targetAvatar.gameObject.SetActive(true);
             targetAvatar.sprite = sprite;
-            targetAvatar.SetNativeSize();
-            targetAvatar.rectTransform.localScale = Vector3.one * scale;
+            FitAvatarToContainer(targetAvatar);
         }
     }
 
@@ -497,11 +496,21 @@ public class StoryUI : MonoBehaviour
         if (_canvasGroup != null)
             _canvasGroup.alpha = 1f;
 
+        // 入场前设置说话者状态：灰化非活跃头像 + 对话框形状
+        _currentSpeakerSide = firstSpeakerIsLeft ? "left" : "right";
+        Color leftColor = firstSpeakerIsLeft ? Color.white : inactiveSpeakerColor;
+        Color rightColor = firstSpeakerIsLeft ? inactiveSpeakerColor : Color.white;
+
+        // 对话框形状立即设置（不播放变形动画）
+        var irregularBox = dialogueBoxImage as IrregularDialogBox;
+        if (irregularBox != null)
+            irregularBox.MirrorProgress = firstSpeakerIsLeft ? 0f : 1f;
+
         // 角色 + 对话框同时入场
         RectTransform leftRT = avatarLeft != null ? avatarLeft.rectTransform : null;
         RectTransform rightRT = avatarRight != null ? avatarRight.rectTransform : null;
         RectTransform dlgRT = dialogueBoxImage != null ? dialogueBoxImage.rectTransform : null;
-        yield return animator.PlayFullEntrance(leftRT, rightRT, dlgRT, firstSpeakerIsLeft);
+        yield return animator.PlayFullEntrance(leftRT, rightRT, dlgRT, firstSpeakerIsLeft, leftColor, rightColor);
 
         // 色块入场特效，同步说话者名称逐字间隔
         if (effectController != null)
@@ -518,9 +527,6 @@ public class StoryUI : MonoBehaviour
             if (entranceSeq != null)
                 yield return entranceSeq.WaitForCompletion();
         }
-
-        // 高亮第一个说话者
-        HighlightSpeaker(firstSpeakerIsLeft ? "left" : "right");
     }
 
     /// <summary>
@@ -584,6 +590,109 @@ public class StoryUI : MonoBehaviour
             case "center": return avatarCenter;
             case "right": return avatarRight;
             default: return avatarLeft;
+        }
+    }
+
+    /// <summary>
+    /// 将头像等比缩放到容器宽度，顶部对齐。
+    /// 基于 sprite 所在纹理的完整尺寸（即原始 PNG 尺寸）作为缩放基准，
+    /// 确保来自相同尺寸画布的素材获得一致的缩放比例。
+    /// </summary>
+    void FitAvatarToContainer(Image avatar)
+    {
+        if (avatar == null || avatar.sprite == null) return;
+
+        Vector2 containerSize = GetAvatarContainerSize(avatar);
+        Vector2 originalPos = GetAvatarOriginalPos(avatar);
+        if (containerSize.x <= 0f) return;
+
+        Sprite sp = avatar.sprite;
+        Texture2D tex = sp.texture;
+        if (tex == null) return;
+
+        // 使用纹理的完整尺寸（= 原始 PNG 尺寸）作为缩放基准
+        float texW = tex.width;
+        float texH = tex.height;
+        Rect contentRect = sp.rect; // sprite 在纹理中的内容区域（裁剪后的像素矩形）
+
+        if (texW <= 0f || contentRect.width <= 0f) return;
+
+        // 统一缩放比例：将完整纹理宽度映射到容器宽度
+        float scale = containerSize.x / texW;
+
+        float scaledW = contentRect.width * scale;
+        float scaledH = contentRect.height * scale;
+
+        avatar.rectTransform.sizeDelta = new Vector2(scaledW, scaledH);
+
+        float pivotX = avatar.rectTransform.pivot.x;
+        float pivotY = avatar.rectTransform.pivot.y;
+
+        // 水平定位：内容在纹理中的 X 偏移映射到容器中
+        // 容器左边缘 = originalPos.x - containerSize.x * pivotX
+        // 内容左边缘 = 容器左边缘 + contentRect.x * scale
+        // newPosX = contentLeftEdge + scaledW * pivotX
+        float newPosX = originalPos.x + pivotX * (scaledW - containerSize.x) + contentRect.x * scale;
+
+        // 顶部对齐：容器顶部对应纹理顶部
+        float containerTop = originalPos.y + containerSize.y * (1f - pivotY);
+
+        // sprite 内容顶部距纹理顶部的距离（缩放后）
+        float spriteTopInTex = contentRect.y + contentRect.height;
+        float distFromTexTop = (texH - spriteTopInTex) * scale;
+
+        // 定位：使 sprite 内容的顶边位于 (containerTop - distFromTexTop)
+        float contentTop = containerTop - distFromTexTop;
+        float newPosY = contentTop - scaledH * (1f - pivotY);
+
+        avatar.rectTransform.anchoredPosition = new Vector2(newPosX, newPosY);
+        avatar.rectTransform.localScale = Vector3.one;
+
+        Debug.Log($"[StoryUI] FitAvatar: name={avatar.name}, sprite={sp.name}, " +
+            $"texSize=({texW}x{texH}), contentRect=({contentRect.x},{contentRect.y},{contentRect.width}x{contentRect.height}), " +
+            $"container=({containerSize.x}x{containerSize.y}), scale={scale:F4}, " +
+            $"result sizeDelta={avatar.rectTransform.sizeDelta}, pos={avatar.rectTransform.anchoredPosition}");
+    }
+
+    Vector2 GetAvatarContainerSize(Image avatar)
+    {
+        if (avatar == avatarLeft) return _avatarLeftContainerSize;
+        if (avatar == avatarCenter) return _avatarCenterContainerSize;
+        if (avatar == avatarRight) return _avatarRightContainerSize;
+        return Vector2.zero;
+    }
+
+    Vector2 GetAvatarOriginalPos(Image avatar)
+    {
+        if (avatar == avatarLeft) return _avatarLeftOriginalPos;
+        if (avatar == avatarCenter) return _avatarCenterOriginalPos;
+        if (avatar == avatarRight) return _avatarRightOriginalPos;
+        return Vector2.zero;
+    }
+
+    /// <summary>
+    /// 确保头像在对话框后面渲染（sibling index 更小 = 更早渲染 = 在后面）
+    /// </summary>
+    void EnsureAvatarsBehindDialogueBox()
+    {
+        if (dialogueBoxImage == null) return;
+        Transform dlgParent = dialogueBoxImage.transform.parent;
+        if (dlgParent == null) return;
+
+        // 将对话框移到最后，确保在所有头像之上
+        // 同时保留 effectController 在对话框之前（如果它也在同一父节点下）
+        Image[] avatars = { avatarLeft, avatarCenter, avatarRight };
+        foreach (var avatar in avatars)
+        {
+            if (avatar != null && avatar.transform.parent == dlgParent)
+            {
+                int avatarIdx = avatar.transform.GetSiblingIndex();
+                int dlgIdx = dialogueBoxImage.transform.GetSiblingIndex();
+                if (avatarIdx > dlgIdx)
+                {
+                    avatar.transform.SetSiblingIndex(dlgIdx);
+                }
+            }
         }
     }
 }

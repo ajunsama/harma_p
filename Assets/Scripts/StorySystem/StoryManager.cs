@@ -450,7 +450,6 @@ public class StoryManager : MonoBehaviour
     IEnumerator WaitForPlayerInput()
     {
         _waitingForInput = true;
-        storyUI?.ShowContinueIndicator();
 
         // 先等一帧，确保不会读到上次的输入
         yield return null;
@@ -464,7 +463,6 @@ public class StoryManager : MonoBehaviour
             yield return null;
         }
 
-        storyUI?.HideContinueIndicator();
     }
 
     /// <summary>

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 97814913d3947864f929af220f996459
+guid: 43a6919ee54da9f49b49f5bfd2024ca8
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5436698941986156381
-    second: PixPin_2026-03-09_23-23-49_0
+      213: -1797211533725557106
+    second: kaho-S03-flipped_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: PixPin_2026-03-09_23-23-49_0
+      name: kaho-S03-flipped_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 198
-        height: 293
+        x: 633
+        y: 110
+        width: 643
+        height: 1725
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3a05c2cfd17fc84b0800000000000000
-      internalID: -5436698941986156381
+      spriteID: e8e9d02d1a50f07e0800000000000000
+      internalID: -1797211533725557106
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      PixPin_2026-03-09_23-23-49_0: -5436698941986156381
+      kaho-S03-flipped_0: -1797211533725557106
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

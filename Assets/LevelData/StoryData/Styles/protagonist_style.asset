@@ -21,6 +21,6 @@ MonoBehaviour:
   dialogueBoxSprite: {fileID: 0}
   defaultSpeakerName: "\u4E3B\u4EBA\u516C"
   speakerNameFontSize: 90
-  enableOutline: 1
+  enableOutline: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   outlineWidth: 0.3

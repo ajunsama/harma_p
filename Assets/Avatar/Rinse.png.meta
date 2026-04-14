@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: b6b386d798d70b04c9dd6fe348bbaad3
+guid: 0f5a0dc1345294b4b9f4f77b9dcea1a2
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 2964034686471216457
-    second: PixPin_2026-03-09_23-24-07_0
+      213: 1536761241633054156
+    second: Rinse_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: PixPin_2026-03-09_23-24-07_0
+      name: Rinse_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 187
-        height: 346
+        x: 666
+        y: 32
+        width: 891
+        height: 1668
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 94d9d0dd7dd522920800000000000000
-      internalID: 2964034686471216457
+      spriteID: ccd5028053ca35510800000000000000
+      internalID: 1536761241633054156
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      PixPin_2026-03-09_23-24-07_0: 2964034686471216457
+      Rinse_0: 1536761241633054156
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

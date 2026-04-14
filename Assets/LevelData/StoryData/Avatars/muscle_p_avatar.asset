@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StoryAvatarTemplate
   avatarId: muscle_p
   displayName: muscle_p
-  avatarSprite: {fileID: 2964034686471216457, guid: b6b386d798d70b04c9dd6fe348bbaad3, type: 3}
+  avatarSprite: {fileID: 1536761241633054156, guid: 0f5a0dc1345294b4b9f4f77b9dcea1a2, type: 3}
   scale: 1

@@ -21,6 +21,6 @@ MonoBehaviour:
   dialogueBoxSprite: {fileID: 0}
   defaultSpeakerName: BOSS
   speakerNameFontSize: 90
-  enableOutline: 1
+  enableOutline: 0
   outlineColor: {r: 0, g: 0, b: 0, a: 1}
   outlineWidth: 0.3
