@@ -31,30 +31,7 @@ public class StoryAnimator : MonoBehaviour
     [Tooltip("右侧角色起始位置偏移（相对于最终位置）")]
     public Vector2 rightStartOffset = new Vector2(300f, 0f);
 
-    // ==============================
-    // 对话框入场
-    // ==============================
-    [Header("对话框入场动画")]
-    [Tooltip("对话框入场时长")]
-    public float dialogueBoxEntranceDuration = 0.4f;
 
-    [Tooltip("对话框入场缓动类型")]
-    public Ease dialogueBoxEntranceEase = Ease.OutBack;
-
-    [Tooltip("对话框左侧入场起始偏移")]
-    public Vector2 dialogueBoxLeftOffset = new Vector2(-400f, 0f);
-
-    [Tooltip("对话框左侧入场起始旋转")]
-    public float dialogueBoxLeftRotation = -15f;
-
-    [Tooltip("对话框右侧入场起始偏移")]
-    public Vector2 dialogueBoxRightOffset = new Vector2(400f, 0f);
-
-    [Tooltip("对话框右侧入场起始旋转")]
-    public float dialogueBoxRightRotation = 15f;
-
-    [Tooltip("对话框入场起始缩放")]
-    public float dialogueBoxStartScale = 0.6f;
 
     void OnDestroy()
     {
@@ -70,14 +47,12 @@ public class StoryAnimator : MonoBehaviour
     /// 所有 RT 由调用方传入
     /// </summary>
     public Coroutine PlayFullEntrance(RectTransform leftRT, RectTransform rightRT,
-        RectTransform dialogueBoxRT, bool firstSpeakerIsLeft,
         Color leftTargetColor, Color rightTargetColor)
     {
-        return StartCoroutine(FullEntranceCoroutine(leftRT, rightRT, dialogueBoxRT, firstSpeakerIsLeft, leftTargetColor, rightTargetColor));
+        return StartCoroutine(FullEntranceCoroutine(leftRT, rightRT, leftTargetColor, rightTargetColor));
     }
 
     IEnumerator FullEntranceCoroutine(RectTransform leftRT, RectTransform rightRT,
-        RectTransform dialogueBoxRT, bool firstSpeakerIsLeft,
         Color leftTargetColor, Color rightTargetColor)
     {
         // 收集需要入场的角色
@@ -85,16 +60,6 @@ public class StoryAnimator : MonoBehaviour
         Image rightImg = rightRT != null ? rightRT.GetComponent<Image>() : null;
         bool hasLeft = leftImg != null && leftImg.sprite != null;
         bool hasRight = rightImg != null && rightImg.sprite != null;
-
-        // 获取对话框 CanvasGroup（用于隐藏/显示，不影响 Image.color）
-        CanvasGroup dlgCG = null;
-        if (dialogueBoxRT != null)
-        {
-            dlgCG = dialogueBoxRT.GetComponent<CanvasGroup>();
-            if (dlgCG == null)
-                dlgCG = dialogueBoxRT.gameObject.AddComponent<CanvasGroup>();
-            dlgCG.alpha = 0f;
-        }
 
         // 1. 激活角色，但先设为透明（避免在布局位置闪现一帧）
         if (hasLeft)
@@ -123,15 +88,8 @@ public class StoryAnimator : MonoBehaviour
                 rightStartOffset, rightTargetColor);
         }
 
-        if (dialogueBoxRT != null)
-        {
-            if (dlgCG != null) dlgCG.alpha = 1f;
-            StartDialogueBoxEntrance(dialogueBoxRT, firstSpeakerIsLeft);
-        }
-
-        // 4. 等待最长的动画完成
-        float maxDuration = Mathf.Max(characterEntranceDuration, dialogueBoxEntranceDuration);
-        yield return new WaitForSecondsRealtime(maxDuration);
+        // 4. 等待角色入场动画完成
+        yield return new WaitForSecondsRealtime(characterEntranceDuration);
     }
 
     void SetupAndStartEntrance(RectTransform rt, Image img,
@@ -149,34 +107,4 @@ public class StoryAnimator : MonoBehaviour
             .SetUpdate(true);
     }
 
-    // ==============================
-    // 对话框入场动画
-    // ==============================
-
-    void StartDialogueBoxEntrance(RectTransform rt, bool fromLeft)
-    {
-        Vector2 finalPos = rt.anchoredPosition;
-        Vector3 finalScale = rt.localScale;
-
-        Vector2 startOffset = fromLeft ? dialogueBoxLeftOffset : dialogueBoxRightOffset;
-        float startRot = fromLeft ? dialogueBoxLeftRotation : dialogueBoxRightRotation;
-
-        rt.anchoredPosition = finalPos + startOffset;
-        rt.localRotation = Quaternion.Euler(0, 0, startRot);
-        rt.localScale = finalScale * dialogueBoxStartScale;
-
-        rt.DOKill();
-
-        rt.DOAnchorPos(finalPos, dialogueBoxEntranceDuration)
-            .SetEase(dialogueBoxEntranceEase)
-            .SetUpdate(true);
-
-        rt.DOLocalRotate(Vector3.zero, dialogueBoxEntranceDuration)
-            .SetEase(dialogueBoxEntranceEase)
-            .SetUpdate(true);
-
-        rt.DOScale(finalScale, dialogueBoxEntranceDuration)
-            .SetEase(dialogueBoxEntranceEase)
-            .SetUpdate(true);
-    }
 }

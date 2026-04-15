@@ -608,7 +608,7 @@ GameObject:
   m_Component:
   - component: {fileID: 69769195}
   - component: {fileID: 69769197}
-  - component: {fileID: 69769198}
+  - component: {fileID: 69769202}
   - component: {fileID: 69769199}
   - component: {fileID: 69769200}
   - component: {fileID: 69769201}
@@ -652,42 +652,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 69769194}
   m_CullTransparentMesh: 1
---- !u!114 &69769198
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 69769194}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d33bd85f9ed8ce64b98ee44cdbd2b42a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IrregularDialogBox
-  m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0.78431374, b: 1, a: 0.9019608}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
-  leftBottomOffset: 0
-  topRightRadius: 20
-  cornerSegments: 8
-  mirrorProgress: 0
-  morphDuration: 1
-  middleExtraWidth: 200
 --- !u!114 &69769199
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -716,7 +680,7 @@ MonoBehaviour:
   blockContainer: {fileID: 356558078}
   stripeOverlay: {fileID: 2006256020}
   blockMaterial: {fileID: 2100000, guid: 5bf041110651c0e4a81e16914e97b45a, type: 2}
-  dialogBox: {fileID: 69769198}
+  dialogBox: {fileID: 0}
   blockWidth: 491
   blockHeight: 131
   blockRotation: 45
@@ -746,10 +710,46 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpeakerNameAligner
   dialogBoxRect: {fileID: 69769195}
-  dialogBox: {fileID: 69769198}
+  dialogBox: {fileID: 0}
   nameController: {fileID: 1874179175}
   leftOffset: 0
   rightOffset: 0
+--- !u!114 &69769202
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 69769194}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d33bd85f9ed8ce64b98ee44cdbd2b42a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IrregularDialogBox
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  leftBottomOffset: 0
+  topRightRadius: 20
+  cornerSegments: 8
+  mirrorProgress: 0
+  morphDuration: 0.1
+  middleExtraWidth: 200
 --- !u!1001 &92620316
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2247,7 +2247,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StoryUI
   storyRoot: {fileID: 352126808}
-  dialogueBoxImage: {fileID: 69769198}
+  dialogueBoxImage: {fileID: 69769202}
   contentText: {fileID: 1030195436}
   speakerNameController: {fileID: 1874179175}
   avatarLeft: {fileID: 379204324}
@@ -2256,6 +2256,7 @@ MonoBehaviour:
   imageDisplayRoot: {fileID: 120781280}
   displayImage: {fileID: 114253939}
   fadeTime: 0.3
+  entranceDelay: 0.2
   animator: {fileID: 1809385614}
   effectController: {fileID: 69769200}
   inactiveSpeakerColor: {r: 0.5, g: 0.5, b: 0.5, a: 0.8}
@@ -2417,7 +2418,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.039215688}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -6122,13 +6123,6 @@ MonoBehaviour:
   characterEntranceEase: 27
   leftStartOffset: {x: -300, y: 0}
   rightStartOffset: {x: 300, y: 0}
-  dialogueBoxEntranceDuration: 0.4
-  dialogueBoxEntranceEase: 27
-  dialogueBoxLeftOffset: {x: -400, y: 0}
-  dialogueBoxLeftRotation: -15
-  dialogueBoxRightOffset: {x: 400, y: 0}
-  dialogueBoxRightRotation: 15
-  dialogueBoxStartScale: 0.6
 --- !u!224 &1809385615
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6504,7 +6498,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpeakerNameAligner
   dialogBoxRect: {fileID: 69769195}
-  dialogBox: {fileID: 69769198}
+  dialogBox: {fileID: 0}
   nameController: {fileID: 1874179175}
   leftOffset: 0.06
   rightOffset: 0.23
@@ -7124,7 +7118,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 400, y: 0}
+  m_AnchoredPosition: {x: 399.99988, y: 0}
   m_SizeDelta: {x: 1400, y: 750}
   m_Pivot: {x: 1, y: 0}
 --- !u!114 &2023359512
@@ -7140,7 +7134,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.039215688}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

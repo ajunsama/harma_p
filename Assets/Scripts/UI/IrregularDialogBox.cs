@@ -26,7 +26,7 @@ public class IrregularDialogBox : Image
 
     [Header("变形动画")]
     [Tooltip("变形动画时长（秒）")]
-    [SerializeField] private float morphDuration = 1f;
+    [SerializeField] private float morphDuration = 0.1f;
 
     [Tooltip("中间态矩形比原始宽度额外增加的像素（左右各一半）")]
     [SerializeField] private float middleExtraWidth = 200f;

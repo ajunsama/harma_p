@@ -46,6 +46,9 @@ public class StoryUI : MonoBehaviour
     [Tooltip("UI出现/消失的过渡时间")]
     public float fadeTime = 0.3f;
 
+    [Tooltip("入场动画前的延迟时间（秒），等待背景模糊等效果先生效")]
+    public float entranceDelay = 0.2f;
+
     [Header("过渡动画")]
     [Tooltip("剧情动画控制器（可选，不设置则使用默认淡入淡出）")]
     public StoryAnimator animator;
@@ -506,27 +509,35 @@ public class StoryUI : MonoBehaviour
         if (irregularBox != null)
             irregularBox.MirrorProgress = firstSpeakerIsLeft ? 0f : 1f;
 
-        // 角色 + 对话框同时入场
+        // 等待背景模糊等效果先生效
+        if (entranceDelay > 0f)
+            yield return new WaitForSecondsRealtime(entranceDelay);
+
+        // 角色入场（不等待完成，与色块动画并行）
         RectTransform leftRT = avatarLeft != null ? avatarLeft.rectTransform : null;
         RectTransform rightRT = avatarRight != null ? avatarRight.rectTransform : null;
-        RectTransform dlgRT = dialogueBoxImage != null ? dialogueBoxImage.rectTransform : null;
-        yield return animator.PlayFullEntrance(leftRT, rightRT, dlgRT, firstSpeakerIsLeft, leftColor, rightColor);
+        Coroutine entranceCoroutine = animator.PlayFullEntrance(leftRT, rightRT, leftColor, rightColor);
 
-        // 色块入场特效，同步说话者名称逐字间隔
+        // 色块入场特效与头像入场同时启动
+        Sequence entranceSeq = null;
         if (effectController != null)
         {
             // 将名称逐字出现的间隔同步为色块淡入间隔
             if (speakerNameController != null)
                 speakerNameController.SyncCharInterval(effectController.fadeInInterval);
 
-            Sequence entranceSeq = effectController.PlayEntrance(speakerName, entranceColor, firstSpeakerIsLeft);
+            entranceSeq = effectController.PlayEntrance(speakerName, entranceColor, firstSpeakerIsLeft);
 
             // 在色块入场的同时启动名称逐字出现（并行而非串行）
             SetSpeakerName(speakerName, firstSpeakerIsLeft, false);
-
-            if (entranceSeq != null)
-                yield return entranceSeq.WaitForCompletion();
         }
+
+        // 等待头像入场和色块入场中较长的完成
+        if (entranceSeq != null)
+            yield return entranceSeq.WaitForCompletion();
+        // 确保头像入场也已完成
+        if (entranceCoroutine != null)
+            yield return entranceCoroutine;
     }
 
     /// <summary>
@@ -543,6 +554,10 @@ public class StoryUI : MonoBehaviour
 
         // 预设同步时长，这样 onMidpoint 内的 SetSpeakerName 会自动拾取并使用
         _pendingNameSyncDuration = syncDuration;
+
+        // 0. 立即清空旧文本，防止切换动画期间显示上一句内容
+        if (contentText != null)
+            contentText.text = "";
 
         // 1. 立即切换内容（在动画开始时就切换文本/头像数据）
         //    SetupDialogueDisplay 会调用 SetSpeakerName，后者会消费 _pendingNameSyncDuration
