@@ -108,6 +108,45 @@ public class SpeakerNameController : MonoBehaviour
 
     public void SyncCharInterval(float interval) { charInterval = interval; }
 
+    /// <summary>逐字间隔（只读暴露，供外部同步色块节奏）</summary>
+    public float CharInterval => charInterval;
+
+    /// <summary>
+    /// 停止当前正在运行的逐字协程（不清除已显示的字符）
+    /// 供外部在接管逐字驱动权时调用
+    /// </summary>
+    public void CancelCharReveal()
+    {
+        bool wasActive = _charRevealCoroutine != null;
+        int maxVis = CurrentText != null ? CurrentText.maxVisibleCharacters : -1;
+        if (_charRevealCoroutine != null)
+        {
+            StopCoroutine(_charRevealCoroutine);
+            _charRevealCoroutine = null;
+        }
+        // 协程在 StartCoroutine 同帧内已同步执行到第一个 yield（char[0] 已可见）
+        // 必须归零，让 Sequence 完全接管逐字显示的控制权
+        var tmp = CurrentText;
+        if (tmp != null) tmp.maxVisibleCharacters = 0;
+        Debug.Log($"[CancelCharReveal] wasActive={wasActive}, maxVisible(before)={maxVis}, maxVisible(after)={CurrentText?.maxVisibleCharacters} t={Time.unscaledTime:F3}");
+    }
+
+    /// <summary>
+    /// 让当前活动 TMP 显示第 charIndex 个字符（maxVisibleCharacters = charIndex + 1）
+    /// 由外部 Sequence InsertCallback 驱动，实现精确时序同步
+    /// </summary>
+    public void RevealChar(int charIndex)
+    {
+        var tmp = CurrentText;
+        if (tmp == null)
+        {
+            Debug.LogWarning($"[RevealChar] char[{charIndex}]: CurrentText 为 null！_currentIsA={_currentIsA}");
+            return;
+        }
+        tmp.maxVisibleCharacters = charIndex + 1;
+        Debug.Log($"[RevealChar] char[{charIndex}] maxVisible={charIndex + 1} text='{tmp.text}' t={Time.unscaledTime:F3}s");
+    }
+
     public void ApplyStyle(Color shadowColor, float fontSize)
     {
         _pendingShadowColor = shadowColor;
@@ -164,6 +203,7 @@ public class SpeakerNameController : MonoBehaviour
         }
 
         _charRevealCoroutine = StartCoroutine(CharRevealCoroutine(current));
+        Debug.Log($"[ShowImmediate] coroutine启动后 maxVisible={current.maxVisibleCharacters} text='{current.text}' t={Time.unscaledTime:F3}");
     }
 
     /// <summary>

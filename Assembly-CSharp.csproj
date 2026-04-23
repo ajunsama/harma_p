@@ -53,6 +53,7 @@
     <Compile Include="Assets\Scripts\LevelSystem\CameraFixedObject.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryImageTemplate.cs" />
     <Compile Include="Assets\Scripts\Enemy.cs" />
+    <Compile Include="Assets\Scripts\UI\AvatarBarController.cs" />
     <Compile Include="Assets\Scripts\EnemySimpleAI2D.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\InfiniteScrollBackground.cs" />
     <Compile Include="Assets\Scripts\EnemyAttackCollider.cs" />
@@ -67,6 +68,7 @@
     <Compile Include="Assets\Scripts\MuscleP_AI_Movement.cs" />
     <Compile Include="Assets\Scripts\PlayerAttack.cs" />
     <Compile Include="Assets\Scripts\UI\TMPLongShadow.cs" />
+    <Compile Include="Assets\Scripts\UI\FollowWorldAnchor.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\LevelData.cs" />
     <Compile Include="Assets\Scripts\StorySystem\EnemyKillStoryFlag.cs" />
     <Compile Include="Assets\Scripts\PlayerHP.cs" />

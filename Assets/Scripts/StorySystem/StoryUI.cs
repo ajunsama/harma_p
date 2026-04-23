@@ -35,6 +35,10 @@ public class StoryUI : MonoBehaviour
     [Tooltip("右侧头像Image")]
     public Image avatarRight;
 
+    [Header("说话者标识图")]
+    [Tooltip("左侧说话者标识图（放在 AvatarBarLeft 内利用 Mask 裁切，配合 FollowWorldAnchor 保持位置固定）")]
+    public Image leftSpeakerIcon;
+
     [Header("图片展示区")]
     [Tooltip("图片展示区域的根节点")]
     public GameObject imageDisplayRoot;
@@ -56,8 +60,11 @@ public class StoryUI : MonoBehaviour
     [Tooltip("对话框特效控制器（可选，色块入场/换边特效）")]
     public DialogBoxEffectController effectController;
 
-    [Tooltip("非活跃说话者的暗化颜色")]
-    public Color inactiveSpeakerColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+    [Tooltip("非活跃说话者的暗化遮罩颜色（半透明黑色）")]
+    public Color inactiveDimColor = new Color(0f, 0f, 0f, 0.6f);
+
+    [Tooltip("角色背景条控制器（可选，管理头像后方的彩色背景条）")]
+    public AvatarBarController avatarBarController;
 
     private CanvasGroup _canvasGroup;
     private Coroutine _typewriterCoroutine;
@@ -75,6 +82,11 @@ public class StoryUI : MonoBehaviour
     private Vector2 _avatarLeftOriginalPos;
     private Vector2 _avatarCenterOriginalPos;
     private Vector2 _avatarRightOriginalPos;
+
+    // 头像暗化遮罩（运行时自动创建的半透明黑色 Image，覆盖在头像上方）
+    private Image _avatarLeftOverlay;
+    private Image _avatarCenterOverlay;
+    private Image _avatarRightOverlay;
 
     /// <summary>
     /// 文字是否正在打字中
@@ -118,6 +130,11 @@ public class StoryUI : MonoBehaviour
 
         // 确保头像在对话框后面渲染（sibling index 越小越先渲染，即在后面）
         EnsureAvatarsBehindDialogueBox();
+
+        // 为每个头像创建暗化遮罩子物体
+        _avatarLeftOverlay = CreateDimOverlay(avatarLeft, "LeftDimOverlay");
+        _avatarCenterOverlay = CreateDimOverlay(avatarCenter, "CenterDimOverlay");
+        _avatarRightOverlay = CreateDimOverlay(avatarRight, "RightDimOverlay");
     }
 
     /// <summary>
@@ -137,6 +154,12 @@ public class StoryUI : MonoBehaviour
         HideAllAvatars();
         HideImage();
         ClearContent();
+
+        if (avatarBarController != null)
+            avatarBarController.HideAll();
+
+        // 重新确保渲染层级：背景条 < 头像 < 对话框
+        EnsureAvatarsBehindDialogueBox();
     }
 
     /// <summary>
@@ -235,6 +258,10 @@ public class StoryUI : MonoBehaviour
         // 同步色块背景颜色（仅在没有动画播放时直接更新）
         if (effectController != null && !effectController.IsPlaying)
             effectController.SetupBackground(style.dialogueBoxColor);
+
+        // 同步背景条颜色
+        if (avatarBarController != null)
+            avatarBarController.SetColor(style.dialogueBoxColor);
     }
 
     /// <summary>
@@ -412,12 +439,26 @@ public class StoryUI : MonoBehaviour
         bool isRight = _currentSpeakerSide == "right";
         bool isCenter = _currentSpeakerSide == "center";
 
+        // 头像始终保持原色，通过遮罩控制暗化
         if (avatarLeft != null && avatarLeft.gameObject.activeSelf)
-            avatarLeft.color = isLeft ? Color.white : inactiveSpeakerColor;
+            avatarLeft.color = Color.white;
         if (avatarRight != null && avatarRight.gameObject.activeSelf)
-            avatarRight.color = isRight ? Color.white : inactiveSpeakerColor;
+            avatarRight.color = Color.white;
         if (avatarCenter != null && avatarCenter.gameObject.activeSelf)
-            avatarCenter.color = isCenter ? Color.white : inactiveSpeakerColor;
+            avatarCenter.color = Color.white;
+
+        // 非说话者：显示暗化遮罩；说话者：隐藏遮罩
+        SetDimOverlay(_avatarLeftOverlay, !isLeft && avatarLeft != null && avatarLeft.gameObject.activeSelf);
+        SetDimOverlay(_avatarRightOverlay, !isRight && avatarRight != null && avatarRight.gameObject.activeSelf);
+        SetDimOverlay(_avatarCenterOverlay, !isCenter && avatarCenter != null && avatarCenter.gameObject.activeSelf);
+
+        // 左侧说话者标识图：左边说话时渐显，否则渐隐
+        if (leftSpeakerIcon != null)
+        {
+            leftSpeakerIcon.DOKill();
+            float targetAlpha = isLeft ? 1f : 0f;
+            leftSpeakerIcon.DOFade(targetAlpha, fadeTime).SetUpdate(true);
+        }
 
         // 切换对话框形状：左边说话者=原始形状，右边说话者=镜像形状
         UpdateDialogueBoxShape(isRight);
@@ -499,15 +540,41 @@ public class StoryUI : MonoBehaviour
         if (_canvasGroup != null)
             _canvasGroup.alpha = 1f;
 
-        // 入场前设置说话者状态：灰化非活跃头像 + 对话框形状
+        // 入场前设置说话者状态：暗化遮罩 + 对话框形状
         _currentSpeakerSide = firstSpeakerIsLeft ? "left" : "right";
-        Color leftColor = firstSpeakerIsLeft ? Color.white : inactiveSpeakerColor;
-        Color rightColor = firstSpeakerIsLeft ? inactiveSpeakerColor : Color.white;
+
+        // 入场时头像颜色始终为白色，通过遮罩暗化非活跃方
+        Color leftColor = Color.white;
+        Color rightColor = Color.white;
+
+        // 入场前先设置暗化遮罩状态
+        SetDimOverlay(_avatarLeftOverlay, !firstSpeakerIsLeft);
+        SetDimOverlay(_avatarRightOverlay, firstSpeakerIsLeft);
+
+        // 左侧说话者标识图：入场时根据说话者立即设置透明度（不做动画）
+        if (leftSpeakerIcon != null)
+        {
+            var c = leftSpeakerIcon.color;
+            leftSpeakerIcon.color = new Color(c.r, c.g, c.b, firstSpeakerIsLeft ? 1f : 0f);
+        }
 
         // 对话框形状立即设置（不播放变形动画）
         var irregularBox = dialogueBoxImage as IrregularDialogBox;
         if (irregularBox != null)
             irregularBox.MirrorProgress = firstSpeakerIsLeft ? 0f : 1f;
+
+        // 背景条：设置初始颜色和角度
+        if (avatarBarController != null)
+        {
+            if (animator != null)
+                avatarBarController.SetSyncEase(animator.characterEntranceEase);
+            avatarBarController.Setup(entranceColor, firstSpeakerIsLeft);
+            // 强制背景条排在最底层（sibling index 最小 = 最先渲染 = 最后面）
+            if (avatarBarController.leftBar != null)
+                avatarBarController.leftBar.transform.SetAsFirstSibling();
+            if (avatarBarController.rightBar != null)
+                avatarBarController.rightBar.transform.SetSiblingIndex(1);
+        }
 
         // 等待背景模糊等效果先生效
         if (entranceDelay > 0f)
@@ -516,20 +583,37 @@ public class StoryUI : MonoBehaviour
         // 角色入场（不等待完成，与色块动画并行）
         RectTransform leftRT = avatarLeft != null ? avatarLeft.rectTransform : null;
         RectTransform rightRT = avatarRight != null ? avatarRight.rectTransform : null;
-        Coroutine entranceCoroutine = animator.PlayFullEntrance(leftRT, rightRT, leftColor, rightColor);
+        RectTransform leftBarRT = avatarBarController != null && avatarBarController.leftBar != null
+            ? avatarBarController.leftBar.rectTransform : null;
+        RectTransform rightBarRT = avatarBarController != null && avatarBarController.rightBar != null
+            ? avatarBarController.rightBar.rectTransform : null;
+        Coroutine entranceCoroutine = animator.PlayFullEntrance(
+            leftRT, rightRT, leftColor, rightColor, leftBarRT, rightBarRT);
 
         // 色块入场特效与头像入场同时启动
         Sequence entranceSeq = null;
         if (effectController != null)
         {
-            // 将名称逐字出现的间隔同步为色块淡入间隔
-            if (speakerNameController != null)
-                speakerNameController.SyncCharInterval(effectController.fadeInInterval);
+            float charInterval = speakerNameController != null ? speakerNameController.CharInterval : -1f;
+            Debug.Log($"[Entrance] charInterval={charInterval:F3}, speakerName='{speakerName}'");
 
-            entranceSeq = effectController.PlayEntrance(speakerName, entranceColor, firstSpeakerIsLeft);
-
-            // 在色块入场的同时启动名称逐字出现（并行而非串行）
+            // 先以无动画方式设置名称（设置文本/位置/alpha，maxVisibleCharacters=0）
             SetSpeakerName(speakerName, firstSpeakerIsLeft, false);
+            // ShowImmediate 内部启动了协程逐字显示，将其终止，改由 Sequence 驱动
+            speakerNameController?.CancelCharReveal();
+
+            // 构建 Phase1 callbacks：每个色块出现时，让对应字符可见
+            int nameLen = string.IsNullOrEmpty(speakerName) ? 0 : speakerName.Length;
+            System.Action[] phase1Callbacks = new System.Action[nameLen];
+            for (int ci = 0; ci < nameLen; ci++)
+            {
+                int captured = ci;
+                float expectedTime = charInterval > 0f ? charInterval * captured : effectController.fadeInInterval * captured;
+                Debug.Log($"[Entrance] 注册 callback: char[{captured}] 预计触发时刻 t={expectedTime:F3}s");
+                phase1Callbacks[captured] = () => speakerNameController?.RevealChar(captured);
+            }
+
+            entranceSeq = effectController.PlayEntrance(speakerName, entranceColor, firstSpeakerIsLeft, charInterval, phase1Callbacks);
         }
 
         // 等待头像入场和色块入场中较长的完成
@@ -573,6 +657,16 @@ public class StoryUI : MonoBehaviour
 
         // 启动形状变形（与色块动画同步）
         HighlightSpeaker(newSide);
+
+        // 背景条换边动画（角度旋转 + 颜色变化，与其他动画并行）
+        if (avatarBarController != null)
+        {
+            if (syncDuration > 0f)
+                avatarBarController.SetSyncDuration(syncDuration);
+            if (animator != null)
+                avatarBarController.SetSyncEase(animator.characterEntranceEase);
+            avatarBarController.PlaySwitchTransition(toColor, newSide?.ToLower() == "left");
+        }
 
         // 等待色块动画完成（变形协程独立运行，会自然结束）
         if (switchSeq != null)
@@ -687,6 +781,7 @@ public class StoryUI : MonoBehaviour
 
     /// <summary>
     /// 确保头像在对话框后面渲染（sibling index 更小 = 更早渲染 = 在后面）
+    /// 同时确保背景条在头像后面渲染
     /// </summary>
     void EnsureAvatarsBehindDialogueBox()
     {
@@ -708,6 +803,71 @@ public class StoryUI : MonoBehaviour
                     avatar.transform.SetSiblingIndex(dlgIdx);
                 }
             }
+        }
+
+        // 确保背景条在头像后面（sibling index 更小）
+        if (avatarBarController != null)
+        {
+            Image[] bars = { avatarBarController.leftBar, avatarBarController.rightBar };
+            foreach (var bar in bars)
+            {
+                if (bar == null || bar.transform.parent != dlgParent) continue;
+                // 找到所有头像中最小的 sibling index，背景条要排在它前面
+                int minAvatarIdx = int.MaxValue;
+                foreach (var avatar in avatars)
+                {
+                    if (avatar != null && avatar.transform.parent == dlgParent)
+                        minAvatarIdx = Mathf.Min(minAvatarIdx, avatar.transform.GetSiblingIndex());
+                }
+                if (minAvatarIdx < int.MaxValue && bar.transform.GetSiblingIndex() > minAvatarIdx)
+                {
+                    bar.transform.SetSiblingIndex(minAvatarIdx);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 为头像创建暗化遮罩子物体（使用相同 sprite 的半透明黑色 Image，只暗化有像素的区域）
+    /// </summary>
+    Image CreateDimOverlay(Image avatar, string name)
+    {
+        if (avatar == null) return null;
+
+        GameObject overlayGO = new GameObject(name, typeof(RectTransform), typeof(Image));
+        overlayGO.transform.SetParent(avatar.transform, false);
+
+        RectTransform rt = overlayGO.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        Image overlayImg = overlayGO.GetComponent<Image>();
+        overlayImg.color = inactiveDimColor;
+        overlayImg.raycastTarget = false;
+
+        overlayGO.SetActive(false);
+        return overlayImg;
+    }
+
+    /// <summary>
+    /// 设置暗化遮罩的显隐，并同步 sprite 使其与头像形状一致
+    /// </summary>
+    void SetDimOverlay(Image overlay, bool show)
+    {
+        if (overlay == null) return;
+        overlay.gameObject.SetActive(show);
+        if (show)
+        {
+            // 取父级头像的 sprite，遮罩只在有像素的地方生效
+            Image parentAvatar = overlay.transform.parent?.GetComponent<Image>();
+            if (parentAvatar != null && parentAvatar.sprite != null)
+            {
+                overlay.sprite = parentAvatar.sprite;
+                overlay.type = parentAvatar.type;
+            }
+            overlay.color = inactiveDimColor;
         }
     }
 }

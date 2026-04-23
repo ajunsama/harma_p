@@ -193,7 +193,9 @@ public class DialogBoxEffectController : MonoBehaviour
     /// <param name="speakerName">说话者名称，长度决定 Phase1 色块数</param>
     /// <param name="baseColor">色块颜色</param>
     /// <param name="fromLeft">第一个说话者在左侧</param>
-    public Sequence PlayEntrance(string speakerName, Color baseColor, bool fromLeft)
+    /// <param name="intervalOverride">Phase1 色块淡入间隔覆盖值（秒），≤0 则使用 fadeInInterval</param>
+    /// <param name="phase1ShowCallbacks">Phase1 每个色块出现时额外触发的 callback（长度可小于 phase1Count），用于同步字符显示</param>
+    public Sequence PlayEntrance(string speakerName, Color baseColor, bool fromLeft, float intervalOverride = -1f, System.Action[] phase1ShowCallbacks = null)
     {
         KillCurrentSequence();
         _baseColor = baseColor;
@@ -209,12 +211,22 @@ public class DialogBoxEffectController : MonoBehaviour
 
         Sequence seq = DOTween.Sequence().SetUpdate(true);
 
+        float interval = intervalOverride > 0f ? intervalOverride : fadeInInterval;
+        float phase2Start = interval * phase1Count + phase1To2Gap;
+        Debug.Log($"[PlayEntrance] fadeInDuration={fadeInDuration:F3}, interval={interval:F3}, phase1Count={phase1Count}, t={Time.unscaledTime:F3}");
+
         // ---- Phase 1: 从说话者侧依次淡入（色块在最终排列位置，仅 alpha 变化） ----
+        // index 0 为左溢出块、index _visibleTileCount-1 为右溢出块，圆心在容器外会被 Mask 裁切
+        // fromLeft:  从 index 1 开始向右，跳过左溢出块
+        // fromRight: 从 index _visibleTileCount-2 开始向左，跳过右溢出块
+        int phase1Start = fromLeft ? 1 : (_visibleTileCount - 2);
+        int phase1Step  = fromLeft ? 1 : -1;
+        bool[] usedInPhase1 = new bool[_visibleTileCount];
+
         for (int i = 0; i < phase1Count; i++)
         {
-            // fromLeft: 从左往右 index 0,1,2...
-            // fromRight: 从右往左 index N-1,N-2,...
-            int blockIdx = fromLeft ? i : (_visibleTileCount - 1 - i);
+            int blockIdx = Mathf.Clamp(phase1Start + i * phase1Step, 0, _visibleTileCount - 1);
+            usedInPhase1[blockIdx] = true;
             Image block = _blockPool[blockIdx];
             RectTransform rt = block.rectTransform;
 
@@ -227,43 +239,60 @@ public class DialogBoxEffectController : MonoBehaviour
             c.a = 0f;
             block.color = c;
 
-            float delay = fadeInInterval * i;
-            seq.Insert(delay, block.DOFade(1f, fadeInDuration).SetEase(Ease.Linear));
+            float delay = interval * i;
+            Debug.Log($"[PlayEntrance] Phase1 block[{i}] blockIdx={blockIdx} delay={delay:F3}s interval={interval:F3}");
+            var fadeTween = block.DOFade(1f, fadeInDuration).SetEase(Ease.Linear);
+            if (i == 0)
+            {
+                var b0 = block;
+                fadeTween
+                    .OnStart(() => Debug.Log($"[PlayEntrance] block[0] DOFade OnStart alpha={b0.color.a:F3} t={Time.unscaledTime:F3}"))
+                    .OnComplete(() => Debug.Log($"[PlayEntrance] block[0] DOFade OnComplete alpha={b0.color.a:F3} t={Time.unscaledTime:F3}"));
+            }
+            seq.Insert(delay, fadeTween);
+
+            // 同步触发外部 callback（字符显示）
+            if (phase1ShowCallbacks != null && i < phase1ShowCallbacks.Length && phase1ShowCallbacks[i] != null)
+            {
+                int captured = i;
+                System.Action cb = phase1ShowCallbacks[captured];
+                seq.InsertCallback(delay, () =>
+                {
+                    Debug.Log($"[PlayEntrance] callback触发: char[{captured}] 实际时刻 t={Time.unscaledTime:F3}s");
+                    cb();
+                });
+            }
         }
 
-        // ---- Phase 2: 剩余色块从对话框右边界外逐个飞入到最终排列位置 ----
-        float phase2Start = fadeInInterval * phase1Count + phase1To2Gap;
+        // ---- Phase 2: 剩余色块（含两个溢出块）从对话框右边界外逐个飞入 ----
         float containerWidth = (blockContainer != null && blockContainer.rect.width > 0f)
             ? blockContainer.rect.width : 800f;
         // 所有飞入色块的起始X = 容器右边界外（containerWidth/2 + 色块宽度留出余量）
         float flyStartX = containerWidth * 0.5f + blockWidth;
 
-        for (int i = 0; i < phase2Count; i++)
+        int phase2Idx = 0;
+        for (int bi = 0; bi < _visibleTileCount; bi++)
         {
-            int blockIdx;
-            if (fromLeft)
-                blockIdx = phase1Count + i;
-            else
-                blockIdx = _visibleTileCount - 1 - phase1Count - i;
-            blockIdx = Mathf.Clamp(blockIdx, 0, _visibleTileCount - 1);
+            if (usedInPhase1[bi]) continue;
 
+            int blockIdx = bi;
             Image block = _blockPool[blockIdx];
             RectTransform rt = block.rectTransform;
 
             float finalX = _tilePositionsX[blockIdx];
-
             rt.sizeDelta = new Vector2(blockWidth, blockHeight);
             rt.localRotation = Quaternion.Euler(0, 0, _currentRotation);
             rt.anchoredPosition = new Vector2(flyStartX, 0f);
-
             block.gameObject.SetActive(true);
             block.color = _baseColor;
 
             // 幂曲线交错：t ∈ [0,1] → t^power，power<1 时前疏后密
-            float t = phase2Count > 1 ? (float)i / (phase2Count - 1) : 0f;
+            float t = phase2Count > 1 ? (float)phase2Idx / (phase2Count - 1) : 0f;
             float staggerT = Mathf.Pow(t, flyInStaggerPower);
             float delay = phase2Start + staggerT * flyInStaggerTotal;
             seq.Insert(delay, rt.DOAnchorPosX(finalX, flyInDuration).SetEase(flyInEase));
+
+            phase2Idx++;
         }
 
         // ---- StripeOverlay 从右边界外滑入（与色块飞入同步） ----

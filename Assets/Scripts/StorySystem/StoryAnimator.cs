@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -43,23 +42,29 @@ public class StoryAnimator : MonoBehaviour
     // ==============================
 
     /// <summary>
-    /// 播放完整入场动画：角色 + 对话框同时入场
+    /// 播放完整入场动画：角色 + 背景条 + 对话框同时入场
     /// 所有 RT 由调用方传入
     /// </summary>
     public Coroutine PlayFullEntrance(RectTransform leftRT, RectTransform rightRT,
-        Color leftTargetColor, Color rightTargetColor)
+        Color leftTargetColor, Color rightTargetColor,
+        RectTransform leftBarRT = null, RectTransform rightBarRT = null)
     {
-        return StartCoroutine(FullEntranceCoroutine(leftRT, rightRT, leftTargetColor, rightTargetColor));
+        return StartCoroutine(FullEntranceCoroutine(leftRT, rightRT, leftTargetColor, rightTargetColor, leftBarRT, rightBarRT));
     }
 
     IEnumerator FullEntranceCoroutine(RectTransform leftRT, RectTransform rightRT,
-        Color leftTargetColor, Color rightTargetColor)
+        Color leftTargetColor, Color rightTargetColor,
+        RectTransform leftBarRT, RectTransform rightBarRT)
     {
         // 收集需要入场的角色
         Image leftImg = leftRT != null ? leftRT.GetComponent<Image>() : null;
         Image rightImg = rightRT != null ? rightRT.GetComponent<Image>() : null;
         bool hasLeft = leftImg != null && leftImg.sprite != null;
         bool hasRight = rightImg != null && rightImg.sprite != null;
+
+        // 背景条
+        bool hasLeftBar = leftBarRT != null;
+        bool hasRightBar = rightBarRT != null;
 
         // 1. 激活角色，但先设为透明（避免在布局位置闪现一帧）
         if (hasLeft)
@@ -71,6 +76,29 @@ public class StoryAnimator : MonoBehaviour
         {
             rightRT.gameObject.SetActive(true);
             rightImg.color = new Color(rightImg.color.r, rightImg.color.g, rightImg.color.b, 0f);
+        }
+        // 背景条激活但透明（等一帧后恢复原色，避免布局位置闪现）
+        Color leftBarOrigColor = Color.clear;
+        Color rightBarOrigColor = Color.clear;
+        if (hasLeftBar)
+        {
+            leftBarRT.gameObject.SetActive(true);
+            var barImg = leftBarRT.GetComponent<Image>();
+            if (barImg != null)
+            {
+                leftBarOrigColor = barImg.color;
+                barImg.color = new Color(barImg.color.r, barImg.color.g, barImg.color.b, 0f);
+            }
+        }
+        if (hasRightBar)
+        {
+            rightBarRT.gameObject.SetActive(true);
+            var barImg = rightBarRT.GetComponent<Image>();
+            if (barImg != null)
+            {
+                rightBarOrigColor = barImg.color;
+                barImg.color = new Color(barImg.color.r, barImg.color.g, barImg.color.b, 0f);
+            }
         }
 
         // 2. 等一帧，让 Canvas 布局系统完成重建
@@ -86,6 +114,15 @@ public class StoryAnimator : MonoBehaviour
         {
             SetupAndStartEntrance(rightRT, rightImg,
                 rightStartOffset, rightTargetColor);
+        }
+        // 背景条跟随对应侧头像一起滑入（恢复原色，含透明度）
+        if (hasLeftBar)
+        {
+            SetupAndStartBarEntrance(leftBarRT, leftStartOffset, leftBarOrigColor);
+        }
+        if (hasRightBar)
+        {
+            SetupAndStartBarEntrance(rightBarRT, rightStartOffset, rightBarOrigColor);
         }
 
         // 4. 等待角色入场动画完成
@@ -103,6 +140,25 @@ public class StoryAnimator : MonoBehaviour
         rt.DOKill();
 
         rt.DOAnchorPos(finalPos, characterEntranceDuration)
+            .SetEase(characterEntranceEase)
+            .SetUpdate(true);
+    }
+
+    /// <summary>
+    /// 背景条入场：从偏移位置滑入，立即恢复原始颜色（含透明度），不做淡入动画
+    /// </summary>
+    void SetupAndStartBarEntrance(RectTransform barRT, Vector2 startOffset, Color originalColor)
+    {
+        Vector2 finalPos = barRT.anchoredPosition;
+        barRT.anchoredPosition = finalPos + startOffset;
+
+        // 立即恢复 Setup 中设置的颜色（含 barAlpha 透明度），不做淡入动画
+        var barImg = barRT.GetComponent<Image>();
+        if (barImg != null)
+            barImg.color = originalColor;
+
+        barRT.DOKill();
+        barRT.DOAnchorPos(finalPos, characterEntranceDuration)
             .SetEase(characterEntranceEase)
             .SetUpdate(true);
     }
