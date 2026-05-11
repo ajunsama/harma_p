@@ -64,6 +64,13 @@ public class DialogBoxEffectController : MonoBehaviour
     [Tooltip("相邻色块淡入的间隔时间")]
     public float fadeInInterval = 0.06f;
 
+    [Header("入场动画 - Phase1: 对齐偏移与色块宽度")]
+    [Tooltip("首个 Phase1 色块的边界对齐 DialogBox 边界后的 X 偏移（像素，正值右移）\nfromLeft = 左边界对齐容器左边界，fromRight = 右边界对齐容器右边界")]
+    public float phase1AlignOffsetX = 0f;
+
+    [Tooltip("Phase1 色块高度/厚度（像素）；0 表示与 blockHeight 相同")]
+    public float phase1BlockHeight = 0f;
+
     [Header("入场动画 - Phase2: 色块飞入")]
     [Tooltip("飞入持续时间")]
     public float flyInDuration = 0.35f;
@@ -205,6 +212,49 @@ public class DialogBoxEffectController : MonoBehaviour
         int phase1Count = Mathf.Clamp(nameLen, 1, _visibleTileCount);
         int phase2Count = _visibleTileCount - phase1Count;
 
+        // ---- Phase1 高度、间距与边界对齐（独立于 Phase2）----
+        // p1Height: Phase1 色块高度/厚度，独立于 blockHeight；Phase2 仍用 blockHeight
+        float p1Height = phase1BlockHeight > 0f ? phase1BlockHeight : blockHeight;
+        float[] p1PositionsX;
+        {
+            float angleRad = _currentRotation * Mathf.Deg2Rad;
+            float sinA = Mathf.Abs(Mathf.Sin(angleRad));
+            // Phase1 无缝间距：基于 p1Height，保证旋转后无缝衔接
+            float p1Spacing = sinA > 0.01f ? p1Height / sinA : p1Height;
+            // 旋转矩形视觉半宽：(W*|cosθ| + H*|sinθ|) / 2
+            float halfExtent = (blockWidth * Mathf.Abs(Mathf.Cos(angleRad)) + p1Height * sinA) * 0.5f;
+            float containerHalfWidth = (blockContainer != null && blockContainer.rect.width > 0f)
+                ? blockContainer.rect.width * 0.5f : 400f;
+            // 首个 Phase1 色块中心X：左/右视觉边界对齐容器对应边界 + 偏移
+            float p1StartX = fromLeft
+                ? (-containerHalfWidth + halfExtent + phase1AlignOffsetX)
+                : ( containerHalfWidth - halfExtent + phase1AlignOffsetX);
+            // 依次生成 phase1Count 个位置，方向朝容器内侧延伸
+            p1PositionsX = new float[phase1Count];
+            for (int i = 0; i < phase1Count; i++)
+                p1PositionsX[i] = fromLeft ? (p1StartX + i * p1Spacing) : (p1StartX - i * p1Spacing);
+        }
+
+        // ---- 平移 _tilePositionsX，让 Phase2 紧邻 Phase1 末尾无缝衔接 ----
+        // Phase1 末尾块右/左边界 → Phase2 首个相邻块左/右边界精确对齐
+        {
+            float sinA2 = Mathf.Abs(Mathf.Sin(_currentRotation * Mathf.Deg2Rad));
+            // 过渡间距：半个 p1Height 块 + 半个 blockHeight 块
+            float transSpacing = sinA2 > 0.01f
+                ? (p1Height + blockHeight) / (2f * sinA2)
+                : (p1Height + blockHeight) * 0.5f;
+            float lastP1X = p1PositionsX[phase1Count - 1];
+            float firstP2DesiredX = fromLeft ? (lastP1X + transSpacing) : (lastP1X - transSpacing);
+            // Phase1 占用的是从 phase1Start 延伸 phase1Count 个块
+            // 紧邻的 Phase2 块索引：fromLeft = phase1Count+1，fromRight = visibleTileCount-2-phase1Count
+            int adjIdx = Mathf.Clamp(
+                fromLeft ? (phase1Count + 1) : (_visibleTileCount - 2 - phase1Count),
+                0, _visibleTileCount - 1);
+            float p2Shift = firstP2DesiredX - _tilePositionsX[adjIdx];
+            for (int i = 0; i < _visibleTileCount; i++)
+                _tilePositionsX[i] += p2Shift;
+        }
+
         // 先隐藏所有色块，激活条纹层（stencil 保证无色块时条纹不可见）
         HideAllBlocks();
         ActivateStripeOverlay(true);
@@ -230,9 +280,9 @@ public class DialogBoxEffectController : MonoBehaviour
             Image block = _blockPool[blockIdx];
             RectTransform rt = block.rectTransform;
 
-            rt.sizeDelta = new Vector2(blockWidth, blockHeight);
+            rt.sizeDelta = new Vector2(blockWidth, p1Height);
             rt.localRotation = Quaternion.Euler(0, 0, _currentRotation);
-            rt.anchoredPosition = new Vector2(_tilePositionsX[blockIdx], 0f);
+            rt.anchoredPosition = new Vector2(p1PositionsX[i], 0f);
 
             block.gameObject.SetActive(true);
             Color c = _baseColor;

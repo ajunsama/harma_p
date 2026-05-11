@@ -49,7 +49,7 @@ Material:
     - _StencilOp: 0
     - _StencilReadMask: 255
     - _StencilWriteMask: 255
-    - _StripeAngle: 675
+    - _StripeAngle: 225
     - _StripeGap: 80
     - _StripeWidth: 80
     - _UseUIAlphaClip: 0
@@ -57,6 +57,6 @@ Material:
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
-    - _StripeColor: {r: 1, g: 1, b: 1, a: 0.5019608}
+    - _StripeColor: {r: 1, g: 1, b: 1, a: 0.1254902}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
