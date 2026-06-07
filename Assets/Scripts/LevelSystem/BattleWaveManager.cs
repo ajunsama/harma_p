@@ -253,6 +253,13 @@ public class BattleWaveManager : MonoBehaviour
             if (playerTransform != null) simpleAI.player = playerTransform;
             simpleAI.SetEntranceTarget(targetPos);
         }
+
+        PunkPThrowAttack punkAI = enemy.GetComponent<PunkPThrowAttack>();
+        if (punkAI != null)
+        {
+            if (playerTransform != null) punkAI.player = playerTransform;
+            punkAI.SetEntranceTarget(targetPos);
+        }
         
         currentWaveEnemies.Add(enemy);
         

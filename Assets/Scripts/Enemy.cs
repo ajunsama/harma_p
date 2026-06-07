@@ -21,6 +21,8 @@ public class Enemy : MonoBehaviour
     MeshRenderer meshRenderer;      // Spine使用MeshRenderer
     EnemySimpleAI2D ai;
     MuscleP_AI_Movement muscleAi;
+    PunkPThrowAttack punkAi;
+    FatP_AI_Movement fatAi;
 
     public bool IsHit { get; private set; }
 
@@ -33,6 +35,8 @@ public class Enemy : MonoBehaviour
         meshRenderer = GetComponentInChildren<MeshRenderer>();
         ai = GetComponent<EnemySimpleAI2D>();
         muscleAi = GetComponent<MuscleP_AI_Movement>();
+        punkAi = GetComponent<PunkPThrowAttack>();
+        fatAi = GetComponent<FatP_AI_Movement>();
 
         // 如果没有手动指定，尝试自动获取 SkeletonAnimation
         if (skeletonAnimation == null)
@@ -129,5 +133,13 @@ public class Enemy : MonoBehaviour
     {
         if (ai != null) ai.isKnockedBack = value;
         if (muscleAi != null) muscleAi.isKnockedBack = value;
+        if (punkAi != null) punkAi.isKnockedBack = value;
+        if (fatAi != null)
+        {
+            if (value)
+                fatAi.OnHit();
+            else
+                fatAi.isKnockedBack = false;
+        }
     }
 }
