@@ -48,6 +48,7 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.2.5f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Editor\LevelDataJsonUtility.cs" />
     <Compile Include="Assets\Editor\StoryEditorWindow.cs" />
     <Compile Include="Assets\Editor\StoryTriggerEditor.cs" />
     <Compile Include="Assets\Editor\LevelEditorWindow.cs" />

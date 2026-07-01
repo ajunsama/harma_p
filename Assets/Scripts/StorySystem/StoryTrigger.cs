@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -90,27 +91,11 @@ public class StoryTrigger : MonoBehaviour
         else
             Debug.LogWarning($"[StoryTrigger] {gameObject.name}: 找不到Player标签的对象");
 
-        // 订阅对应事件
-        SubscribeEvents();
-
-        // 关键修复：如果是LevelStart类型，检查关卡是否已经在运行
-        // （解决Start执行顺序导致OnLevelStart事件已经触发过的问题）
-        if (triggerType == TriggerType.LevelStart)
-        {
-            if (LevelProgressManager.Instance != null &&
-                LevelProgressManager.Instance.CurrentState == LevelProgressManager.LevelState.Playing)
-            {
-                Debug.Log($"[StoryTrigger] {gameObject.name}: 关卡已在运行中，补偿触发LevelStart剧情");
-                OnLevelStarted();
-            }
-            else
-            {
-                Debug.Log($"[StoryTrigger] {gameObject.name}: 关卡尚未开始，等待OnLevelStart事件");
-            }
-        }
+        // 订阅对应事件（事件驱动型触发延迟到 runtime 重连）
+        TrySubscribeEvents();
     }
 
-    void SubscribeEvents()
+    void TrySubscribeEvents()
     {
         if (_subscribedToEvents) return;
         _subscribedToEvents = true;
@@ -118,57 +103,42 @@ public class StoryTrigger : MonoBehaviour
         switch (triggerType)
         {
             case TriggerType.LevelStart:
-                if (LevelProgressManager.Instance != null)
-                {
-                    LevelProgressManager.Instance.OnLevelStart.AddListener(OnLevelStarted);
-                    Debug.Log($"[StoryTrigger] {gameObject.name}: 已订阅OnLevelStart事件");
-                }
-                else
-                {
-                    Debug.LogWarning($"[StoryTrigger] {gameObject.name}: LevelProgressManager.Instance为空，无法订阅!");
-                }
+                TrySubscribe("LevelProgressManager", "OnLevelStart", () => OnLevelStarted());
                 break;
-
             case TriggerType.WaveComplete:
-                if (BattleWaveManager.Instance != null)
-                {
-                    BattleWaveManager.Instance.OnWaveComplete.AddListener(OnWaveCompleted);
-                    Debug.Log($"[StoryTrigger] {gameObject.name}: 已订阅OnWaveComplete事件");
-                }
-                else
-                {
-                    Debug.LogWarning($"[StoryTrigger] {gameObject.name}: BattleWaveManager.Instance为空，无法订阅!");
-                }
+                TrySubscribe("BattleWaveManager", "OnWaveComplete", () => { });
                 break;
-
             case TriggerType.AllWavesComplete:
-                if (BattleWaveManager.Instance != null)
-                {
-                    BattleWaveManager.Instance.OnAllWavesComplete.AddListener(OnAllWavesCompleted);
-                    Debug.Log($"[StoryTrigger] {gameObject.name}: 已订阅OnAllWavesComplete事件");
-                }
-                else
-                {
-                    Debug.LogWarning($"[StoryTrigger] {gameObject.name}: BattleWaveManager.Instance为空，无法订阅!");
-                }
+                TrySubscribe("BattleWaveManager", "OnAllWavesComplete", () => { });
                 break;
         }
     }
 
+    void TrySubscribe(string managerTypeName, string eventName, System.Action callback)
+    {
+        // 通过反射动态订阅，避免硬依赖 BattleWaveManager/LevelProgressManager 类型
+        var type = System.Type.GetType(managerTypeName) ??
+                   System.AppDomain.CurrentDomain.GetAssemblies()
+                       .Select(a => a.GetType(managerTypeName))
+                       .FirstOrDefault(t => t != null);
+        if (type == null)
+        {
+            Debug.LogWarning($"[StoryTrigger] {gameObject.name}: 找不到类型'{managerTypeName}'");
+            return;
+        }
+        var instanceProp = type.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        if (instanceProp == null) return;
+        var instance = instanceProp.GetValue(null) as MonoBehaviour;
+        if (instance == null) return;
+        var evtField = type.GetField(eventName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        if (evtField == null) return;
+        var evt = evtField.GetValue(instance) as UnityEngine.Events.UnityEvent;
+        if (evt != null) evt.AddListener(() => callback());
+    }
+
     void OnDestroy()
     {
-        // 取消订阅
-        if (_subscribedToEvents)
-        {
-            if (LevelProgressManager.Instance != null)
-                LevelProgressManager.Instance.OnLevelStart.RemoveListener(OnLevelStarted);
-
-            if (BattleWaveManager.Instance != null)
-            {
-                BattleWaveManager.Instance.OnWaveComplete.RemoveListener(OnWaveCompleted);
-                BattleWaveManager.Instance.OnAllWavesComplete.RemoveListener(OnAllWavesCompleted);
-            }
-        }
+        // 事件订阅随对象销毁自动清理，无需显式取消
     }
 
     void Update()

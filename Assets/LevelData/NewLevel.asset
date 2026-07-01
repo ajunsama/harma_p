@@ -15,69 +15,33 @@ MonoBehaviour:
   levelName: NewLevel
   difficulty: 1
   levelLength: 50
-  playerStartPosition: {x: -13.49, y: -1.19}
-  levelEndPositionX: 72.3
-  defaultEnemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-  battleWaves:
-  - waveName: "\u7B2C\u4E00\u6CE2"
-    triggerPositionX: 8.01
-    leftEnemyCount: 2
-    leftEnemyY: -3.33
-    rightEnemyCount: 2
-    rightEnemyY: -3.5
-    enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-    enemyYSpacing: 1
-    mustClearToProceed: 1
-    enemies:
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: -3, y: -3.83}
-      spawnDelay: 0
-      fromLeft: 1
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: -4.5, y: -2.83}
-      spawnDelay: 0.2
-      fromLeft: 1
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: 3, y: -4}
-      spawnDelay: 0
-      fromLeft: 0
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: 4.5, y: -3}
-      spawnDelay: 0.2
-      fromLeft: 0
-  - waveName: "\u6CE2\u6B212"
-    triggerPositionX: 25.33
-    leftEnemyCount: 0
-    leftEnemyY: -3.5
-    rightEnemyCount: 1
-    rightEnemyY: -3.5
-    enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-    enemyYSpacing: 1
-    mustClearToProceed: 1
-    enemies:
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: 3, y: -3.5}
-      spawnDelay: 0
-      fromLeft: 0
-  - waveName: "\u6CE2\u6B213"
-    triggerPositionX: 45.31
-    leftEnemyCount: 2
-    leftEnemyY: -3.5
-    rightEnemyCount: 1
-    rightEnemyY: -3.5
-    enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-    enemyYSpacing: 1
-    mustClearToProceed: 1
-    enemies:
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: -3, y: -4}
-      spawnDelay: 0
-      fromLeft: 1
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: -4.5, y: -3}
-      spawnDelay: 0.2
-      fromLeft: 1
-    - enemyPrefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
-      spawnOffset: {x: 3, y: -3.5}
-      spawnDelay: 0
-      fromLeft: 0
+  playerPrefab: {fileID: 1743930696149737694, guid: 77103445a5cb7cb40ace3957835b2f01, type: 3}
+  backgroundSettings:
+    mode: 0
+    singleBackground: {fileID: -9084149176029018482, guid: fcb81f9c453a6194eb812cfe80ac00ea, type: 3}
+    singleParallaxFactor: 0
+    singleSortingOrder: -10
+    parallaxLayers: []
+  playerSpawnPosition: {x: 0, y: 0}
+  playerFaceRight: 1
+  levelEndPositionX: 32.7
+  endConditions: []
+  variables:
+  - variableName: level1
+    type: 0
+    defaultValue: false
+    description: 
+  - variableName: level2
+    type: 0
+    defaultValue: false
+    description: 
+  - variableName: level3
+    type: 0
+    defaultValue: false
+    description: 
+  elements: []
+  storyTriggers: []
+  groups: []
+  enemyPrefabLibrary: []
+  itemPrefabLibrary: []
+  obstaclePrefabLibrary: []

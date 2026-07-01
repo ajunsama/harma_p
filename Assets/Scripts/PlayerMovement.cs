@@ -28,11 +28,6 @@ public class PlayerMovement : MonoBehaviour
     private float rightBound;
     private float bottomBound;
     private float topBound;
-    
-    // 战斗区域边界（由 BattleWaveManager 提供）
-    private float battleLeftBound;
-    private float battleRightBound;
-    private bool useBattleBounds = false;
 
     [Header("Spine动画")]
     [SerializeField] SkeletonAnimation skeletonAnimation;   // 拖Spine对象进来
@@ -229,15 +224,12 @@ public class PlayerMovement : MonoBehaviour
         //     effectiveRightBound = cameraX + cameraHalfWidth - 0.5f;
         // }
         
-        // [修改] 不再使用战斗区域限制玩家，只使用相机视野限制
-        /*
-        // 如果在战斗中，使用战斗区域边界（可能比屏幕更小）
-        if (BattleWaveManager.Instance != null && BattleWaveManager.Instance.IsInBattle)
+        // 战斗锁屏时限制玩家在相机视野内
+        if (LevelCameraController.IsLocked)
         {
-            effectiveLeftBound = Mathf.Max(effectiveLeftBound, BattleWaveManager.Instance.BattleLeftBound);
-            effectiveRightBound = Mathf.Min(effectiveRightBound, BattleWaveManager.Instance.BattleRightBound);
+            effectiveLeftBound = Mathf.Max(effectiveLeftBound, LevelCameraController.LockedLeftBound);
+            effectiveRightBound = Mathf.Min(effectiveRightBound, LevelCameraController.LockedRightBound);
         }
-        */
 
         Vector2 pos = rb.position + velocity * Time.fixedDeltaTime;
         if (isJumping)

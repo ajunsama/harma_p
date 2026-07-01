@@ -17,7 +17,14 @@ public class InfiniteScrollBackground : MonoBehaviour
     [Header("设置")]
     [Tooltip("背景固定Y坐标")]
     public float fixedY = 0f;
-    
+
+    [Tooltip("视差系数：0=相对相机静止, 1=与相机同步移动")]
+    [Range(0f, 1f)]
+    public float parallaxFactor = 0f;
+
+    [Tooltip("初始X偏移")]
+    public float initialX = 0f;
+
     [Header("调试")]
     [Tooltip("开启后在关键位置打印详细日志，便于排查为何不能滚动背景")] 
     public bool verboseLogging = false;
@@ -130,37 +137,23 @@ public class InfiniteScrollBackground : MonoBehaviour
             Debug.Log($"[InfiniteScrollBackground] LateUpdate status: cameraPos={cameraTransform.position}, bgPos={backgroundSprite.transform.position}, spriteWidth={spriteWidth}, fixedY={fixedY}");
         }
         
-        // 背景不移动！背景相对于世界是静止的
-        // 只需要根据相机位置，把三块背景（左、中、右）摆放到正确位置
-        // 确保相机视野内总是有背景覆盖
-        
+        // 根据视差系数移动背景：
+        // parallaxFactor=0 时背景相对世界静止（旧行为）
+        // parallaxFactor=1 时背景与相机同步移动
         float cameraX = cameraTransform.position.x;
+        float targetBgX = initialX + cameraX * parallaxFactor;
+
+        // 找到最接近目标位置的主背景 tile 位置
         float bgX = backgroundSprite.transform.position.x;
-        
-        // 计算相机相对于当前主背景中心的偏移
-        // 如果相机超出当前主背景的覆盖范围，就把主背景整体平移
-        if (cameraX > bgX + spriteWidth * 0.5f)
+        float offset = Mathf.Repeat(targetBgX - bgX + spriteWidth * 0.5f, spriteWidth) - spriteWidth * 0.5f;
+        Vector3 newPos = backgroundSprite.transform.position;
+        newPos.x = bgX + offset;
+        newPos.y = fixedY;
+        backgroundSprite.transform.position = newPos;
+
+        if (verboseLogging && Time.frameCount % 120 == 0)
         {
-            if (verboseLogging) Debug.Log($"[InfiniteScrollBackground] Camera beyond right threshold (cameraX={cameraX}, bgX={bgX}). Moving background right.");
-            // 相机在主背景右侧太远，主背景整体右移一个宽度
-            Vector3 pos = backgroundSprite.transform.position;
-            pos.x += spriteWidth;
-            backgroundSprite.transform.position = pos;
-        }
-        else if (cameraX < bgX - spriteWidth * 0.5f)
-        {
-            if (verboseLogging) Debug.Log($"[InfiniteScrollBackground] Camera beyond left threshold (cameraX={cameraX}, bgX={bgX}). Moving background left.");
-            // 相机在主背景左侧太远，主背景整体左移一个宽度
-            Vector3 pos = backgroundSprite.transform.position;
-            pos.x -= spriteWidth;
-            backgroundSprite.transform.position = pos;
-        }
-        else
-        {
-            if (verboseLogging && Time.frameCount % 120 == 0)
-            {
-                Debug.Log($"[InfiniteScrollBackground] Camera within center. No background movement needed. cameraX={cameraX}, bgX={bgX}");
-            }
+            Debug.Log($"[InfiniteScrollBackground] CameraX={cameraX}, targetBgX={targetBgX}, bgX={newPos.x}");
         }
         
         // 更新副本位置（始终在主背景左右两侧）

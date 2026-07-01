@@ -1,241 +1,342 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-/// <summary>
-/// 单个敌人的生成配置（内部使用，由波次自动生成）
-/// </summary>
-[Serializable]
-public class EnemySpawnData
+// ============================================================
+// 枚举定义
+// ============================================================
+
+public enum ElementType
 {
-    [Tooltip("敌人预制体")]
-    public GameObject enemyPrefab;
-    
-    [Tooltip("生成位置（相对于波次触发点的偏移）")]
-    public Vector2 spawnOffset;
-    
-    [Tooltip("生成延迟（秒）")]
-    public float spawnDelay = 0f;
-    
-    [Tooltip("是否从左侧进入")]
-    public bool fromLeft = false;
+    Enemy,
+    Item,
+    Obstacle
 }
 
-/// <summary>
-/// 战斗波次数据 - 简化版
-/// </summary>
-[Serializable]
-public class BattleWave
+public enum LevelVariableType
 {
-    [Tooltip("波次名称（用于编辑器显示）")]
-    public string waveName = "Wave";
-    
-    [Tooltip("触发位置X（玩家到达此位置触发波次）")]
-    public float triggerPositionX;
-    
-    [Header("左侧敌人（从屏幕左边进入）")]
-    [Tooltip("左侧敌人数量")]
-    public int leftEnemyCount = 0;
-    
-    [Tooltip("左侧敌人Y轴位置")]
-    public float leftEnemyY = -3.5f;
-    
-    [Header("右侧敌人（从屏幕右边进入）")]
-    [Tooltip("右侧敌人数量")]
-    public int rightEnemyCount = 1;
-    
-    [Tooltip("右侧敌人Y轴位置")]
-    public float rightEnemyY = -3.5f;
-    
-    [Header("敌人配置")]
-    [Tooltip("使用的敌人预制体")]
-    public GameObject enemyPrefab;
-    
-    [Tooltip("敌人之间的Y轴间隔")]
-    public float enemyYSpacing = 1.0f;
-    
-    [Header("战斗区域")]
-    [Tooltip("是否需要清除所有敌人才能继续前进")]
-    public bool mustClearToProceed = true;
-    
-    // 内部使用的敌人列表（运行时生成）
-    [HideInInspector]
-    public List<EnemySpawnData> enemies = new List<EnemySpawnData>();
-    
-    /// <summary>
-    /// 获取该波次的敌人总数
-    /// </summary>
-    public int TotalEnemyCount => leftEnemyCount + rightEnemyCount;
-    
-    /// <summary>
-    /// 根据简化配置生成敌人列表
-    /// </summary>
-    public void GenerateEnemyList()
+    Bool,
+    Int,
+    Float,
+    String
+}
+
+public enum BackgroundMode
+{
+    SingleInfiniteScroll,
+    ParallaxLayers
+}
+
+// ============================================================
+// 背景设置
+// ============================================================
+
+[Serializable]
+public class ParallaxLayerData
+{
+    public Sprite sprite;
+    public float parallaxFactor = 0.5f;
+    public int sortingOrder;
+    public bool infiniteHorizontal = true;
+}
+
+[Serializable]
+public class BackgroundSettings
+{
+    public BackgroundMode mode = BackgroundMode.SingleInfiniteScroll;
+
+    public Sprite singleBackground;
+    public float singleParallaxFactor = 0f;
+    public int singleSortingOrder = -10;
+
+    public List<ParallaxLayerData> parallaxLayers = new List<ParallaxLayerData>();
+}
+
+// ============================================================
+// 关卡变量系统
+// ============================================================
+
+[Serializable]
+public class LevelVariableDefinition
+{
+    public string variableName;
+    public LevelVariableType type;
+    public string defaultValue;
+    public string description;
+}
+
+[Serializable]
+public class LevelVariableCondition
+{
+    public enum CompareMode
     {
-        enemies.Clear();
-        
-        if (enemyPrefab == null) return;
-        
-        // 生成左侧敌人
-        for (int i = 0; i < leftEnemyCount; i++)
-        {
-            EnemySpawnData enemy = new EnemySpawnData();
-            enemy.enemyPrefab = enemyPrefab;
-            enemy.fromLeft = true;
-            
-            // Y轴位置：如果多个敌人，稍微错开
-            float yOffset = 0;
-            if (leftEnemyCount > 1)
-            {
-                yOffset = (i - (leftEnemyCount - 1) / 2f) * enemyYSpacing;
-            }
-            
-            // 目标位置在触发点左侧
-            enemy.spawnOffset = new Vector2(-3f - i * 1.5f, leftEnemyY + yOffset);
-            enemy.spawnDelay = i * 0.2f;
-            enemies.Add(enemy);
-        }
-        
-        // 生成右侧敌人
-        for (int i = 0; i < rightEnemyCount; i++)
-        {
-            EnemySpawnData enemy = new EnemySpawnData();
-            enemy.enemyPrefab = enemyPrefab;
-            enemy.fromLeft = false;
-            
-            // Y轴位置
-            float yOffset = 0;
-            if (rightEnemyCount > 1)
-            {
-                yOffset = (i - (rightEnemyCount - 1) / 2f) * enemyYSpacing;
-            }
-            
-            // 目标位置在触发点右侧
-            enemy.spawnOffset = new Vector2(3f + i * 1.5f, rightEnemyY + yOffset);
-            enemy.spawnDelay = i * 0.2f;
-            enemies.Add(enemy);
-        }
+        Equals,
+        NotEquals,
+        Greater,
+        GreaterOrEqual,
+        Less,
+        LessOrEqual,
+        Contains,
+        IsTrue,
+        IsFalse
     }
+
+    public string variableName;
+    public CompareMode mode;
+    public string compareValue;
 }
 
-/// <summary>
-/// 关卡数据 - ScriptableObject，可在编辑器中创建和编辑
-/// </summary>
+[Serializable]
+public class VariableSetAction
+{
+    public string variableName;
+    public string stringValue;
+}
+
+// ============================================================
+// 元素类型定义
+// ============================================================
+
+[Serializable]
+public class ElementCustomParameter
+{
+    public string componentTypeName;
+    public string fieldName;
+    public string valueTypeName;
+    public string serializedValue;
+}
+
+[Serializable]
+public class ElementPrefabEntry
+{
+    public string displayName;
+    public GameObject prefab;
+    public Sprite icon;
+}
+
+[Serializable]
+public class LevelElement
+{
+    public string elementId;
+    public string displayName;
+    public ElementType elementType;
+    public GameObject prefab;
+
+    public Vector2 position;
+    public bool faceRight = true;
+
+    public float appearDelay;
+    public string groupId;
+
+    public List<LevelVariableCondition> appearConditions = new List<LevelVariableCondition>();
+    public List<ElementCustomParameter> customParameters = new List<ElementCustomParameter>();
+}
+
+// ============================================================
+// 过场动画触发器
+// ============================================================
+
+[Serializable]
+public class StoryTriggerPoint
+{
+    public float positionX;
+    public string storyId;
+    public bool triggerOnce = true;
+    public bool triggerFromLeft = true;
+    public List<LevelVariableCondition> triggerConditions = new List<LevelVariableCondition>();
+
+    public List<VariableSetAction> onStoryStartSetVariables = new List<VariableSetAction>();
+    public List<VariableSetAction> onStoryCompleteSetVariables = new List<VariableSetAction>();
+}
+
+// ============================================================
+// 元素组
+// ============================================================
+
+[Serializable]
+public class ElementGroup
+{
+    public string groupId;
+    public string groupName;
+    public float triggerPositionX;
+    public bool mustClearToProceed;
+    public List<LevelVariableCondition> triggerConditions = new List<LevelVariableCondition>();
+}
+
+// ============================================================
+// 校验结果
+// ============================================================
+
+[Serializable]
+public class LevelValidationResult
+{
+    public bool isValid;
+    public List<string> errors = new List<string>();
+    public List<string> warnings = new List<string>();
+
+    public void AddError(string msg) { errors.Add(msg); isValid = false; }
+    public void AddWarning(string msg) { warnings.Add(msg); }
+}
+
+// ============================================================
+// 关卡数据 ScriptableObject
+// ============================================================
+
 [CreateAssetMenu(fileName = "NewLevel", menuName = "Game/Level Data", order = 1)]
 public class LevelData : ScriptableObject
 {
-    [Header("关卡基本信息")]
-    [Tooltip("关卡名称")]
+    [Header("基本信息")]
     public string levelName = "New Level";
-    
-    [Tooltip("关卡难度 (1-5)")]
-    [Range(1, 5)]
-    public int difficulty = 1;
-    
-    [Header("关卡地图设置")]
-    [Tooltip("关卡总长度")]
+    [Range(1, 5)] public int difficulty = 1;
     public float levelLength = 50f;
-    
-    [Tooltip("玩家起始位置")]
-    public Vector2 playerStartPosition = new Vector2(-8f, -3.5f);
-    
-    [Tooltip("关卡终点位置X")]
+
+    [Header("玩家预制体")]
+    public GameObject playerPrefab;
+
+    [Header("背景图")]
+    public BackgroundSettings backgroundSettings = new BackgroundSettings();
+
+    [Header("玩家出生点")]
+    public Vector2 playerSpawnPosition = new Vector2(-8f, -3.5f);
+    public bool playerFaceRight = true;
+
+    [Header("关卡结束条件")]
     public float levelEndPositionX = 45f;
-    
-    [Header("默认敌人预制体")]
-    [Tooltip("新波次默认使用的敌人预制体")]
-    public GameObject defaultEnemyPrefab;
-    
-    [Header("战斗波次")]
-    [Tooltip("所有战斗波次列表")]
-    public List<BattleWave> battleWaves = new List<BattleWave>();
-    
-    /// <summary>
-    /// 获取波次总数
-    /// </summary>
-    public int TotalWaveCount => battleWaves.Count;
-    
-    /// <summary>
-    /// 获取关卡中所有敌人的总数
-    /// </summary>
-    public int TotalEnemyCount
+    public List<LevelVariableCondition> endConditions = new List<LevelVariableCondition>();
+
+    [Header("关卡变量")]
+    public List<LevelVariableDefinition> variables = new List<LevelVariableDefinition>();
+
+    [Header("元素列表")]
+    public List<LevelElement> elements = new List<LevelElement>();
+
+    [Header("过场动画触发器")]
+    public List<StoryTriggerPoint> storyTriggers = new List<StoryTriggerPoint>();
+
+    [Header("元素组")]
+    public List<ElementGroup> groups = new List<ElementGroup>();
+
+    [Header("预制体库（编辑器辅助）")]
+    public List<ElementPrefabEntry> enemyPrefabLibrary = new List<ElementPrefabEntry>();
+    public List<ElementPrefabEntry> itemPrefabLibrary = new List<ElementPrefabEntry>();
+    public List<ElementPrefabEntry> obstaclePrefabLibrary = new List<ElementPrefabEntry>();
+
+    // ========== 查找辅助 ==========
+
+    public ElementGroup FindGroup(string groupId)
     {
-        get
-        {
-            int total = 0;
-            foreach (var wave in battleWaves)
-            {
-                total += wave.TotalEnemyCount;
-            }
-            return total;
-        }
+        return groups.Find(g => g.groupId == groupId);
     }
-    
-    /// <summary>
-    /// 根据位置获取当前应触发的波次索引
-    /// </summary>
-    public int GetWaveIndexAtPosition(float positionX)
+
+    public List<LevelElement> GetElementsByGroup(string groupId)
     {
-        for (int i = battleWaves.Count - 1; i >= 0; i--)
-        {
-            if (positionX >= battleWaves[i].triggerPositionX)
-            {
-                return i;
-            }
-        }
-        return -1;
+        return elements.Where(e => e.groupId == groupId).ToList();
     }
-    
-    /// <summary>
-    /// 初始化所有波次的敌人列表（在加载关卡时调用）
-    /// </summary>
-    public void InitializeWaves()
+
+    public List<LevelElement> GetUngroupedElements()
     {
-        foreach (var wave in battleWaves)
-        {
-            // 如果波次没有设置敌人预制体，使用默认的
-            if (wave.enemyPrefab == null)
-                wave.enemyPrefab = defaultEnemyPrefab;
-                
-            wave.GenerateEnemyList();
-        }
+        return elements.Where(e => string.IsNullOrEmpty(e.groupId)).ToList();
     }
-    
-    /// <summary>
-    /// 验证关卡数据是否有效
-    /// </summary>
-    public bool Validate(out string errorMessage)
+
+    public LevelVariableDefinition FindVariable(string name)
     {
-        errorMessage = "";
-        
+        return variables.Find(v => v.variableName == name);
+    }
+
+    // ========== 校验 ==========
+
+    public LevelValidationResult Validate()
+    {
+        var result = new LevelValidationResult();
+
         if (string.IsNullOrEmpty(levelName))
+            result.AddError("关卡名称不能为空");
+
+        if (playerPrefab == null)
+            result.AddError("玩家预制体不能为空");
+
+        if (levelEndPositionX <= playerSpawnPosition.x)
+            result.AddError($"终点位置X({levelEndPositionX})必须大于起点X({playerSpawnPosition.x})");
+
+        for (int i = 0; i < elements.Count; i++)
         {
-            errorMessage = "关卡名称不能为空";
-            return false;
+            var el = elements[i];
+            if (el.prefab == null)
+                result.AddError($"元素 #{i} '{el.displayName}' 引用的预制体为空");
+            if (string.IsNullOrEmpty(el.elementId))
+                result.AddError($"元素 #{i} '{el.displayName}' 缺少elementId");
         }
-        
-        if (battleWaves.Count == 0)
+
+        for (int i = 0; i < storyTriggers.Count; i++)
         {
-            errorMessage = "关卡至少需要一个战斗波次";
-            return false;
+            var st = storyTriggers[i];
+            if (string.IsNullOrEmpty(st.storyId))
+                result.AddError($"过场触发器 #{i} 的storyId为空");
         }
-        
-        for (int i = 0; i < battleWaves.Count; i++)
+
+        for (int i = 0; i < groups.Count; i++)
         {
-            var wave = battleWaves[i];
-            if (wave.TotalEnemyCount == 0)
+            var g = groups[i];
+            if (g.triggerPositionX < 0 || g.triggerPositionX > levelLength)
+                result.AddError($"元素组 '{g.groupName}' 的触发位置X({g.triggerPositionX})超出关卡范围(0~{levelLength})");
+        }
+
+        var variableNames = new HashSet<string>(variables.Select(v => v.variableName));
+        foreach (var el in elements)
+        {
+            foreach (var cond in el.appearConditions)
             {
-                errorMessage = $"波次 {i + 1} 没有配置敌人";
-                return false;
-            }
-            
-            if (wave.enemyPrefab == null && defaultEnemyPrefab == null)
-            {
-                errorMessage = $"波次 {i + 1} 没有设置敌人预制体";
-                return false;
+                if (!string.IsNullOrEmpty(cond.variableName) && !variableNames.Contains(cond.variableName))
+                    result.AddError($"元素 '{el.displayName}' 引用了未定义的变量'{cond.variableName}'");
             }
         }
-        
-        return true;
+        foreach (var cond in endConditions)
+        {
+            if (!string.IsNullOrEmpty(cond.variableName) && !variableNames.Contains(cond.variableName))
+                result.AddError($"结束条件引用了未定义的变量'{cond.variableName}'");
+        }
+        foreach (var st in storyTriggers)
+        {
+            foreach (var cond in st.triggerConditions)
+            {
+                if (!string.IsNullOrEmpty(cond.variableName) && !variableNames.Contains(cond.variableName))
+                    result.AddError($"过场触发器(storyId={st.storyId})引用了未定义的变量'{cond.variableName}'");
+            }
+        }
+        foreach (var g in groups)
+        {
+            foreach (var cond in g.triggerConditions)
+            {
+                if (!string.IsNullOrEmpty(cond.variableName) && !variableNames.Contains(cond.variableName))
+                    result.AddError($"元素组'{g.groupName}'引用了未定义的变量'{cond.variableName}'");
+            }
+        }
+
+        // 警告
+        if (elements.Count == 0)
+            result.AddWarning("关卡没有任何元素");
+
+        if (storyTriggers.Count == 0)
+            result.AddWarning("没有配置任何过场动画");
+
+        if (backgroundSettings.singleBackground == null &&
+            (backgroundSettings.parallaxLayers == null || backgroundSettings.parallaxLayers.Count == 0))
+            result.AddWarning("没有配置背景图");
+
+        foreach (var g in groups)
+        {
+            int count = elements.Count(e => e.groupId == g.groupId);
+            if (count == 0)
+                result.AddWarning($"元素组'{g.groupName}'内没有元素");
+        }
+
+        if (result.errors.Count == 0)
+            result.isValid = true;
+
+        return result;
     }
+
+    // ========== JSON 导入/导出（由 Editor 端 LevelDataJsonUtility 实现）==========
+    // 运行时通过 ExportToJson / ImportFromJson 为 stub，实际序列化在 Editor 中完成
 }

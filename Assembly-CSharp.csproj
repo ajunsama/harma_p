@@ -48,7 +48,6 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.2.5f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\LevelSystem\BattleAreaVisualizer.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\ParallaxBackground.cs" />
     <Compile Include="Assets\Scripts\PunkPKnife.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\CameraFixedObject.cs" />
@@ -60,8 +59,8 @@
     <Compile Include="Assets\Scripts\LevelSystem\InfiniteScrollBackground.cs" />
     <Compile Include="Assets\Scripts\EnemyAttackCollider.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\LevelUI.cs" />
+    <Compile Include="Assets\Scripts\LevelSystem\ItemPickup.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryManager.cs" />
-    <Compile Include="Assets\Scripts\LevelSystem\LevelProgressManager.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryStyleTemplate.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryAvatarTemplate.cs" />
     <Compile Include="Assets\Scripts\EnemyChargeAttack.cs" />
@@ -75,20 +74,23 @@
     <Compile Include="Assets\Scripts\LevelSystem\LevelData.cs" />
     <Compile Include="Assets\Scripts\StorySystem\EnemyKillStoryFlag.cs" />
     <Compile Include="Assets\Scripts\PlayerHP.cs" />
+    <Compile Include="Assets\Scripts\LevelSystem\LevelSceneBuilder.cs" />
     <Compile Include="Assets\Scripts\UI\IrregularDialogBox.cs" />
     <Compile Include="Assets\Scripts\PlayerMovement.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryTrigger.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryData.cs" />
+    <Compile Include="Assets\Scripts\LevelSystem\Obstacle.cs" />
     <Compile Include="Assets\Scripts\UI\DialogBoxEffectController.cs" />
     <Compile Include="Assets\Scripts\UI\SpeakerNameController.cs" />
     <Compile Include="Assets\Scripts\GroundChecker.cs" />
+    <Compile Include="Assets\Scripts\LevelSystem\LevelCameraController.cs" />
     <Compile Include="Assets\Scripts\EnemySpawner.cs" />
+    <Compile Include="Assets\Scripts\LevelSystem\LevelVariableManager.cs" />
     <Compile Include="Assets\Scripts\LevelManager.cs" />
     <Compile Include="Assets\Scripts\FatP_AI_Movement.cs" />
     <Compile Include="Assets\Scripts\YSortSprite.cs" />
     <Compile Include="Assets\Scripts\SpineDanceSequence.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryAnimator.cs" />
-    <Compile Include="Assets\Scripts\LevelSystem\BattleWaveManager.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryTemplateLibrary.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -5,3 +5,5 @@ Logs/
 .claude/
 .opencode/
 .codewhale/
+.agents/
+.codex/

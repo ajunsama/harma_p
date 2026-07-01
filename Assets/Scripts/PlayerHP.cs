@@ -23,6 +23,7 @@ public class PlayerHP : MonoBehaviour
     private bool isInvincible = false; // 是否处于无敌状态
     private bool isDead = false;       // 是否已死亡
     private PlayerMovement playerMovement; // 玩家移动组件引用
+    private Coroutine _invincibleCoroutine; // 当前无敌协程引用
     
     // 公共属性供外部访问
     public bool IsInvincible => isInvincible;
@@ -31,8 +32,13 @@ public class PlayerHP : MonoBehaviour
     void Start()
     {
         currentHP = maxHP;
-        hpSlider.maxValue = maxHP;
-        hpSlider.value  = currentHP;
+
+        // hpSlider 可选：如果场景中未分配则不更新 UI，避免 NullReferenceException
+        if (hpSlider != null)
+        {
+            hpSlider.maxValue = maxHP;
+            hpSlider.value = currentHP;
+        }
         
         // 自动获取 SpriteRenderer（可选）
         if (spriteRenderer == null)
@@ -56,7 +62,8 @@ public class PlayerHP : MonoBehaviour
             return;
             
         currentHP = Mathf.Max(currentHP - amount, 0);
-        hpSlider.value = currentHP;
+        if (hpSlider != null)
+            hpSlider.value = currentHP;
 
         if (currentHP <= 0)
         {
@@ -67,7 +74,7 @@ public class PlayerHP : MonoBehaviour
             // 播放受伤动画
             PlayHitAnimation();
             // 触发受伤逻辑：无敌时间和闪烁
-            StartCoroutine(InvincibleCoroutine());
+            StartInvincible(invincibleDuration);
         }
     }
 
@@ -75,47 +82,40 @@ public class PlayerHP : MonoBehaviour
     public void Heal(int amount = 1)
     {
         currentHP = Mathf.Min(currentHP + amount, maxHP);
-        hpSlider.value = currentHP;
+        if (hpSlider != null)
+            hpSlider.value = currentHP;
     }
-    
-    // 无敌协程：闪烁效果
-    IEnumerator InvincibleCoroutine()
+
+    public void MakeInvincible(float duration)
+    {
+        StartInvincible(duration);
+    }
+
+    void StartInvincible(float duration)
+    {
+        if (_invincibleCoroutine != null)
+            StopCoroutine(_invincibleCoroutine);
+        _invincibleCoroutine = StartCoroutine(InvincibleCoroutine(duration));
+    }
+
+    IEnumerator InvincibleCoroutine(float duration)
     {
         isInvincible = true;
         float elapsed = 0f;
-        
-        // 使用Spine的颜色闪烁
         bool useSpineColor = skeletonAnimation != null;
-        
-        while (elapsed < invincibleDuration)
+        while (elapsed < duration)
         {
             if (useSpineColor)
-            {
-                // Spine闪烁：切换骨架透明度
-                var skeleton = skeletonAnimation.Skeleton;
-                skeleton.A = skeleton.A > 0.5f ? 0.3f : 1f;
-            }
+                skeletonAnimation.Skeleton.A = skeletonAnimation.Skeleton.A > 0.5f ? 0.3f : 1f;
             else if (spriteRenderer != null)
-            {
-                // SpriteRenderer闪烁
                 spriteRenderer.enabled = !spriteRenderer.enabled;
-            }
-                
             yield return new WaitForSeconds(blinkInterval);
             elapsed += blinkInterval;
         }
-        
-        // 确保最后是完全可见的
-        if (useSpineColor)
-        {
-            skeletonAnimation.Skeleton.A = 1f;
-        }
-        else if (spriteRenderer != null)
-        {
-            spriteRenderer.enabled = true;
-        }
-            
+        if (useSpineColor) skeletonAnimation.Skeleton.A = 1f;
+        else if (spriteRenderer != null) spriteRenderer.enabled = true;
         isInvincible = false;
+        _invincibleCoroutine = null;
     }
     
     // 播放受伤动画

@@ -4,7 +4,7 @@
   "logLevel": "Warning",
   "keepServerRunning": true,
   "transportMethod": "streamableHttp",
-  "authOption": "required",
+  "authOption": "none",
   "connectionMode": "Custom",
   "cloudToken": "Uo1JEQrL2J4bu7t_hxosjy1jXR9A4_-4Ejv28uv6C80",
   "tools": [
@@ -520,10 +520,13 @@
   "skillAutoGenerate": {
     "claude-code": true,
     "open-code": true,
-    "other-custom": true
+    "other-custom": true,
+    "codex": true
   },
   "timeoutMs": 10000,
   "keepConnected": true,
+  "maxConsecutiveConnectionFailures": 0,
+  "connectTimeoutSeconds": 0,
   "generateSkillFiles": false,
-  "skillsPath": ".opencode/skills"
+  "skillsPath": ".agents/skills"
 }

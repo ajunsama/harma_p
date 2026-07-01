@@ -575,25 +575,15 @@ public class StoryManager : MonoBehaviour
         switch (action.actionType)
         {
             case StoryResultAction.ActionType.SpawnEnemies:
-                // 通过BattleWaveManager生成敌人
-                if (BattleWaveManager.Instance != null && action.intParameter >= 0)
-                {
-                    BattleWaveManager.Instance.StartWave(action.intParameter);
-                }
+                // TODO: Phase 3 — 通过 LevelSceneBuilder 生成敌人
                 break;
 
             case StoryResultAction.ActionType.GameOver:
-                if (LevelProgressManager.Instance != null)
-                {
-                    LevelProgressManager.Instance.OnLevelFailed?.Invoke();
-                }
+                // TODO: Phase 3 — 通过 LevelSceneBuilder 触发关卡失败
                 break;
 
             case StoryResultAction.ActionType.LevelComplete:
-                if (LevelProgressManager.Instance != null)
-                {
-                    LevelProgressManager.Instance.OnLevelComplete?.Invoke();
-                }
+                // TODO: Phase 3 — 通过 LevelSceneBuilder 触发关卡完成
                 break;
 
             case StoryResultAction.ActionType.LoadScene:
