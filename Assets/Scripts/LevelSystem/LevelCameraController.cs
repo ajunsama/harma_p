@@ -10,6 +10,8 @@ public class LevelCameraController : MonoBehaviour
     [Header("相机参数")]
     public float fixedY;
     public float zOffset = -10f;
+    public bool useCustomInitialPosition;
+    public Vector2 initialPosition;
 
     [Header("死区设置")]
     [Range(0f, 0.45f)]
@@ -57,8 +59,11 @@ public class LevelCameraController : MonoBehaviour
 
         if (!_didInitCenter)
         {
-            float initX = Mathf.Clamp(playerX, minX, maxX);
-            transform.position = new Vector3(initX, fixedY, zOffset);
+            float initX = useCustomInitialPosition ? initialPosition.x : playerX;
+            float initY = useCustomInitialPosition ? initialPosition.y : fixedY;
+            initX = Mathf.Clamp(initX, minX, maxX);
+            fixedY = initY;
+            transform.position = new Vector3(initX, initY, zOffset);
             _didInitCenter = true;
             return;
         }

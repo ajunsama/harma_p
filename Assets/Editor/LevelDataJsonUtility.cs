@@ -30,6 +30,11 @@ public class LevelDataDto
     public float playerSpawnX;
     public float playerSpawnY;
     public bool playerFaceRight;
+    public bool useCustomInitialCameraPosition;
+    public float initialCameraX;
+    public float initialCameraY;
+    public float cameraDeadZone;
+    public bool hasCameraSettings;
     public float levelEndPositionX;
     public string backgroundMode;
     public string backgroundSpriteGuid;
@@ -101,6 +106,11 @@ public class LevelDataDto
             playerSpawnX = ld.playerSpawnPosition.x,
             playerSpawnY = ld.playerSpawnPosition.y,
             playerFaceRight = ld.playerFaceRight,
+            useCustomInitialCameraPosition = ld.useCustomInitialCameraPosition,
+            initialCameraX = ld.initialCameraPosition.x,
+            initialCameraY = ld.initialCameraPosition.y,
+            cameraDeadZone = ld.cameraDeadZone,
+            hasCameraSettings = true,
             levelEndPositionX = ld.levelEndPositionX,
             backgroundMode = ld.backgroundSettings.mode.ToString(),
             backgroundSpriteGuid = ld.backgroundSettings.singleBackground != null ? AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(ld.backgroundSettings.singleBackground)) : "",
@@ -145,6 +155,9 @@ public class LevelDataDto
         ld.playerPrefab = !string.IsNullOrEmpty(playerPrefabGuid) ? AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(playerPrefabGuid)) : null;
         ld.playerSpawnPosition = new Vector2(playerSpawnX, playerSpawnY);
         ld.playerFaceRight = playerFaceRight;
+        ld.useCustomInitialCameraPosition = useCustomInitialCameraPosition;
+        ld.initialCameraPosition = new Vector2(initialCameraX, initialCameraY);
+        ld.cameraDeadZone = hasCameraSettings ? Mathf.Clamp(cameraDeadZone, 0f, 0.45f) : 0.2f;
         ld.levelEndPositionX = levelEndPositionX;
 
         if (!string.IsNullOrEmpty(backgroundMode))

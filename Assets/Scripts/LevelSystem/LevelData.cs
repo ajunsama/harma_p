@@ -44,11 +44,13 @@ public class ParallaxLayerData
 [Serializable]
 public class BackgroundSettings
 {
+    public const int DefaultSortingOrder = -10000;
+
     public BackgroundMode mode = BackgroundMode.SingleInfiniteScroll;
 
     public Sprite singleBackground;
     public float singleParallaxFactor = 0f;
-    public int singleSortingOrder = -10;
+    public int singleSortingOrder = DefaultSortingOrder;
 
     public List<ParallaxLayerData> parallaxLayers = new List<ParallaxLayerData>();
 }
@@ -200,6 +202,11 @@ public class LevelData : ScriptableObject
     [Header("玩家出生点")]
     public Vector2 playerSpawnPosition = new Vector2(-8f, -3.5f);
     public bool playerFaceRight = true;
+
+    [Header("Camera Settings")]
+    public bool useCustomInitialCameraPosition;
+    public Vector2 initialCameraPosition = Vector2.zero;
+    [Range(0f, 0.45f)] public float cameraDeadZone = 0.2f;
 
     [Header("关卡结束条件")]
     public float levelEndPositionX = 45f;

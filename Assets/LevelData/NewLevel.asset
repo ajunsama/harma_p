@@ -20,10 +20,13 @@ MonoBehaviour:
     mode: 0
     singleBackground: {fileID: -9084149176029018482, guid: fcb81f9c453a6194eb812cfe80ac00ea, type: 3}
     singleParallaxFactor: 0
-    singleSortingOrder: -10
+    singleSortingOrder: -10000
     parallaxLayers: []
-  playerSpawnPosition: {x: 0, y: 0}
+  playerSpawnPosition: {x: 0.12, y: -4.49}
   playerFaceRight: 1
+  useCustomInitialCameraPosition: 1
+  initialCameraPosition: {x: 7.23, y: 0}
+  cameraDeadZone: 0.2
   levelEndPositionX: 32.7
   endConditions: []
   variables:
@@ -39,7 +42,57 @@ MonoBehaviour:
     type: 0
     defaultValue: false
     description: 
-  elements: []
+  elements:
+  - elementId: 359e2ccd-f6c1-45fc-90c9-5542ef27b958
+    displayName: FatP_Test
+    elementType: 0
+    prefab: {fileID: 2205715361683696001, guid: c452834c8e14d55499d90a8e8b432c00, type: 3}
+    position: {x: 7.5, y: -4}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    appearConditions: []
+    customParameters: []
+  - elementId: 87066976-1d64-436a-9468-781fae867561
+    displayName: MuscleP
+    elementType: 0
+    prefab: {fileID: 9121894431470579864, guid: 0c06786d5294f9342adf2f5e052fcf02, type: 3}
+    position: {x: 7, y: -1}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    appearConditions: []
+    customParameters: []
+  - elementId: 10f1ced7-afe2-43f2-9bb7-e5d019cf0bbe
+    displayName: PunkP_Test
+    elementType: 0
+    prefab: {fileID: 3410753177876068644, guid: 58d2df485030bcf4bbdc906332ec6f4e, type: 3}
+    position: {x: 11.5, y: -0.5}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    appearConditions: []
+    customParameters: []
+  - elementId: 9fa9efd1-f715-4fce-9f69-168139a187ea
+    displayName: Item_RoastMeat
+    elementType: 1
+    prefab: {fileID: 9120663107355990007, guid: dfefd365b099e564cbeae5a8b3dbd400, type: 3}
+    position: {x: 13, y: -4}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    appearConditions: []
+    customParameters: []
+  - elementId: 8cc78b68-7c04-4857-8aff-7c2ea349257e
+    displayName: Obstacle_ClayPot
+    elementType: 2
+    prefab: {fileID: 1032192333778224483, guid: f781d74d7f8aac8419844898e4d78308, type: 3}
+    position: {x: 3, y: -3.5}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    appearConditions: []
+    customParameters: []
   storyTriggers: []
   groups: []
   enemyPrefabLibrary: []

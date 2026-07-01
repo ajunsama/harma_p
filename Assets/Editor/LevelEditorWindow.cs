@@ -9,8 +9,18 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+[InitializeOnLoad]
 public class LevelEditorWindow : EditorWindow
 {
+    private const string RestoreAfterPlayKey = "LevelEditorWindow.RestoreAfterPlay";
+    private const string RestoreLevelPathKey = "LevelEditorWindow.RestoreLevelPath";
+
+    static LevelEditorWindow()
+    {
+        EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+    }
+
     // ========== 当前编辑状态 ==========
     private LevelData _level;
     private Vector2 _paletteScroll;
@@ -62,6 +72,23 @@ public class LevelEditorWindow : EditorWindow
     {
         var window = GetWindow<LevelEditorWindow>("关卡编辑器");
         window.minSize = new Vector2(1000, 650);
+    }
+
+    static void OnPlayModeStateChanged(PlayModeStateChange state)
+    {
+        if (state != PlayModeStateChange.EnteredEditMode) return;
+        if (!SessionState.GetBool(RestoreAfterPlayKey, false)) return;
+
+        SessionState.SetBool(RestoreAfterPlayKey, false);
+        var window = GetWindow<LevelEditorWindow>("关卡编辑器");
+        window.minSize = new Vector2(1000, 650);
+
+        string levelPath = SessionState.GetString(RestoreLevelPathKey, "");
+        if (!string.IsNullOrEmpty(levelPath))
+            window._level = AssetDatabase.LoadAssetAtPath<LevelData>(levelPath);
+
+        window.ScanPrefabs();
+        window.Show();
     }
 
     void OnEnable()
@@ -549,6 +576,7 @@ public class LevelEditorWindow : EditorWindow
 
         DrawPreviewBackground(local);
         DrawPreviewFloor(local);
+        DrawInitialCameraFrame(local);
 
         // 地面线
         Handles.color = new Color(0.25f, 0.45f, 0.25f);
@@ -653,6 +681,35 @@ public class LevelEditorWindow : EditorWindow
         Handles.color = new Color(0.6f, 1f, 0.7f, 0.9f);
         Handles.DrawAAPolyLine(2f, new Vector3(floorRect.xMin, topY), new Vector3(floorRect.xMax, topY));
         Handles.Label(new Vector3(Mathf.Max(4f, floorRect.xMin + 6f), topY + 4f), "Floor");
+    }
+
+    void DrawInitialCameraFrame(Rect local)
+    {
+        if (!_level.useCustomInitialCameraPosition) return;
+
+        float orthographicSize = 5f;
+        float aspect = 16f / 9f;
+        Camera sceneCamera = Camera.main;
+        if (sceneCamera != null)
+        {
+            orthographicSize = sceneCamera.orthographicSize;
+            aspect = sceneCamera.aspect;
+        }
+
+        float height = orthographicSize * 2f;
+        float width = height * aspect;
+        Rect worldRect = new Rect(
+            _level.initialCameraPosition.x - width * 0.5f,
+            _level.initialCameraPosition.y - height * 0.5f,
+            width,
+            height);
+        Rect screenRect = WorldRectToScreenRect(worldRect, local);
+
+        Handles.DrawSolidRectangleWithOutline(
+            screenRect,
+            new Color(1f, 1f, 1f, 0.04f),
+            new Color(1f, 1f, 1f, 0.7f));
+        Handles.Label(new Vector3(screenRect.xMin + 6f, screenRect.yMin + 6f), "Initial Camera");
     }
 
     Rect WorldBoundsToScreenRect(Bounds bounds, Rect rect)
@@ -837,8 +894,13 @@ public class LevelEditorWindow : EditorWindow
         Vector2 sp = WorldToScreen(_level.playerSpawnPosition, rect);
         if (sp.x < -20 || sp.x > local.width + 20) return;
 
-        Handles.color = PlayerColor;
-        Handles.DrawSolidDisc(new Vector3(sp.x, sp.y), Vector3.forward, 7);
+        if (!DrawPrefabFootPreview(_level.playerPrefab, sp, _level.playerFaceRight, PlayerColor, false))
+        {
+            Handles.color = PlayerColor;
+            Handles.DrawSolidDisc(new Vector3(sp.x, sp.y - 8f), Vector3.forward, 7);
+        }
+
+        DrawFootMarker(sp, PlayerColor, false);
         float dir = _level.playerFaceRight ? 1 : -1;
         Vector3 arrowTip = new Vector3(sp.x + dir * 10, sp.y);
         Handles.DrawAAPolyLine(2f, new Vector3(sp.x, sp.y), arrowTip);
@@ -909,13 +971,20 @@ public class LevelEditorWindow : EditorWindow
                 default: c = EnemyColor; break;
             }
 
-            Handles.color = c;
-            if (el.elementType == ElementType.Enemy)
-                DrawTriangle(sp, size, el.faceRight);
-            else if (el.elementType == ElementType.Item)
-                DrawStar(sp, size);
-            else
-                DrawSquare(sp, size);
+            bool drewPrefab = DrawPrefabFootPreview(el.prefab, sp, el.faceRight, c, selected);
+            if (!drewPrefab)
+            {
+                Vector2 symbolCenter = new Vector2(sp.x, sp.y - size - 2f);
+                Handles.color = c;
+                if (el.elementType == ElementType.Enemy)
+                    DrawTriangle(symbolCenter, size, el.faceRight);
+                else if (el.elementType == ElementType.Item)
+                    DrawStar(symbolCenter, size);
+                else
+                    DrawSquare(symbolCenter, size);
+            }
+
+            DrawFootMarker(sp, c, selected);
 
             if (selected)
             {
@@ -929,6 +998,110 @@ public class LevelEditorWindow : EditorWindow
                 Handles.Label(new Vector3(sp.x + 10, sp.y + 5), el.displayName, style);
             }
         }
+    }
+
+    bool DrawPrefabFootPreview(GameObject prefab, Vector2 footScreen, bool faceRight, Color fallbackColor, bool selected)
+    {
+        if (prefab == null) return false;
+        if (HasSpinePreview(prefab)) return false;
+
+        Texture2D texture = AssetPreview.GetAssetPreview(prefab);
+        if (texture == null)
+            texture = AssetPreview.GetMiniThumbnail(prefab) as Texture2D;
+        if (texture == null) return false;
+
+        Vector2 worldSize = GetPrefabPreviewWorldSize(prefab);
+        float width = Mathf.Clamp(worldSize.x * _canvasScale, 14f, 120f);
+        float height = Mathf.Clamp(worldSize.y * _canvasScale, 18f, 140f);
+        Rect drawRect = new Rect(footScreen.x - width * 0.5f, footScreen.y - height, width, height);
+
+        Color oldColor = GUI.color;
+        GUI.color = new Color(1f, 1f, 1f, selected ? 1f : 0.9f);
+        GUI.DrawTexture(drawRect, texture, ScaleMode.ScaleToFit, true);
+        GUI.color = oldColor;
+
+        if (selected)
+            Handles.DrawSolidRectangleWithOutline(drawRect, Color.clear, Color.white);
+
+        return true;
+    }
+
+    bool HasSpinePreview(GameObject prefab)
+    {
+        foreach (var behaviour in prefab.GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            if (behaviour == null) continue;
+
+            var type = behaviour.GetType();
+            if (type.FullName != null && type.FullName.StartsWith("Spine.", StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
+    }
+
+    Vector2 GetPrefabPreviewWorldSize(GameObject prefab)
+    {
+        Bounds bounds = default;
+        bool hasBounds = false;
+
+        foreach (var renderer in prefab.GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer == null) continue;
+            if (!hasBounds)
+            {
+                bounds = renderer.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds = EncapsulateDefault(bounds, renderer.bounds);
+            }
+        }
+
+        if (hasBounds)
+            return ClampPreviewSize(bounds.size);
+
+        foreach (var collider in prefab.GetComponentsInChildren<Collider2D>(true))
+        {
+            if (collider == null) continue;
+            if (!hasBounds)
+            {
+                bounds = collider.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds = EncapsulateDefault(bounds, collider.bounds);
+            }
+        }
+
+        if (hasBounds)
+            return ClampPreviewSize(bounds.size);
+
+        return new Vector2(1f, 2f);
+    }
+
+    Bounds EncapsulateDefault(Bounds current, Bounds next)
+    {
+        current.Encapsulate(next);
+        return current;
+    }
+
+    Vector2 ClampPreviewSize(Vector3 size)
+    {
+        float width = Mathf.Max(0.8f, Mathf.Abs(size.x));
+        float height = Mathf.Max(1f, Mathf.Abs(size.y));
+        return new Vector2(width, height);
+    }
+
+    void DrawFootMarker(Vector2 footScreen, Color color, bool selected)
+    {
+        Handles.color = selected ? Color.white : color;
+        Handles.DrawSolidDisc(new Vector3(footScreen.x, footScreen.y), Vector3.forward, selected ? 4f : 3f);
+        Handles.DrawAAPolyLine(1f,
+            new Vector3(footScreen.x - 5f, footScreen.y),
+            new Vector3(footScreen.x + 5f, footScreen.y));
     }
 
     void DrawTriangle(Vector2 center, float size, bool faceRight)
@@ -1002,6 +1175,14 @@ public class LevelEditorWindow : EditorWindow
         _level.playerPrefab = (GameObject)EditorGUILayout.ObjectField("玩家预制体", _level.playerPrefab, typeof(GameObject), false);
         _level.playerSpawnPosition = EditorGUILayout.Vector2Field("玩家起点", _level.playerSpawnPosition);
         _level.playerFaceRight = EditorGUILayout.Toggle("朝向右边", _level.playerFaceRight);
+        EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("Camera Settings", EditorStyles.boldLabel);
+        _level.useCustomInitialCameraPosition = EditorGUILayout.Toggle("Custom Initial Camera", _level.useCustomInitialCameraPosition);
+        using (new EditorGUI.DisabledScope(!_level.useCustomInitialCameraPosition))
+        {
+            _level.initialCameraPosition = EditorGUILayout.Vector2Field("Initial Camera Pos", _level.initialCameraPosition);
+        }
+        _level.cameraDeadZone = EditorGUILayout.Slider("Camera Dead Zone", _level.cameraDeadZone, 0f, 0.45f);
         _level.levelEndPositionX = EditorGUILayout.FloatField("终点位置 X", _level.levelEndPositionX);
 
         EditorGUILayout.Space(10);
@@ -1596,7 +1777,20 @@ public class LevelEditorWindow : EditorWindow
         var builder = builderGo.AddComponent<LevelSceneBuilder>();
         builder.levelData = _level;
 
+        SessionState.SetBool(RestoreAfterPlayKey, true);
+        SessionState.SetString(RestoreLevelPathKey, AssetDatabase.GetAssetPath(_level));
+        FocusGameView();
+        Close();
+
         EditorApplication.EnterPlaymode();
+    }
+
+    static void FocusGameView()
+    {
+        EditorApplication.ExecuteMenuItem("Window/General/Game");
+        var gameViewType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
+        if (gameViewType != null)
+            EditorWindow.GetWindow(gameViewType).Focus();
     }
 
     void ExportScene()

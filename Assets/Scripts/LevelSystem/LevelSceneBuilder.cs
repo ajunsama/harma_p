@@ -162,6 +162,11 @@ public class LevelSceneBuilder : MonoBehaviour
             _cameraController.target = playerTransform;
             _cameraController.minX = -20f;
             _cameraController.maxX = levelData.levelLength + 20f;
+            _cameraController.deadZone = levelData.cameraDeadZone;
+            _cameraController.useCustomInitialPosition = levelData.useCustomInitialCameraPosition;
+            _cameraController.initialPosition = levelData.initialCameraPosition;
+            if (levelData.useCustomInitialCameraPosition)
+                _cameraController.fixedY = levelData.initialCameraPosition.y;
         }
     }
 
@@ -181,7 +186,7 @@ public class LevelSceneBuilder : MonoBehaviour
 
             var sr = bgGo.AddComponent<SpriteRenderer>();
             sr.sprite = bg.singleBackground;
-            sr.sortingOrder = bg.singleSortingOrder;
+            sr.sortingOrder = Mathf.Min(bg.singleSortingOrder, BackgroundSettings.DefaultSortingOrder);
 
             var isb = bgGo.AddComponent<InfiniteScrollBackground>();
             isb.backgroundSprite = sr;

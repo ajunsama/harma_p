@@ -20,7 +20,7 @@ MonoBehaviour:
     mode: 0
     singleBackground: {fileID: -9084149176029018482, guid: fcb81f9c453a6194eb812cfe80ac00ea, type: 3}
     singleParallaxFactor: 0.3
-    singleSortingOrder: -10
+    singleSortingOrder: -10000
     parallaxLayers: []
   playerSpawnPosition: {x: 2, y: 0}
   playerFaceRight: 1
