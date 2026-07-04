@@ -36,6 +36,7 @@ public class LevelDataDto
     public float cameraDeadZone;
     public bool hasCameraSettings;
     public float levelEndPositionX;
+    public string storyCollectionGuid;
     public string backgroundMode;
     public string backgroundSpriteGuid;
     public float backgroundParallax;
@@ -80,10 +81,21 @@ public class LevelDataDto
     [Serializable]
     public class StoryTriggerDto
     {
+        public string triggerMode;
         public float posX;
         public string storyId;
         public bool triggerOnce;
         public bool triggerFromLeft;
+        public List<ConditionDto> conditions = new List<ConditionDto>();
+        public List<SetActionDto> onStartSetVariables = new List<SetActionDto>();
+        public List<SetActionDto> onCompleteSetVariables = new List<SetActionDto>();
+    }
+
+    [Serializable]
+    public class SetActionDto
+    {
+        public string variable;
+        public string value;
     }
 
     [Serializable]
@@ -112,6 +124,7 @@ public class LevelDataDto
             cameraDeadZone = ld.cameraDeadZone,
             hasCameraSettings = true,
             levelEndPositionX = ld.levelEndPositionX,
+            storyCollectionGuid = ld.storyCollectionJson != null ? AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(ld.storyCollectionJson)) : "",
             backgroundMode = ld.backgroundSettings.mode.ToString(),
             backgroundSpriteGuid = ld.backgroundSettings.singleBackground != null ? AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(ld.backgroundSettings.singleBackground)) : "",
             backgroundParallax = ld.backgroundSettings.singleParallaxFactor,
@@ -139,7 +152,19 @@ public class LevelDataDto
         }
 
         foreach (var st in ld.storyTriggers)
-            d.storyTriggers.Add(new StoryTriggerDto { posX = st.positionX, storyId = st.storyId, triggerOnce = st.triggerOnce, triggerFromLeft = st.triggerFromLeft });
+        {
+            var dto = new StoryTriggerDto { triggerMode = st.triggerMode.ToString(), posX = st.positionX, storyId = st.storyId, triggerOnce = st.triggerOnce, triggerFromLeft = st.triggerFromLeft };
+            if (st.triggerConditions != null)
+                foreach (var c in st.triggerConditions)
+                    dto.conditions.Add(new ConditionDto { variable = c.variableName, mode = c.mode.ToString(), value = c.compareValue });
+            if (st.onStoryStartSetVariables != null)
+                foreach (var a in st.onStoryStartSetVariables)
+                    dto.onStartSetVariables.Add(new SetActionDto { variable = a.variableName, value = a.stringValue });
+            if (st.onStoryCompleteSetVariables != null)
+                foreach (var a in st.onStoryCompleteSetVariables)
+                    dto.onCompleteSetVariables.Add(new SetActionDto { variable = a.variableName, value = a.stringValue });
+            d.storyTriggers.Add(dto);
+        }
 
         foreach (var g in ld.groups)
             d.groups.Add(new GroupDto { id = g.groupId, name = g.groupName, triggerX = g.triggerPositionX, mustClear = g.mustClearToProceed });
@@ -159,6 +184,7 @@ public class LevelDataDto
         ld.initialCameraPosition = new Vector2(initialCameraX, initialCameraY);
         ld.cameraDeadZone = hasCameraSettings ? Mathf.Clamp(cameraDeadZone, 0f, 0.45f) : 0.2f;
         ld.levelEndPositionX = levelEndPositionX;
+        ld.storyCollectionJson = !string.IsNullOrEmpty(storyCollectionGuid) ? AssetDatabase.LoadAssetAtPath<TextAsset>(AssetDatabase.GUIDToAssetPath(storyCollectionGuid)) : null;
 
         if (!string.IsNullOrEmpty(backgroundMode))
             ld.backgroundSettings.mode = (BackgroundMode)Enum.Parse(typeof(BackgroundMode), backgroundMode);
@@ -193,7 +219,34 @@ public class LevelDataDto
         ld.storyTriggers.Clear();
         if (storyTriggers != null)
             foreach (var s in storyTriggers)
-                ld.storyTriggers.Add(new StoryTriggerPoint { positionX = s.posX, storyId = s.storyId, triggerOnce = s.triggerOnce, triggerFromLeft = s.triggerFromLeft });
+            {
+                var conditions = new List<LevelVariableCondition>();
+                if (s.conditions != null)
+                    foreach (var c in s.conditions)
+                        conditions.Add(new LevelVariableCondition { variableName = c.variable, mode = (LevelVariableCondition.CompareMode)Enum.Parse(typeof(LevelVariableCondition.CompareMode), c.mode), compareValue = c.value });
+
+                var startActions = new List<VariableSetAction>();
+                if (s.onStartSetVariables != null)
+                    foreach (var a in s.onStartSetVariables)
+                        startActions.Add(new VariableSetAction { variableName = a.variable, stringValue = a.value });
+
+                var completeActions = new List<VariableSetAction>();
+                if (s.onCompleteSetVariables != null)
+                    foreach (var a in s.onCompleteSetVariables)
+                        completeActions.Add(new VariableSetAction { variableName = a.variable, stringValue = a.value });
+
+                ld.storyTriggers.Add(new StoryTriggerPoint
+                {
+                    triggerMode = string.IsNullOrEmpty(s.triggerMode) ? StoryTriggerMode.Position : (StoryTriggerMode)Enum.Parse(typeof(StoryTriggerMode), s.triggerMode),
+                    positionX = s.posX,
+                    storyId = s.storyId,
+                    triggerOnce = s.triggerOnce,
+                    triggerFromLeft = s.triggerFromLeft,
+                    triggerConditions = conditions,
+                    onStoryStartSetVariables = startActions,
+                    onStoryCompleteSetVariables = completeActions
+                });
+            }
 
         ld.groups.Clear();
         if (groups != null)

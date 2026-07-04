@@ -245,7 +245,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 263cd89b5f9100b4797aa44b04f3f608, type: 2}
+  - {fileID: 2100000, guid: 79119e69bcb17724f8a405f1f100b958, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -280,7 +280,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d247ba06193faa74d9335f5481b2b56c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: spine-unity::Spine.Unity.SkeletonAnimation
-  skeletonDataAsset: {fileID: 11400000, guid: f1cda31b197e5fd4b9c58f9e591eb835, type: 2}
+  skeletonDataAsset: {fileID: 11400000, guid: 7b9b99bf0eec2ab4098d7aadad7c8334, type: 2}
   initialSkinName: 
   initialFlipX: 0
   initialFlipY: 0
@@ -392,7 +392,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
   maxHp: 1
   skeletonAnimation: {fileID: 0}
-  hitAnimName: hit
+  hitAnimName: 
+  deathAnimName: die
   idleAnimName: idle
   blinkDuration: 0.6
   blinkInterval: 0.1
@@ -421,7 +422,7 @@ MonoBehaviour:
   minWanderDistance: 2
   maxWanderDistance: 4
   attackDesire: 70.2
-  attackRange: 10
+  attackRange: 7
   yAxisTolerance: 0.5
   maxYAxisOffset: 0.5
   forceAttackTime: 15

@@ -38,10 +38,7 @@ MonoBehaviour:
     type: 0
     defaultValue: false
     description: 
-  - variableName: level3
-    type: 0
-    defaultValue: false
-    description: 
+  storyCollectionJson: {fileID: 4900000, guid: 49a92a70e4a678a48acc2021c61c9ad9, type: 3}
   elements:
   - elementId: 359e2ccd-f6c1-45fc-90c9-5542ef27b958
     displayName: FatP_Test
@@ -93,7 +90,23 @@ MonoBehaviour:
     groupId: 
     appearConditions: []
     customParameters: []
-  storyTriggers: []
+  storyTriggers:
+  - triggerMode: 0
+    positionX: 3.12
+    storyId: story_20260705_031436
+    triggerOnce: 1
+    triggerFromLeft: 1
+    triggerConditions: []
+    onStoryStartSetVariables: []
+    onStoryCompleteSetVariables: []
+  - triggerMode: 0
+    positionX: 0.62
+    storyId: story_20260705_031436
+    triggerOnce: 1
+    triggerFromLeft: 1
+    triggerConditions: []
+    onStoryStartSetVariables: []
+    onStoryCompleteSetVariables: []
   groups: []
   enemyPrefabLibrary: []
   itemPrefabLibrary: []

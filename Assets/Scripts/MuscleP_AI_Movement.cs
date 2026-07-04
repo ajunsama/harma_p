@@ -36,7 +36,7 @@ public class MuscleP_AI_Movement : MonoBehaviour
     [Header("攻击参数")]
     [Range(0, 100)]
     public float attackDesire = 50f;   // 攻击欲望 (0=永不攻击, 100=每步都攻击)
-    public float attackRange = 12f;     // 攻击距离（增加以便更远距离发起攻击）
+    public float attackRange = 7f;      // 攻击距离
     public float yAxisTolerance = 0.5f; // y轴对齐容差
     public float maxYAxisOffset = 0.5f;   // y轴最大偏移（超过此距离必须调整y轴）
     public float forceAttackTime = 2.5f; // 强制攻击时间（缩短以便更频繁攻击）
@@ -81,6 +81,9 @@ public class MuscleP_AI_Movement : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         lastAttackTime = Time.time;
+
+        if (skeletonAnimation == null)
+            skeletonAnimation = GetComponentInChildren<SkeletonAnimation>();
     }
 
     void Start()
@@ -756,6 +759,9 @@ public class MuscleP_AI_Movement : MonoBehaviour
     {
         if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
             return;
+
+        if (!HasAnimation(animName))
+            return;
             
         // 检查当前动画是否已经是目标动画（避免重复设置）
         if (currentTrack != null && currentTrack.Animation != null && 
@@ -774,8 +780,26 @@ public class MuscleP_AI_Movement : MonoBehaviour
     {
         if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
             return;
+
+        if (!HasAnimation(animName))
+            return;
         
         currentTrack = skeletonAnimation.AnimationState.SetAnimation(trackIndex, animName, loop);
+    }
+
+    bool HasAnimation(string animName)
+    {
+        return skeletonAnimation.Skeleton != null
+            && skeletonAnimation.Skeleton.Data != null
+            && skeletonAnimation.Skeleton.Data.FindAnimation(animName) != null;
+    }
+
+    void StopMovementForEnemy()
+    {
+        isAttacking = false;
+        isDashing = false;
+        if (rb != null)
+            rb.linearVelocity = Vector2.zero;
     }
     
     // 限制位置在边界内

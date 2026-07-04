@@ -1,5 +1,17 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+
+[Serializable]
+public class StorySpeakerPreset
+{
+    public string presetId;
+    public string displayName;
+    public string speakerName;
+    public string styleId;
+    public string avatarId;
+    public string avatarPosition = "left";
+}
 
 /// <summary>
 /// 模板库 - ScriptableObject，集中管理所有模板
@@ -7,6 +19,9 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "StoryTemplateLibrary", menuName = "剧情系统/模板库")]
 public class StoryTemplateLibrary : ScriptableObject
 {
+    [Header("说话人组合")]
+    public List<StorySpeakerPreset> speakerPresets = new List<StorySpeakerPreset>();
+
     [Header("文字样式模板")]
     public List<StoryStyleTemplate> styleTemplates = new List<StoryStyleTemplate>();
 

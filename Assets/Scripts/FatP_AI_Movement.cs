@@ -34,13 +34,13 @@ public class FatP_AI_Movement : MonoBehaviour
     [Header("攻击参数")]
     [Range(0, 100)]
     public float attackDesire = 20f;
-    public float attackRange = 18f;
+    public float attackRange = 6f;
     public float yAxisTolerance = 0.6f;
     public float maxYAxisOffset = 0.6f;
     public float forceAttackTime = 5f;
     public float chargeTime = 0.7f;
     public float dashSpeed = 10f;
-    public float playerBodyWidth = 4f;
+    public float playerBodyWidth = 2f;
     public float postAttackDelay = 0.5f;
 
     [Header("Spine动画")]
@@ -82,6 +82,9 @@ public class FatP_AI_Movement : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         lastAttackTime = Time.time;
+
+        if (skeletonAnimation == null)
+            skeletonAnimation = GetComponentInChildren<SkeletonAnimation>();
     }
 
     void Start()
@@ -556,7 +559,7 @@ public class FatP_AI_Movement : MonoBehaviour
         Vector2 dashDirection = (player.position.x > transform.position.x) ? Vector2.right : Vector2.left;
 
         float distanceToPlayer = Mathf.Abs(player.position.x - transform.position.x);
-        float dashDistance = distanceToPlayer + (playerBodyWidth * 4);
+        float dashDistance = distanceToPlayer + (playerBodyWidth * 2f);
 
         Vector2 startPos = transform.position;
         float fixedY = startPos.y;
@@ -634,6 +637,9 @@ public class FatP_AI_Movement : MonoBehaviour
         if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
             return;
 
+        if (!HasAnimation(animName))
+            return;
+
         if (currentTrack != null && currentTrack.Animation != null &&
             currentTrack.Animation.Name == animName && !currentTrack.IsComplete)
         {
@@ -648,7 +654,25 @@ public class FatP_AI_Movement : MonoBehaviour
         if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
             return;
 
+        if (!HasAnimation(animName))
+            return;
+
         currentTrack = skeletonAnimation.AnimationState.SetAnimation(trackIndex, animName, loop);
+    }
+
+    bool HasAnimation(string animName)
+    {
+        return skeletonAnimation.Skeleton != null
+            && skeletonAnimation.Skeleton.Data != null
+            && skeletonAnimation.Skeleton.Data.FindAnimation(animName) != null;
+    }
+
+    void StopMovementForEnemy()
+    {
+        isAttacking = false;
+        isDashing = false;
+        if (rb != null)
+            rb.linearVelocity = Vector2.zero;
     }
 
     void ClampPositionToBounds()

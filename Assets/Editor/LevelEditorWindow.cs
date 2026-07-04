@@ -436,6 +436,7 @@ public class LevelEditorWindow : EditorWindow
         for (int i = 0; i < _level.storyTriggers.Count; i++)
         {
             var st = _level.storyTriggers[i];
+            if (st.triggerMode != StoryTriggerMode.Position) continue;
             Vector2 screenPos = WorldToScreen(new Vector2(st.positionX, 0), rect);
             if (Vector2.Distance(mousePos, screenPos) < 10f)
             {
@@ -521,7 +522,15 @@ public class LevelEditorWindow : EditorWindow
         menu.AddItem(new GUIContent("添加过场触发器"), false, () =>
         {
             Undo.RecordObject(_level, "Add StoryTrigger");
-            _level.storyTriggers.Add(new StoryTriggerPoint { positionX = worldPos.x });
+            _level.storyTriggers.Add(new StoryTriggerPoint
+            {
+                triggerMode = StoryTriggerMode.Position,
+                positionX = worldPos.x,
+                storyId = GetStoryIds().FirstOrDefault() ?? ""
+            });
+            _selectedStoryTriggerIndex = _level.storyTriggers.Count - 1;
+            _selectedElementId = null;
+            _selectedGroupId = null;
             EditorUtility.SetDirty(_level);
         });
         menu.AddItem(new GUIContent("添加元素组"), false, () =>
@@ -941,6 +950,7 @@ public class LevelEditorWindow : EditorWindow
         for (int i = 0; i < _level.storyTriggers.Count; i++)
         {
             var st = _level.storyTriggers[i];
+            if (st.triggerMode != StoryTriggerMode.Position) continue;
             float sx = WorldToScreenX(st.positionX, rect);
             if (sx < 0 || sx > local.width) continue;
 
@@ -1204,6 +1214,11 @@ public class LevelEditorWindow : EditorWindow
         EditorGUILayout.LabelField("关卡变量", EditorStyles.boldLabel);
         DrawVariables();
 
+        EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("剧情数据", EditorStyles.boldLabel);
+        _level.storyCollectionJson = (TextAsset)EditorGUILayout.ObjectField("过场动画集 JSON", _level.storyCollectionJson, typeof(TextAsset), false);
+        DrawStoryTriggerQuickPanel();
+
         EditorGUILayout.Space(8);
         if (GUILayout.Button("导出JSON", GUILayout.Height(22))) ExportJson();
         if (GUILayout.Button("导入JSON", GUILayout.Height(22))) ImportJson();
@@ -1239,6 +1254,105 @@ public class LevelEditorWindow : EditorWindow
                 defaultValue = "false"
             });
             EditorUtility.SetDirty(_level);
+        }
+    }
+
+    void DrawStoryTriggerQuickPanel()
+    {
+        var storyIds = GetStoryIds();
+        if (_level.storyCollectionJson == null)
+        {
+            EditorGUILayout.HelpBox("先导入剧情编辑器导出的 JSON，再为其中的剧情添加触发器。", MessageType.Info);
+            return;
+        }
+
+        if (storyIds.Count == 0)
+        {
+            EditorGUILayout.HelpBox("当前剧情 JSON 中没有可用的 storyId，或 JSON 解析失败。", MessageType.Warning);
+            return;
+        }
+
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("剧情触发器", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("触发方式可选：位置触发、条件满足、关卡开始、关卡完成。选中触发器后可配置条件和剧情前后变量变化。", MessageType.Info);
+
+        for (int i = 0; i < _level.storyTriggers.Count; i++)
+        {
+            var trigger = _level.storyTriggers[i];
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+            string storyLabel = string.IsNullOrEmpty(trigger.storyId) ? "(未选择剧情)" : trigger.storyId;
+            bool selected = _selectedStoryTriggerIndex == i;
+            if (GUILayout.Toggle(selected, storyLabel, "Button", GUILayout.Width(120)))
+            {
+                _selectedStoryTriggerIndex = i;
+                _selectedElementId = null;
+                _selectedGroupId = null;
+            }
+
+            trigger.triggerMode = (StoryTriggerMode)EditorGUILayout.EnumPopup(trigger.triggerMode, GUILayout.Width(88));
+
+            if (trigger.triggerMode == StoryTriggerMode.Position)
+            {
+                EditorGUILayout.LabelField("X", GUILayout.Width(16));
+                trigger.positionX = EditorGUILayout.FloatField(trigger.positionX, GUILayout.Width(64));
+            }
+            else
+            {
+                GUILayout.Label(GetStoryTriggerModeLabel(trigger.triggerMode), EditorStyles.miniLabel, GUILayout.Width(74));
+            }
+
+            GUILayout.FlexibleSpace();
+            using (new EditorGUI.DisabledScope(trigger.triggerMode != StoryTriggerMode.Position))
+            {
+                if (GUILayout.Button("定位", GUILayout.Width(46)))
+                {
+                    _selectedStoryTriggerIndex = i;
+                    _selectedElementId = null;
+                    _selectedGroupId = null;
+                    _canvasScroll.x = trigger.positionX * _canvasScale - 200f;
+                    Repaint();
+                }
+            }
+
+            if (GUILayout.Button("删除", GUILayout.Width(46)))
+            {
+                Undo.RecordObject(_level, "Remove Story Trigger");
+                _level.storyTriggers.RemoveAt(i);
+                _selectedStoryTriggerIndex = -1;
+                EditorUtility.SetDirty(_level);
+                EditorGUILayout.EndHorizontal();
+                break;
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        if (GUILayout.Button("+ 为剧情添加位置触发器", GUILayout.Height(30)))
+        {
+            Undo.RecordObject(_level, "Add Story Trigger");
+            _level.storyTriggers.Add(new StoryTriggerPoint
+            {
+                triggerMode = StoryTriggerMode.Position,
+                storyId = storyIds[0],
+                positionX = Mathf.Clamp(_level.playerSpawnPosition.x + 3f, 0f, _level.levelLength),
+                triggerOnce = true,
+                triggerFromLeft = true
+            });
+            _selectedStoryTriggerIndex = _level.storyTriggers.Count - 1;
+            _selectedElementId = null;
+            _selectedGroupId = null;
+            EditorUtility.SetDirty(_level);
+        }
+    }
+
+    string GetStoryTriggerModeLabel(StoryTriggerMode mode)
+    {
+        switch (mode)
+        {
+            case StoryTriggerMode.Position: return "位置";
+            case StoryTriggerMode.Conditions: return "条件";
+            case StoryTriggerMode.LevelStart: return "开始";
+            case StoryTriggerMode.LevelComplete: return "完成";
+            default: return mode.ToString();
         }
     }
 
@@ -1314,13 +1428,30 @@ public class LevelEditorWindow : EditorWindow
         EditorGUILayout.LabelField("过场触发器", EditorStyles.boldLabel);
         EditorGUILayout.Space(5);
 
-        st.storyId = EditorGUILayout.TextField("故事ID", st.storyId);
-        st.positionX = EditorGUILayout.FloatField("触发位置 X", st.positionX);
+        st.storyId = DrawStoryIdField("故事ID", st.storyId);
+        st.triggerMode = (StoryTriggerMode)EditorGUILayout.EnumPopup("触发方式", st.triggerMode);
         st.triggerOnce = EditorGUILayout.Toggle("只触发一次", st.triggerOnce);
-        st.triggerFromLeft = EditorGUILayout.Toggle("从左向右触发", st.triggerFromLeft);
+
+        switch (st.triggerMode)
+        {
+            case StoryTriggerMode.Position:
+                st.positionX = EditorGUILayout.FloatField("触发位置 X", st.positionX);
+                st.triggerFromLeft = EditorGUILayout.Toggle("从左向右触发", st.triggerFromLeft);
+                EditorGUILayout.HelpBox("玩家越过触发位置 X 时播放剧情。下方触发条件可作为额外门槛。", MessageType.Info);
+                break;
+            case StoryTriggerMode.Conditions:
+                EditorGUILayout.HelpBox("当下方触发条件全部满足时播放剧情。变量变化后会自动重新检查。", MessageType.Info);
+                break;
+            case StoryTriggerMode.LevelStart:
+                EditorGUILayout.HelpBox("关卡构建完成后播放剧情。下方触发条件可作为额外门槛。", MessageType.Info);
+                break;
+            case StoryTriggerMode.LevelComplete:
+                EditorGUILayout.HelpBox("关卡完成时播放剧情。下方触发条件可作为额外门槛。", MessageType.Info);
+                break;
+        }
 
         EditorGUILayout.Space(10);
-        EditorGUILayout.LabelField("触发条件", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField(st.triggerMode == StoryTriggerMode.Conditions ? "条件触发规则" : "附加触发条件", EditorStyles.boldLabel);
         DrawConditions(st.triggerConditions);
 
         EditorGUILayout.Space(10);
@@ -1564,13 +1695,35 @@ public class LevelEditorWindow : EditorWindow
         return value.ToString();
     }
 
+    string DrawStoryIdField(string label, string current)
+    {
+        var ids = GetStoryIds();
+        if (ids.Count == 0)
+            return EditorGUILayout.TextField(label, current);
+
+        if (!ids.Contains(current))
+            ids.Insert(0, string.IsNullOrEmpty(current) ? "" : current);
+
+        int idx = Mathf.Max(0, ids.IndexOf(current));
+        idx = EditorGUILayout.Popup(label, idx, ids.ToArray());
+        return ids[idx];
+    }
+
     List<string> GetStoryIds()
     {
         var ids = new List<string>();
-        var storyManager = FindObjectOfType<StoryManager>();
-        if (storyManager != null && storyManager.CurrentSequence != null)
+        if (_level == null || _level.storyCollectionJson == null)
+            return ids;
+
+        try
         {
-            // StoryManager 不直接暴露所有 storyId 列表，这里简单返回空
+            var data = JsonUtility.FromJson<StoryDataCollection>(_level.storyCollectionJson.text);
+            if (data?.stories != null)
+                ids.AddRange(data.stories.Where(s => s != null && !string.IsNullOrEmpty(s.storyId)).Select(s => s.storyId));
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[LevelEditorWindow] 剧情 JSON 解析失败: {e.Message}");
         }
         return ids;
     }

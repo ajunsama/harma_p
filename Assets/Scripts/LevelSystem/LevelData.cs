@@ -28,6 +28,14 @@ public enum BackgroundMode
     ParallaxLayers
 }
 
+public enum StoryTriggerMode
+{
+    Position,
+    Conditions,
+    LevelStart,
+    LevelComplete
+}
+
 // ============================================================
 // 背景设置
 // ============================================================
@@ -142,6 +150,7 @@ public class LevelElement
 [Serializable]
 public class StoryTriggerPoint
 {
+    public StoryTriggerMode triggerMode = StoryTriggerMode.Position;
     public float positionX;
     public string storyId;
     public bool triggerOnce = true;
@@ -214,6 +223,9 @@ public class LevelData : ScriptableObject
 
     [Header("关卡变量")]
     public List<LevelVariableDefinition> variables = new List<LevelVariableDefinition>();
+
+    [Header("剧情数据")]
+    public TextAsset storyCollectionJson;
 
     [Header("元素列表")]
     public List<LevelElement> elements = new List<LevelElement>();

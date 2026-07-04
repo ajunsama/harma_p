@@ -1,496 +1,806 @@
-using UnityEngine;
-using UnityEditor;
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditorInternal;
+using UnityEngine;
 
 /// <summary>
-/// 剧情系统编辑器工具窗口
-/// 提供：JSON导入/导出、模板管理、预览功能
+/// Editor focused on authoring story dialogue JSON used by StoryManager.
 /// </summary>
 public class StoryEditorWindow : EditorWindow
 {
-    private Vector2 _scrollPos;
+    private const string DefaultDirectory = "Assets/LevelData/StoryData";
+    private const float DialogueCardHeight = 292f;
+    private const float DialogueCardPadding = 12f;
+    private const float DialogueHeaderHeight = 24f;
+    private const float DialogueFieldGap = 4f;
+
+    private readonly string[] _tabNames = { "剧情编辑", "角色模板", "样式模板", "图片模板", "JSON预览" };
     private int _selectedTab;
-    private readonly string[] _tabNames = { "JSON导入/导出", "样式模板", "头像模板", "图片模板", "预览" };
+    private Vector2 _scrollPos;
 
-    // JSON导入
-    private TextAsset _importJsonAsset;
-    private string _jsonPreview = "";
-
-    // 模板管理
+    private TextAsset _storyJsonAsset;
     private StoryTemplateLibrary _templateLibrary;
+    private StoryDataCollection _data = new StoryDataCollection();
+    private int _selectedStoryIndex = -1;
+    private int _selectedDialogueIndex = -1;
+    private string _loadedAssetPath;
+    private string _jsonPreview;
+    private StorySequence _dialogueListStory;
+    private ReorderableList _dialogueList;
 
-    // 样式创建
-    private string _newStyleId = "";
-    private string _newStyleName = "";
-
-    // 头像创建
-    private string _newAvatarId = "";
-    private string _newAvatarName = "";
-    private Sprite _newAvatarSprite;
-
-    // 图片创建
-    private string _newImageId = "";
-    private string _newImageName = "";
-    private Sprite _newImageSprite;
-
-    [MenuItem("工具/剧情系统编辑器")]
+    [MenuItem("Tools/剧情编辑器")]
     public static void ShowWindow()
     {
-        var window = GetWindow<StoryEditorWindow>("剧情系统编辑器");
-        window.minSize = new Vector2(500, 400);
+        var window = GetWindow<StoryEditorWindow>("剧情编辑器");
+        window.minSize = new Vector2(760, 520);
     }
 
-    void OnGUI()
+    private void OnEnable()
     {
-        EditorGUILayout.Space(5);
-        _selectedTab = GUILayout.Toolbar(_selectedTab, _tabNames);
-        EditorGUILayout.Space(10);
+        if (_data == null)
+            _data = new StoryDataCollection();
+    }
 
+    private void OnGUI()
+    {
+        DrawHeader();
+
+        _selectedTab = GUILayout.Toolbar(_selectedTab, _tabNames);
         _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
 
         switch (_selectedTab)
         {
-            case 0: DrawJsonTab(); break;
-            case 1: DrawStyleTab(); break;
-            case 2: DrawAvatarTab(); break;
-            case 3: DrawImageTab(); break;
-            case 4: DrawPreviewTab(); break;
+            case 0: DrawStoryEditTab(); break;
+            case 1: DrawAvatarTemplateTab(); break;
+            case 2: DrawStyleTemplateTab(); break;
+            case 3: DrawImageTemplateTab(); break;
+            case 4: DrawJsonPreviewTab(); break;
         }
 
         EditorGUILayout.EndScrollView();
     }
 
-    // ==================== JSON导入/导出 ====================
-
-    void DrawJsonTab()
+    private void DrawHeader()
     {
-        EditorGUILayout.LabelField("JSON数据管理", EditorStyles.boldLabel);
-        EditorGUILayout.Space(5);
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.LabelField("剧情编辑器只负责编辑对话数据，并导出给关卡编辑器引用。播放 UI 仍由 StoryManager/StoryUI 处理。", EditorStyles.wordWrappedLabel);
 
-        // 导入
-        EditorGUILayout.LabelField("导入JSON", EditorStyles.miniLabel);
-        _importJsonAsset = (TextAsset)EditorGUILayout.ObjectField(
-            "JSON文件", _importJsonAsset, typeof(TextAsset), false);
+        EditorGUILayout.BeginHorizontal();
+        EditorGUI.BeginChangeCheck();
+        _storyJsonAsset = (TextAsset)EditorGUILayout.ObjectField("剧情 JSON", _storyJsonAsset, typeof(TextAsset), false);
+        if (EditorGUI.EndChangeCheck() && _storyJsonAsset != null)
+            LoadFromTextAsset(_storyJsonAsset);
 
-        if (_importJsonAsset != null)
+        if (GUILayout.Button("新建", GUILayout.Width(64)))
+            NewCollection();
+        if (GUILayout.Button("打开", GUILayout.Width(64)))
+            OpenJson();
+        if (GUILayout.Button("保存", GUILayout.Width(64)))
+            SaveJson(false);
+        if (GUILayout.Button("另存为", GUILayout.Width(72)))
+            SaveJson(true);
+        EditorGUILayout.EndHorizontal();
+
+        _templateLibrary = (StoryTemplateLibrary)EditorGUILayout.ObjectField("模板库", _templateLibrary, typeof(StoryTemplateLibrary), false);
+        EditorGUILayout.EndVertical();
+    }
+
+    private void DrawStoryEditTab()
+    {
+        if (_data.stories == null)
+            _data.stories = new List<StorySequence>();
+
+        EditorGUILayout.BeginHorizontal();
+        DrawStoryList();
+        DrawStoryDetail();
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawStoryList()
+    {
+        EditorGUILayout.BeginVertical(GUILayout.Width(230));
+        EditorGUILayout.LabelField("剧情段落", EditorStyles.boldLabel);
+
+        for (int i = 0; i < _data.stories.Count; i++)
         {
-            if (GUILayout.Button("预览JSON内容"))
+            var story = _data.stories[i];
+            string label = string.IsNullOrEmpty(story.storyId) ? "(未命名)" : story.storyId;
+            if (GUILayout.Toggle(_selectedStoryIndex == i, label, "Button"))
             {
-                _jsonPreview = _importJsonAsset.text;
+                _selectedStoryIndex = i;
+                _selectedDialogueIndex = story.dialogues != null && story.dialogues.Count > 0 ? 0 : -1;
             }
+        }
 
-            if (GUILayout.Button("验证JSON格式"))
+        EditorGUILayout.Space();
+        if (GUILayout.Button("+ 新剧情"))
+        {
+            _data.stories.Add(CreateStory());
+            _selectedStoryIndex = _data.stories.Count - 1;
+            _selectedDialogueIndex = -1;
+        }
+
+        using (new EditorGUI.DisabledScope(_selectedStoryIndex < 0 || _selectedStoryIndex >= _data.stories.Count))
+        {
+            if (GUILayout.Button("复制剧情"))
             {
-                ValidateJson(_importJsonAsset.text);
+                var copy = JsonUtility.FromJson<StorySequence>(JsonUtility.ToJson(_data.stories[_selectedStoryIndex]));
+                copy.storyId = GenerateStoryId();
+                _data.stories.Insert(_selectedStoryIndex + 1, copy);
+                _selectedStoryIndex++;
+            }
+            if (GUILayout.Button("删除剧情") && EditorUtility.DisplayDialog("删除剧情", "确定删除当前剧情段落？", "删除", "取消"))
+            {
+                _data.stories.RemoveAt(_selectedStoryIndex);
+                _selectedStoryIndex = Mathf.Clamp(_selectedStoryIndex, -1, _data.stories.Count - 1);
+                _selectedDialogueIndex = -1;
             }
         }
 
-        if (!string.IsNullOrEmpty(_jsonPreview))
+        EditorGUILayout.EndVertical();
+    }
+
+    private void DrawStoryDetail()
+    {
+        EditorGUILayout.BeginVertical();
+        if (_selectedStoryIndex < 0 || _selectedStoryIndex >= _data.stories.Count)
         {
-            EditorGUILayout.Space(5);
-            EditorGUILayout.LabelField("JSON预览：");
-            EditorGUILayout.TextArea(_jsonPreview, GUILayout.MaxHeight(200));
+            EditorGUILayout.HelpBox("选择或新建一段剧情后开始编辑。", MessageType.Info);
+            EditorGUILayout.EndVertical();
+            return;
         }
 
-        EditorGUILayout.Space(15);
+        var story = _data.stories[_selectedStoryIndex];
+        if (story.dialogues == null)
+            story.dialogues = new List<StoryDialogue>();
 
-        // 导出模板
-        EditorGUILayout.LabelField("导出JSON模板", EditorStyles.miniLabel);
-        if (GUILayout.Button("生成空白JSON模板文件"))
-        {
-            GenerateJsonTemplate();
-        }
+        EditorGUILayout.LabelField("段落信息", EditorStyles.boldLabel);
+        EditorGUILayout.BeginHorizontal();
+        story.storyId = EditorGUILayout.TextField("剧情 ID", story.storyId);
+        if (GUILayout.Button("生成 ID", GUILayout.Width(80)))
+            story.storyId = GenerateStoryId();
+        EditorGUILayout.EndHorizontal();
+        story.chapterId = EditorGUILayout.TextField("章节 ID", story.chapterId);
+        story.sectionId = EditorGUILayout.TextField("小节 ID", story.sectionId);
 
-        if (GUILayout.Button("从场景中StoryManager导出当前数据"))
+        EditorGUILayout.Space(8);
+        DrawDialogueCards(story);
+        EditorGUILayout.EndVertical();
+    }
+
+    private void DrawDialogueCards(StorySequence story)
+    {
+        EnsureDialogueList(story);
+        _dialogueList.DoLayoutList();
+
+        EditorGUILayout.Space(10);
+        if (GUILayout.Button("+ 新增对话", GUILayout.Height(40)))
         {
-            ExportFromScene();
+            Undo.RecordObject(this, "Add Story Dialogue");
+            story.dialogues.Add(CreateDialogue(story, story.dialogues.Count + 1));
+            RenumberDialogues(story);
+            _dialogueList.index = story.dialogues.Count - 1;
+            _selectedDialogueIndex = _dialogueList.index;
         }
     }
 
-    void ValidateJson(string json)
+    private void EnsureDialogueList(StorySequence story)
+    {
+        if (_dialogueListStory == story && _dialogueList != null && _dialogueList.list == story.dialogues)
+            return;
+
+        _dialogueListStory = story;
+        _dialogueList = new ReorderableList(story.dialogues, typeof(StoryDialogue), true, false, false, false)
+        {
+            elementHeight = DialogueCardHeight,
+            footerHeight = 0f,
+            showDefaultBackground = false
+        };
+
+        _dialogueList.drawElementCallback = (rect, index, active, focused) =>
+        {
+            if (index < 0 || index >= story.dialogues.Count) return;
+            DrawDialogueCard(rect, story, index);
+        };
+
+        _dialogueList.onReorderCallback = _ => RenumberDialogues(story);
+    }
+
+    private void DrawDialogueCard(Rect rect, StorySequence story, int index)
+    {
+        var dialogue = story.dialogues[index];
+        rect.y += 4f;
+        rect.height -= 8f;
+
+        GUI.Box(rect, GUIContent.none, EditorStyles.helpBox);
+
+        var headerRect = new Rect(rect.x + DialogueCardPadding, rect.y + 8f, rect.width - DialogueCardPadding * 2f, DialogueHeaderHeight);
+        EditorGUI.LabelField(new Rect(headerRect.x, headerRect.y, 170f, headerRect.height), $"对话 #{index + 1}", EditorStyles.boldLabel);
+
+        var addRect = new Rect(headerRect.xMax - 112f, headerRect.y, 52f, headerRect.height);
+        var deleteRect = new Rect(headerRect.xMax - 56f, headerRect.y, 52f, headerRect.height);
+        if (GUI.Button(addRect, "添加"))
+        {
+            story.dialogues.Insert(index + 1, CreateDialogue(story, index + 2));
+            RenumberDialogues(story);
+            _dialogueList.index = index + 1;
+            _selectedDialogueIndex = _dialogueList.index;
+            GUI.changed = true;
+        }
+
+        if (GUI.Button(deleteRect, "删除"))
+        {
+            story.dialogues.RemoveAt(index);
+            RenumberDialogues(story);
+            _dialogueList.index = Mathf.Clamp(index - 1, -1, story.dialogues.Count - 1);
+            _selectedDialogueIndex = _dialogueList.index;
+            GUI.changed = true;
+            return;
+        }
+
+        var bodyRect = new Rect(rect.x + DialogueCardPadding, rect.y + 40f, rect.width - DialogueCardPadding * 2f, rect.height - 52f);
+        float gap = 12f;
+        float leftWidth = Mathf.Clamp(bodyRect.width * 0.42f, 260f, 340f);
+        if (bodyRect.width - leftWidth - gap < 260f)
+            leftWidth = Mathf.Max(220f, bodyRect.width - gap - 260f);
+        var leftRect = new Rect(bodyRect.x, bodyRect.y, leftWidth, bodyRect.height);
+        var rightRect = new Rect(leftRect.xMax + gap, bodyRect.y, bodyRect.width - leftWidth - gap, bodyRect.height);
+
+        DrawDialogueMetaFields(leftRect, story, dialogue);
+        DrawDialogueContentFields(rightRect, dialogue);
+    }
+
+    private void DrawDialogueMetaFields(Rect rect, StorySequence story, StoryDialogue dialogue)
+    {
+        float y = rect.y;
+        float line = EditorGUIUtility.singleLineHeight;
+        float gap = DialogueFieldGap;
+
+        dialogue.id = EditorGUI.IntField(new Rect(rect.x, y, rect.width, line), "序号", dialogue.id);
+        y += line + gap;
+        dialogue.chapterId = EditorGUI.TextField(new Rect(rect.x, y, rect.width, line), "章节 ID", string.IsNullOrEmpty(dialogue.chapterId) ? story.chapterId : dialogue.chapterId);
+        y += line + gap;
+        dialogue.sectionId = EditorGUI.TextField(new Rect(rect.x, y, rect.width, line), "小节 ID", string.IsNullOrEmpty(dialogue.sectionId) ? story.sectionId : dialogue.sectionId);
+        y += line + gap;
+        DrawSpeakerPresetPopup(new Rect(rect.x, y, rect.width, line), dialogue);
+        y += line + gap;
+        dialogue.playSpeed = EditorGUI.FloatField(new Rect(rect.x, y, rect.width, line), "播放速度", dialogue.playSpeed);
+        y += line + gap;
+        dialogue.styleId = DrawIdPopup(new Rect(rect.x, y, rect.width, line), "样式 ID", dialogue.styleId, GetStyleIds());
+        y += line + gap;
+        dialogue.avatarId = DrawIdPopup(new Rect(rect.x, y, rect.width, line), "头像 ID", dialogue.avatarId, GetAvatarIds());
+        y += line + gap;
+        dialogue.avatarPosition = DrawIdPopup(new Rect(rect.x, y, rect.width, line), "头像位置", dialogue.avatarPosition, new List<string> { "left", "center", "right" });
+        y += line + gap;
+        dialogue.showImage = EditorGUI.Toggle(new Rect(rect.x, y, rect.width, line), "显示图片", dialogue.showImage);
+        y += line + gap;
+        using (new EditorGUI.DisabledScope(!dialogue.showImage))
+            dialogue.imageId = DrawIdPopup(new Rect(rect.x, y, rect.width, line), "图片 ID", dialogue.imageId, GetImageIds());
+    }
+
+    private void DrawDialogueContentFields(Rect rect, StoryDialogue dialogue)
+    {
+        float line = EditorGUIUtility.singleLineHeight;
+        dialogue.speakerName = EditorGUI.TextField(new Rect(rect.x, rect.y, rect.width, line), "说话人", dialogue.speakerName);
+
+        var contentLabelRect = new Rect(rect.x, rect.y + line + 8f, rect.width, line);
+        EditorGUI.LabelField(contentLabelRect, "说话内容");
+        var contentRect = new Rect(rect.x, contentLabelRect.yMax + 2f, rect.width, 96f);
+        dialogue.content = EditorGUI.TextArea(contentRect, dialogue.content);
+
+        var extraRect = new Rect(rect.x, contentRect.yMax + 8f, rect.width, line);
+        dialogue.extraJson = EditorGUI.TextField(extraRect, "扩展 JSON", dialogue.extraJson);
+    }
+
+    private void DrawDialogueList(StorySequence story)
+    {
+        EditorGUILayout.BeginVertical(GUILayout.Width(250));
+        EditorGUILayout.LabelField("对话", EditorStyles.boldLabel);
+
+        for (int i = 0; i < story.dialogues.Count; i++)
+        {
+            var d = story.dialogues[i];
+            string speaker = string.IsNullOrEmpty(d.speakerName) ? d.styleId : d.speakerName;
+            string label = $"{i + 1}. {speaker}  {Trim(d.content, 18)}";
+            if (GUILayout.Toggle(_selectedDialogueIndex == i, label, "Button"))
+                _selectedDialogueIndex = i;
+        }
+
+        EditorGUILayout.Space();
+        if (GUILayout.Button("+ 新对话"))
+        {
+            story.dialogues.Add(CreateDialogue(story, story.dialogues.Count + 1));
+            _selectedDialogueIndex = story.dialogues.Count - 1;
+        }
+
+        using (new EditorGUI.DisabledScope(_selectedDialogueIndex < 0 || _selectedDialogueIndex >= story.dialogues.Count))
+        {
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("上移") && _selectedDialogueIndex > 0)
+            {
+                Swap(story.dialogues, _selectedDialogueIndex, _selectedDialogueIndex - 1);
+                _selectedDialogueIndex--;
+                RenumberDialogues(story);
+            }
+            if (GUILayout.Button("下移") && _selectedDialogueIndex < story.dialogues.Count - 1)
+            {
+                Swap(story.dialogues, _selectedDialogueIndex, _selectedDialogueIndex + 1);
+                _selectedDialogueIndex++;
+                RenumberDialogues(story);
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (GUILayout.Button("删除对话"))
+            {
+                story.dialogues.RemoveAt(_selectedDialogueIndex);
+                _selectedDialogueIndex = Mathf.Clamp(_selectedDialogueIndex, -1, story.dialogues.Count - 1);
+                RenumberDialogues(story);
+            }
+        }
+
+        EditorGUILayout.EndVertical();
+    }
+
+    private void DrawDialogueDetail(StorySequence story)
+    {
+        EditorGUILayout.BeginVertical();
+        if (_selectedDialogueIndex < 0 || _selectedDialogueIndex >= story.dialogues.Count)
+        {
+            EditorGUILayout.HelpBox("选择或新建一条对话。", MessageType.Info);
+            EditorGUILayout.EndVertical();
+            return;
+        }
+
+        var d = story.dialogues[_selectedDialogueIndex];
+        DrawSpeakerPresetPicker(d);
+
+        d.id = EditorGUILayout.IntField("序号", d.id);
+        d.chapterId = EditorGUILayout.TextField("章节 ID", string.IsNullOrEmpty(d.chapterId) ? story.chapterId : d.chapterId);
+        d.sectionId = EditorGUILayout.TextField("小节 ID", string.IsNullOrEmpty(d.sectionId) ? story.sectionId : d.sectionId);
+        d.speakerName = EditorGUILayout.TextField("说话人", d.speakerName);
+        d.content = EditorGUILayout.TextArea(d.content, GUILayout.MinHeight(72));
+        d.playSpeed = EditorGUILayout.FloatField("播放速度", d.playSpeed);
+
+        d.styleId = DrawIdPopup("样式 ID", d.styleId, GetStyleIds());
+        d.avatarPosition = DrawIdPopup("头像位置", d.avatarPosition, new List<string> { "left", "center", "right" });
+        d.avatarId = DrawIdPopup("头像 ID", d.avatarId, GetAvatarIds());
+        d.showImage = EditorGUILayout.Toggle("显示图片", d.showImage);
+        using (new EditorGUI.DisabledScope(!d.showImage))
+            d.imageId = DrawIdPopup("图片 ID", d.imageId, GetImageIds());
+
+        d.extraJson = EditorGUILayout.TextField("扩展 JSON", d.extraJson);
+        EditorGUILayout.EndVertical();
+    }
+
+    private void DrawAvatarTemplateTab()
+    {
+        DrawSpeakerPresetEditor();
+
+        EditorGUILayout.Space(12);
+        EditorGUILayout.LabelField("现有角色模板", EditorStyles.boldLabel);
+        if (_templateLibrary == null)
+        {
+            EditorGUILayout.HelpBox("拖入 StoryTemplateLibrary 后可以查看角色头像模板。模板本身仍在 Inspector 中调整。", MessageType.Info);
+            return;
+        }
+
+        foreach (var avatar in _templateLibrary.avatarTemplates.Where(a => a != null))
+        {
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+            GUILayout.Label(AssetPreview.GetAssetPreview(avatar.avatarSprite) ?? Texture2D.grayTexture, GUILayout.Width(64), GUILayout.Height(64));
+            EditorGUILayout.BeginVertical();
+            EditorGUILayout.LabelField(avatar.displayName, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("ID", avatar.avatarId);
+            EditorGUILayout.LabelField("缩放", avatar.scale.ToString("0.###"));
+            if (GUILayout.Button("选中模板", GUILayout.Width(90)))
+                Selection.activeObject = avatar;
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndHorizontal();
+        }
+    }
+
+    private void DrawSpeakerPresetPicker(StoryDialogue dialogue)
+    {
+        var presets = GetSpeakerPresets();
+        if (presets.Count == 0)
+        {
+            EditorGUILayout.HelpBox("可在“角色模板”页添加说话人组合，之后这里就能一键套用名称、样式和头像。", MessageType.Info);
+            return;
+        }
+
+        var labels = new List<string> { "手动设置" };
+        labels.AddRange(presets.Select(GetSpeakerPresetLabel));
+
+        int currentIndex = 0;
+        for (int i = 0; i < presets.Count; i++)
+        {
+            if (IsPresetMatch(dialogue, presets[i]))
+            {
+                currentIndex = i + 1;
+                break;
+            }
+        }
+
+        EditorGUI.BeginChangeCheck();
+        int selectedIndex = EditorGUILayout.Popup("说话人组合", currentIndex, labels.ToArray());
+        if (EditorGUI.EndChangeCheck() && selectedIndex > 0)
+            ApplySpeakerPreset(dialogue, presets[selectedIndex - 1]);
+    }
+
+    private void DrawSpeakerPresetPopup(Rect rect, StoryDialogue dialogue)
+    {
+        var presets = GetSpeakerPresets();
+        if (presets.Count == 0)
+        {
+            EditorGUI.LabelField(rect, "说话人组合", "未配置");
+            return;
+        }
+
+        var labels = new List<string> { "手动设置" };
+        labels.AddRange(presets.Select(GetSpeakerPresetLabel));
+
+        int currentIndex = 0;
+        for (int i = 0; i < presets.Count; i++)
+        {
+            if (IsPresetMatch(dialogue, presets[i]))
+            {
+                currentIndex = i + 1;
+                break;
+            }
+        }
+
+        EditorGUI.BeginChangeCheck();
+        int selectedIndex = EditorGUI.Popup(rect, "说话人组合", currentIndex, labels.ToArray());
+        if (EditorGUI.EndChangeCheck() && selectedIndex > 0)
+            ApplySpeakerPreset(dialogue, presets[selectedIndex - 1]);
+    }
+
+    private void DrawSpeakerPresetEditor()
+    {
+        EditorGUILayout.LabelField("说话人组合", EditorStyles.boldLabel);
+        if (_templateLibrary == null)
+        {
+            EditorGUILayout.HelpBox("拖入 StoryTemplateLibrary 后可以配置说话人组合。", MessageType.Info);
+            return;
+        }
+
+        if (_templateLibrary.speakerPresets == null)
+            _templateLibrary.speakerPresets = new List<StorySpeakerPreset>();
+
+        EditorGUILayout.HelpBox("组合用于把说话人名称、样式 ID、头像 ID 和头像位置绑定在一起。编辑剧情时选择组合即可自动填充。", MessageType.Info);
+
+        for (int i = 0; i < _templateLibrary.speakerPresets.Count; i++)
+        {
+            var preset = _templateLibrary.speakerPresets[i];
+            if (preset == null)
+            {
+                preset = new StorySpeakerPreset();
+                _templateLibrary.speakerPresets[i] = preset;
+            }
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+            preset.displayName = EditorGUILayout.TextField("显示名", preset.displayName);
+            if (GUILayout.Button("删除", GUILayout.Width(52)))
+            {
+                Undo.RecordObject(_templateLibrary, "Remove Speaker Preset");
+                _templateLibrary.speakerPresets.RemoveAt(i);
+                EditorUtility.SetDirty(_templateLibrary);
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.EndVertical();
+                break;
+            }
+            EditorGUILayout.EndHorizontal();
+
+            preset.presetId = EditorGUILayout.TextField("组合 ID", preset.presetId);
+            preset.speakerName = EditorGUILayout.TextField("说话人", preset.speakerName);
+            preset.styleId = DrawIdPopup("样式 ID", preset.styleId, GetStyleIds());
+            preset.avatarId = DrawIdPopup("头像 ID", preset.avatarId, GetAvatarIds());
+            preset.avatarPosition = DrawIdPopup("头像位置", preset.avatarPosition, new List<string> { "left", "center", "right" });
+            EditorGUILayout.EndVertical();
+        }
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("+ 新组合"))
+        {
+            Undo.RecordObject(_templateLibrary, "Add Speaker Preset");
+            _templateLibrary.speakerPresets.Add(new StorySpeakerPreset
+            {
+                presetId = GenerateSpeakerPresetId(),
+                displayName = "新说话人",
+                speakerName = "新说话人",
+                styleId = GetStyleIds().FirstOrDefault() ?? "",
+                avatarId = GetAvatarIds().FirstOrDefault() ?? "",
+                avatarPosition = "left"
+            });
+            EditorUtility.SetDirty(_templateLibrary);
+        }
+
+        using (new EditorGUI.DisabledScope(!TryGetCurrentDialogue(out var currentDialogue)))
+        {
+            if (GUILayout.Button("从当前对话创建组合"))
+            {
+                Undo.RecordObject(_templateLibrary, "Add Speaker Preset From Dialogue");
+                _templateLibrary.speakerPresets.Add(new StorySpeakerPreset
+                {
+                    presetId = GenerateSpeakerPresetId(),
+                    displayName = string.IsNullOrEmpty(currentDialogue.speakerName) ? "新说话人" : currentDialogue.speakerName,
+                    speakerName = currentDialogue.speakerName,
+                    styleId = currentDialogue.styleId,
+                    avatarId = currentDialogue.avatarId,
+                    avatarPosition = currentDialogue.avatarPosition
+                });
+                EditorUtility.SetDirty(_templateLibrary);
+            }
+        }
+        EditorGUILayout.EndHorizontal();
+
+        if (GUI.changed)
+            EditorUtility.SetDirty(_templateLibrary);
+    }
+
+    private void DrawStyleTemplateTab()
+    {
+        DrawTemplateList("样式模板", _templateLibrary?.styleTemplates?.Cast<UnityEngine.Object>());
+    }
+
+    private void DrawImageTemplateTab()
+    {
+        DrawTemplateList("图片模板", _templateLibrary?.imageTemplates?.Cast<UnityEngine.Object>());
+    }
+
+    private void DrawTemplateList(string title, IEnumerable<UnityEngine.Object> templates)
+    {
+        EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+        if (_templateLibrary == null || templates == null)
+        {
+            EditorGUILayout.HelpBox("拖入 StoryTemplateLibrary 后可以查看模板；具体参数在 Inspector 中调整。", MessageType.Info);
+            return;
+        }
+
+        foreach (var template in templates.Where(t => t != null))
+        {
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+            EditorGUILayout.ObjectField(template, template.GetType(), false);
+            if (GUILayout.Button("选中", GUILayout.Width(60)))
+                Selection.activeObject = template;
+            EditorGUILayout.EndHorizontal();
+        }
+    }
+
+    private void DrawJsonPreviewTab()
+    {
+        if (GUILayout.Button("刷新预览"))
+            _jsonPreview = JsonUtility.ToJson(_data, true);
+
+        if (string.IsNullOrEmpty(_jsonPreview))
+            _jsonPreview = JsonUtility.ToJson(_data, true);
+
+        EditorGUILayout.TextArea(_jsonPreview, GUILayout.MinHeight(360));
+    }
+
+    private void LoadFromTextAsset(TextAsset asset)
     {
         try
         {
-            var data = JsonUtility.FromJson<StoryDataCollection>(json);
-            if (data?.stories != null)
-            {
-                int totalDialogues = 0;
-                foreach (var story in data.stories)
-                    totalDialogues += story.dialogues?.Count ?? 0;
-
-                EditorUtility.DisplayDialog("验证成功",
-                    $"JSON格式正确！\n" +
-                    $"共 {data.stories.Count} 段剧情\n" +
-                    $"共 {totalDialogues} 条对话",
-                    "确定");
-            }
-            else
-            {
-                EditorUtility.DisplayDialog("验证警告",
-                    "JSON格式正确，但没有找到剧情数据。\n请检查stories字段。",
-                    "确定");
-            }
+            _data = JsonUtility.FromJson<StoryDataCollection>(asset.text) ?? new StoryDataCollection();
+            if (_data.stories == null)
+                _data.stories = new List<StorySequence>();
+            _loadedAssetPath = AssetDatabase.GetAssetPath(asset);
+            _selectedStoryIndex = _data.stories.Count > 0 ? 0 : -1;
+            _selectedDialogueIndex = _selectedStoryIndex >= 0 && _data.stories[0].dialogues.Count > 0 ? 0 : -1;
+            _jsonPreview = null;
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
-            EditorUtility.DisplayDialog("验证失败",
-                $"JSON格式错误：\n{e.Message}",
-                "确定");
+            EditorUtility.DisplayDialog("加载失败", e.Message, "确定");
         }
     }
 
-    void GenerateJsonTemplate()
+    private void NewCollection()
     {
-        string path = EditorUtility.SaveFilePanel(
-            "保存JSON模板", Application.dataPath, "story_template", "json");
+        _storyJsonAsset = null;
+        _loadedAssetPath = null;
+        _data = new StoryDataCollection();
+        _data.stories.Add(CreateStory());
+        _selectedStoryIndex = 0;
+        _selectedDialogueIndex = -1;
+    }
 
+    private void OpenJson()
+    {
+        string path = EditorUtility.OpenFilePanel("打开剧情 JSON", DefaultDirectory, "json");
         if (string.IsNullOrEmpty(path)) return;
+        if (path.StartsWith(Application.dataPath))
+            path = "Assets" + path.Substring(Application.dataPath.Length);
 
-        var template = new StoryDataCollection();
-        var story = new StorySequence
+        var asset = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+        if (asset == null)
         {
-            storyId = "story_001",
+            EditorUtility.DisplayDialog("打开失败", "请选择 Assets 目录内的 JSON 文件。", "确定");
+            return;
+        }
+
+        _storyJsonAsset = asset;
+        LoadFromTextAsset(asset);
+    }
+
+    private void SaveJson(bool saveAs)
+    {
+        string path = _loadedAssetPath;
+        if (saveAs || string.IsNullOrEmpty(path))
+        {
+            path = EditorUtility.SaveFilePanelInProject("保存剧情 JSON", "story_collection", "json", "选择保存位置", DefaultDirectory);
+            if (string.IsNullOrEmpty(path)) return;
+        }
+
+        File.WriteAllText(path, JsonUtility.ToJson(_data, true), System.Text.Encoding.UTF8);
+        AssetDatabase.Refresh();
+        _loadedAssetPath = path;
+        _storyJsonAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+        _jsonPreview = null;
+    }
+
+    private StorySequence CreateStory()
+    {
+        return new StorySequence
+        {
+            storyId = GenerateStoryId(),
             chapterId = "chapter_1",
             sectionId = "section_1",
-            dialogues = new System.Collections.Generic.List<StoryDialogue>
-            {
-                new StoryDialogue
-                {
-                    id = 1,
-                    chapterId = "chapter_1",
-                    sectionId = "section_1",
-                    content = "在此填写对话内容...",
-                    styleId = "protagonist",
-                    playSpeed = 0.05f,
-                    avatarPosition = "left",
-                    avatarId = "hero_normal",
-                    showImage = false,
-                    imageId = "",
-                    speakerName = "主人公"
-                },
-                new StoryDialogue
-                {
-                    id = 2,
-                    chapterId = "chapter_1",
-                    sectionId = "section_1",
-                    content = "Boss的台词...",
-                    styleId = "boss",
-                    playSpeed = 0.03f,
-                    avatarPosition = "right",
-                    avatarId = "boss_normal",
-                    showImage = true,
-                    imageId = "bg_sunset",
-                    speakerName = "BOSS"
-                }
-            }
+            dialogues = new List<StoryDialogue>()
         };
-        template.stories.Add(story);
-
-        string json = JsonUtility.ToJson(template, true);
-        File.WriteAllText(path, json, System.Text.Encoding.UTF8);
-        AssetDatabase.Refresh();
-
-        EditorUtility.DisplayDialog("成功", $"JSON模板已保存到:\n{path}", "确定");
     }
 
-    void ExportFromScene()
+    private StoryDialogue CreateDialogue(StorySequence story, int id)
     {
-        var manager = FindFirstObjectByType<StoryManager>();
-        if (manager == null || manager.storyJsonFile == null)
+        var dialogue = new StoryDialogue
         {
-            EditorUtility.DisplayDialog("导出失败",
-                "场景中没有找到StoryManager或其JSON数据为空", "确定");
-            return;
-        }
+            id = id,
+            chapterId = story.chapterId,
+            sectionId = story.sectionId,
+            content = "",
+            styleId = GetStyleIds().FirstOrDefault() ?? "",
+            playSpeed = 0.05f,
+            avatarPosition = "left",
+            avatarId = GetAvatarIds().FirstOrDefault() ?? ""
+        };
 
-        string path = EditorUtility.SaveFilePanel(
-            "导出JSON", Application.dataPath, "story_export", "json");
+        var firstPreset = GetSpeakerPresets().FirstOrDefault();
+        if (firstPreset != null)
+            ApplySpeakerPreset(dialogue, firstPreset);
 
-        if (!string.IsNullOrEmpty(path))
-        {
-            File.WriteAllText(path, manager.storyJsonFile.text, System.Text.Encoding.UTF8);
-            AssetDatabase.Refresh();
-            EditorUtility.DisplayDialog("成功", "导出完成", "确定");
-        }
+        return dialogue;
     }
 
-    // ==================== 样式模板管理 ====================
-
-    void DrawStyleTab()
+    private string GenerateStoryId()
     {
-        EditorGUILayout.LabelField("文字样式模板管理", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox(
-            "样式模板用于定义不同角色的文字表现：字体大小、颜色、对话框样式等。\n" +
-            "建议为主人公、Boss、小怪各创建一套。", MessageType.Info);
+        string stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        string baseId = $"story_{stamp}";
+        var used = new HashSet<string>(_data.stories?.Select(s => s.storyId) ?? Enumerable.Empty<string>());
+        if (!used.Contains(baseId)) return baseId;
 
-        EditorGUILayout.Space(5);
-        _templateLibrary = (StoryTemplateLibrary)EditorGUILayout.ObjectField(
-            "模板库", _templateLibrary, typeof(StoryTemplateLibrary), false);
-
-        EditorGUILayout.Space(10);
-        EditorGUILayout.LabelField("快速创建样式模板", EditorStyles.miniLabel);
-
-        _newStyleId = EditorGUILayout.TextField("样式ID", _newStyleId);
-        _newStyleName = EditorGUILayout.TextField("显示名称", _newStyleName);
-
-        if (GUILayout.Button("创建新样式模板") && !string.IsNullOrEmpty(_newStyleId))
-        {
-            CreateStyleTemplate(_newStyleId, _newStyleName);
-        }
-
-        EditorGUILayout.Space(10);
-        if (GUILayout.Button("批量创建默认样式（主人公/Boss/小怪）"))
-        {
-            CreateStyleTemplate("protagonist", "主人公样式");
-            CreateStyleTemplate("boss", "Boss样式");
-            CreateStyleTemplate("minion", "小怪样式");
-            CreateStyleTemplate("narrator", "旁白样式");
-        }
+        int index = 2;
+        while (used.Contains($"{baseId}_{index}"))
+            index++;
+        return $"{baseId}_{index}";
     }
 
-    void CreateStyleTemplate(string styleId, string displayName)
+    private string DrawIdPopup(string label, string current, List<string> ids)
     {
-        string dir = "Assets/LevelData/StoryData/Styles";
-        if (!AssetDatabase.IsValidFolder(dir))
-        {
-            CreateFolderRecursive(dir);
-        }
+        ids = ids.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+        if (!ids.Contains(current))
+            ids.Insert(0, string.IsNullOrEmpty(current) ? "" : current);
 
-        string path = $"{dir}/{styleId}_style.asset";
-        if (AssetDatabase.LoadAssetAtPath<StoryStyleTemplate>(path) != null)
-        {
-            Debug.LogWarning($"样式 {styleId} 已存在: {path}");
-            return;
-        }
-
-        var template = CreateInstance<StoryStyleTemplate>();
-        template.styleId = styleId;
-        template.displayName = displayName;
-
-        // 设置不同角色的默认颜色
-        switch (styleId)
-        {
-            case "protagonist":
-                template.dialogueBoxColor = new Color(0f, 0.8f, 1f, 0.9f);
-                template.textColor = Color.white;
-                template.defaultSpeakerName = "主人公";
-                break;
-            case "boss":
-                template.dialogueBoxColor = new Color(0.8f, 0.2f, 0.2f, 0.9f);
-                template.textColor = Color.white;
-                template.defaultSpeakerName = "BOSS";
-                break;
-            case "minion":
-                template.dialogueBoxColor = new Color(0.5f, 0.5f, 0.5f, 0.9f);
-                template.textColor = Color.white;
-                template.defaultSpeakerName = "小怪";
-                break;
-            case "narrator":
-                template.dialogueBoxColor = new Color(0f, 0f, 0f, 0.8f);
-                template.textColor = new Color(0.9f, 0.9f, 0.9f);
-                template.defaultSpeakerName = "";
-                break;
-        }
-
-        AssetDatabase.CreateAsset(template, path);
-        AssetDatabase.SaveAssets();
-
-        // 自动添加到模板库
-        if (_templateLibrary != null)
-        {
-            _templateLibrary.styleTemplates.Add(template);
-            EditorUtility.SetDirty(_templateLibrary);
-        }
-
-        Debug.Log($"[StoryEditor] 创建样式模板: {path}");
+        int index = Mathf.Max(0, ids.IndexOf(current));
+        index = EditorGUILayout.Popup(label, index, ids.ToArray());
+        return ids.Count > 0 ? ids[index] : current;
     }
 
-    // ==================== 头像模板管理 ====================
-
-    void DrawAvatarTab()
+    private string DrawIdPopup(Rect rect, string label, string current, List<string> ids)
     {
-        EditorGUILayout.LabelField("头像模板管理", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox(
-            "头像模板定义角色头像的代号与对应图片。\n" +
-            "在JSON数据中通过avatarId引用。", MessageType.Info);
+        ids = ids.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+        if (!ids.Contains(current))
+            ids.Insert(0, string.IsNullOrEmpty(current) ? "" : current);
 
-        EditorGUILayout.Space(5);
-        _templateLibrary = (StoryTemplateLibrary)EditorGUILayout.ObjectField(
-            "模板库", _templateLibrary, typeof(StoryTemplateLibrary), false);
-
-        EditorGUILayout.Space(10);
-        EditorGUILayout.LabelField("创建头像模板", EditorStyles.miniLabel);
-
-        _newAvatarId = EditorGUILayout.TextField("头像代号", _newAvatarId);
-        _newAvatarName = EditorGUILayout.TextField("显示名称", _newAvatarName);
-        _newAvatarSprite = (Sprite)EditorGUILayout.ObjectField(
-            "头像图片", _newAvatarSprite, typeof(Sprite), false);
-
-        if (GUILayout.Button("创建头像模板") && !string.IsNullOrEmpty(_newAvatarId))
-        {
-            CreateAvatarTemplate(_newAvatarId, _newAvatarName, _newAvatarSprite);
-        }
+        int index = Mathf.Max(0, ids.IndexOf(current));
+        index = EditorGUI.Popup(rect, label, index, ids.ToArray());
+        return ids.Count > 0 ? ids[index] : current;
     }
 
-    void CreateAvatarTemplate(string avatarId, string displayName, Sprite sprite)
+    private List<string> GetStyleIds()
     {
-        string dir = "Assets/LevelData/StoryData/Avatars";
-        if (!AssetDatabase.IsValidFolder(dir))
-        {
-            CreateFolderRecursive(dir);
-        }
-
-        string path = $"{dir}/{avatarId}_avatar.asset";
-        if (AssetDatabase.LoadAssetAtPath<StoryAvatarTemplate>(path) != null)
-        {
-            Debug.LogWarning($"头像 {avatarId} 已存在: {path}");
-            return;
-        }
-
-        var template = CreateInstance<StoryAvatarTemplate>();
-        template.avatarId = avatarId;
-        template.displayName = displayName;
-        template.avatarSprite = sprite;
-
-        AssetDatabase.CreateAsset(template, path);
-        AssetDatabase.SaveAssets();
-
-        if (_templateLibrary != null)
-        {
-            _templateLibrary.avatarTemplates.Add(template);
-            EditorUtility.SetDirty(_templateLibrary);
-        }
-
-        Debug.Log($"[StoryEditor] 创建头像模板: {path}");
+        return _templateLibrary?.styleTemplates?.Where(t => t != null).Select(t => t.styleId).ToList() ?? new List<string>();
     }
 
-    // ==================== 图片模板管理 ====================
-
-    void DrawImageTab()
+    private List<string> GetAvatarIds()
     {
-        EditorGUILayout.LabelField("图片模板管理", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox(
-            "图片模板定义展示图片的代号与对应图片资源。\n" +
-            "在JSON数据中通过imageId引用。", MessageType.Info);
-
-        EditorGUILayout.Space(5);
-        _templateLibrary = (StoryTemplateLibrary)EditorGUILayout.ObjectField(
-            "模板库", _templateLibrary, typeof(StoryTemplateLibrary), false);
-
-        EditorGUILayout.Space(10);
-        EditorGUILayout.LabelField("创建图片模板", EditorStyles.miniLabel);
-
-        _newImageId = EditorGUILayout.TextField("图片代号", _newImageId);
-        _newImageName = EditorGUILayout.TextField("显示名称", _newImageName);
-        _newImageSprite = (Sprite)EditorGUILayout.ObjectField(
-            "图片资源", _newImageSprite, typeof(Sprite), false);
-
-        if (GUILayout.Button("创建图片模板") && !string.IsNullOrEmpty(_newImageId))
-        {
-            CreateImageTemplate(_newImageId, _newImageName, _newImageSprite);
-        }
+        return _templateLibrary?.avatarTemplates?.Where(t => t != null).Select(t => t.avatarId).ToList() ?? new List<string>();
     }
 
-    void CreateImageTemplate(string imageId, string displayName, Sprite sprite)
+    private List<string> GetImageIds()
     {
-        string dir = "Assets/LevelData/StoryData/Images";
-        if (!AssetDatabase.IsValidFolder(dir))
-        {
-            CreateFolderRecursive(dir);
-        }
-
-        string path = $"{dir}/{imageId}_image.asset";
-        if (AssetDatabase.LoadAssetAtPath<StoryImageTemplate>(path) != null)
-        {
-            Debug.LogWarning($"图片 {imageId} 已存在: {path}");
-            return;
-        }
-
-        var template = CreateInstance<StoryImageTemplate>();
-        template.imageId = imageId;
-        template.displayName = displayName;
-        template.imageSprite = sprite;
-
-        AssetDatabase.CreateAsset(template, path);
-        AssetDatabase.SaveAssets();
-
-        if (_templateLibrary != null)
-        {
-            _templateLibrary.imageTemplates.Add(template);
-            EditorUtility.SetDirty(_templateLibrary);
-        }
-
-        Debug.Log($"[StoryEditor] 创建图片模板: {path}");
+        return _templateLibrary?.imageTemplates?.Where(t => t != null).Select(t => t.imageId).ToList() ?? new List<string>();
     }
 
-    // ==================== 预览 ====================
-
-    void DrawPreviewTab()
+    private List<StorySpeakerPreset> GetSpeakerPresets()
     {
-        EditorGUILayout.LabelField("剧情预览", EditorStyles.boldLabel);
-        EditorGUILayout.HelpBox(
-            "拖入JSON文件可以预览剧情内容。\n" +
-            "注意：预览仅供检查数据，完整效果请在运行时查看。", MessageType.Info);
-
-        EditorGUILayout.Space(5);
-        _importJsonAsset = (TextAsset)EditorGUILayout.ObjectField(
-            "JSON文件", _importJsonAsset, typeof(TextAsset), false);
-
-        if (_importJsonAsset == null) return;
-
-        EditorGUILayout.Space(10);
-
-        try
-        {
-            var data = JsonUtility.FromJson<StoryDataCollection>(_importJsonAsset.text);
-            if (data?.stories == null) return;
-
-            foreach (var story in data.stories)
-            {
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                EditorGUILayout.LabelField($"剧情: {story.storyId}", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField($"章: {story.chapterId}  节: {story.sectionId}");
-
-                if (story.dialogues != null)
-                {
-                    foreach (var d in story.dialogues)
-                    {
-                        EditorGUILayout.BeginVertical(EditorStyles.textArea);
-                        EditorGUILayout.LabelField(
-                            $"[{d.id}] 样式:{d.styleId} 头像:{d.avatarId}({d.avatarPosition})" +
-                            $" 图片:{(d.showImage ? d.imageId : "无")}");
-                        EditorGUILayout.LabelField(d.content, EditorStyles.wordWrappedLabel);
-                        EditorGUILayout.EndVertical();
-                    }
-                }
-
-                EditorGUILayout.EndVertical();
-                EditorGUILayout.Space(5);
-            }
-        }
-        catch (System.Exception e)
-        {
-            EditorGUILayout.HelpBox($"解析JSON失败: {e.Message}", MessageType.Error);
-        }
+        return _templateLibrary?.speakerPresets?.Where(p => p != null).ToList() ?? new List<StorySpeakerPreset>();
     }
 
-    // ==================== 工具方法 ====================
-
-    /// <summary>
-    /// 递归创建文件夹
-    /// </summary>
-    void CreateFolderRecursive(string path)
+    private static void ApplySpeakerPreset(StoryDialogue dialogue, StorySpeakerPreset preset)
     {
-        string[] parts = path.Split('/');
-        string current = parts[0]; // "Assets"
-        for (int i = 1; i < parts.Length; i++)
+        if (dialogue == null || preset == null) return;
+
+        dialogue.speakerName = preset.speakerName;
+        dialogue.styleId = preset.styleId;
+        dialogue.avatarId = preset.avatarId;
+        dialogue.avatarPosition = string.IsNullOrEmpty(preset.avatarPosition) ? "left" : preset.avatarPosition;
+    }
+
+    private static bool IsPresetMatch(StoryDialogue dialogue, StorySpeakerPreset preset)
+    {
+        if (dialogue == null || preset == null) return false;
+
+        return dialogue.speakerName == preset.speakerName &&
+               dialogue.styleId == preset.styleId &&
+               dialogue.avatarId == preset.avatarId &&
+               (dialogue.avatarPosition ?? "left") == (preset.avatarPosition ?? "left");
+    }
+
+    private static string GetSpeakerPresetLabel(StorySpeakerPreset preset)
+    {
+        if (preset == null) return "";
+        if (!string.IsNullOrEmpty(preset.displayName)) return preset.displayName;
+        if (!string.IsNullOrEmpty(preset.speakerName)) return preset.speakerName;
+        return string.IsNullOrEmpty(preset.presetId) ? "(未命名组合)" : preset.presetId;
+    }
+
+    private string GenerateSpeakerPresetId()
+    {
+        var used = new HashSet<string>(GetSpeakerPresets().Select(p => p.presetId));
+        int index = used.Count + 1;
+        string id;
+        do
         {
-            string next = current + "/" + parts[i];
-            if (!AssetDatabase.IsValidFolder(next))
-            {
-                AssetDatabase.CreateFolder(current, parts[i]);
-            }
-            current = next;
+            id = $"speaker_{index}";
+            index++;
         }
+        while (used.Contains(id));
+
+        return id;
+    }
+
+    private bool TryGetCurrentDialogue(out StoryDialogue dialogue)
+    {
+        dialogue = null;
+        if (_selectedStoryIndex < 0 || _selectedStoryIndex >= (_data.stories?.Count ?? 0)) return false;
+
+        var story = _data.stories[_selectedStoryIndex];
+        int index = _dialogueListStory == story && _dialogueList != null ? _dialogueList.index : _selectedDialogueIndex;
+        if (index < 0 || index >= (story.dialogues?.Count ?? 0)) return false;
+
+        dialogue = story.dialogues[index];
+        return dialogue != null;
+    }
+
+    private static void Swap<T>(IList<T> list, int a, int b)
+    {
+        (list[a], list[b]) = (list[b], list[a]);
+    }
+
+    private static void RenumberDialogues(StorySequence story)
+    {
+        for (int i = 0; i < story.dialogues.Count; i++)
+            story.dialogues[i].id = i + 1;
+    }
+
+    private static string Trim(string value, int max)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return value.Length <= max ? value : value.Substring(0, max) + "...";
     }
 }

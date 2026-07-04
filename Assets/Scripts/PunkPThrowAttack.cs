@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using Spine.Unity;
 
 [RequireComponent(typeof(Rigidbody2D), typeof(Enemy))]
 public class PunkPThrowAttack : MonoBehaviour
@@ -22,13 +23,13 @@ public class PunkPThrowAttack : MonoBehaviour
 
     [Header("攻击参数")]
     public GameObject knifePrefab;
-    public float throwCooldown = 1.2f;
+    public float throwCooldown = 0.8f;
     public float throwWindupTime = 0.25f;
     public float knifeSpawnOffsetX = 4f;
     public float knifeSpawnOffsetY = 1f;
     [Range(0, 100)]
-    public float attackDesire = 85f;
-    public float forceAttackTime = 3f;
+    public float attackDesire = 100f;
+    public float forceAttackTime = 1.2f;
 
     [Header("边界")]
     private float leftBound = -1000f;
@@ -38,6 +39,13 @@ public class PunkPThrowAttack : MonoBehaviour
 
     Rigidbody2D rb;
     Enemy enemy;
+
+    [Header("Spine动画")]
+    [SerializeField] SkeletonAnimation skeletonAnimation;
+    [SpineAnimation] public string idleAnimName = "idle";
+    [SpineAnimation] public string walkAnimName = "walk";
+    [SpineAnimation] public string attackAnimName = "attack";
+    Spine.TrackEntry currentTrack;
 
     public bool isKnockedBack = false;
     bool isAttacking = false;
@@ -54,6 +62,9 @@ public class PunkPThrowAttack : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         enemy = GetComponent<Enemy>();
+
+        if (skeletonAnimation == null)
+            skeletonAnimation = GetComponentInChildren<SkeletonAnimation>();
     }
 
     void Start()
@@ -113,9 +124,9 @@ public class PunkPThrowAttack : MonoBehaviour
         if (isKnockedBack || isAttacking || player == null) return;
         Vector3 scale = transform.localScale;
         if (player.position.x > transform.position.x)
-            scale.x = Mathf.Abs(scale.x);
-        else
             scale.x = -Mathf.Abs(scale.x);
+        else
+            scale.x = Mathf.Abs(scale.x);
         transform.localScale = scale;
     }
 
@@ -168,7 +179,7 @@ public class PunkPThrowAttack : MonoBehaviour
 
             if (timeSinceAttack >= forceAttackTime)
             {
-                nextState = AIState.ThrowKnife;
+                nextState = CanThrowAtPlayer(isYAligned, dist) ? AIState.ThrowKnife : AIState.Wander;
             }
             else
             {
@@ -198,23 +209,36 @@ public class PunkPThrowAttack : MonoBehaviour
 
     AIState ChooseNextState(bool isYAligned, float yDiff, float dist)
     {
+        bool canThrowNow = Time.time - lastAttackTime >= throwCooldown;
+
         if (yDiff > maxYAxisOffset)
             return AIState.Wander;
 
-        if (!canIdle)
+        if (!CanThrowAtPlayer(isYAligned, dist))
             return AIState.Wander;
 
-        if (isYAligned && dist <= maxKeepDistance)
+        if (canThrowNow && isYAligned && dist <= maxKeepDistance)
         {
             float chance = attackDesire >= 100 ? 1f : (attackDesire / 100f);
             if (Random.value < chance)
                 return AIState.ThrowKnife;
         }
 
+        if (Time.time - lastAttackTime >= forceAttackTime)
+            return AIState.ThrowKnife;
+
+        if (!canIdle)
+            return AIState.Wander;
+
         float r = Random.value;
         if (r < 0.75f) return AIState.Wander;
         if (r < 0.85f) return AIState.Idle;
         return AIState.ThrowKnife;
+    }
+
+    bool CanThrowAtPlayer(bool isYAligned, float dist)
+    {
+        return isYAligned && dist <= maxKeepDistance;
     }
 
     IEnumerator Wander()
@@ -229,6 +253,7 @@ public class PunkPThrowAttack : MonoBehaviour
             rb.linearVelocity = dir * speed;
 
             ClampPositionToBounds();
+            UpdateAnimator();
             yield return null;
         }
 
@@ -240,25 +265,31 @@ public class PunkPThrowAttack : MonoBehaviour
         Vector2 toPlayer = player.position - transform.position;
         float dist = toPlayer.magnitude;
         Vector2 targetPos;
+        float yDiff = Mathf.Abs(transform.position.y - player.position.y);
 
-        if (dist < minKeepDistance)
+        if (yDiff > maxYAxisOffset || dist > maxKeepDistance)
         {
-            Vector2 retreatDir = -toPlayer.normalized;
-            float retreatDist = Random.Range(minWanderDistance, maxWanderDistance);
-            targetPos = (Vector2)transform.position + retreatDir * retreatDist;
-        }
-        else if (dist > maxKeepDistance)
-        {
-            float approachDist = Random.Range(minWanderDistance, maxWanderDistance);
-            targetPos = (Vector2)transform.position + toPlayer.normalized * approachDist;
+            float desiredDistance = Random.Range(minKeepDistance + 0.4f, maxKeepDistance - 0.4f);
+            float side = transform.position.x <= player.position.x ? -1f : 1f;
+            targetPos = new Vector2(player.position.x + side * desiredDistance, player.position.y);
         }
         else
+
         {
-            Vector2 perp = new Vector2(-toPlayer.y, toPlayer.x).normalized;
-            if (Random.value > 0.5f) perp = -perp;
-            Vector2 dir = (perp * 0.7f + toPlayer.normalized * 0.3f).normalized;
-            float wanderDist = Random.Range(minWanderDistance, maxWanderDistance);
-            targetPos = (Vector2)transform.position + dir * wanderDist;
+            if (dist < minKeepDistance)
+            {
+                Vector2 retreatDir = -toPlayer.normalized;
+                float retreatDist = Random.Range(minWanderDistance, maxWanderDistance);
+                targetPos = (Vector2)transform.position + retreatDir * retreatDist;
+            }
+            else
+            {
+                Vector2 perp = new Vector2(-toPlayer.y, toPlayer.x).normalized;
+                if (Random.value > 0.5f) perp = -perp;
+                Vector2 dir = (perp * 0.7f + toPlayer.normalized * 0.3f).normalized;
+                float wanderDist = Random.Range(minWanderDistance, maxWanderDistance);
+                targetPos = (Vector2)transform.position + dir * wanderDist;
+            }
         }
 
         float targetY = Mathf.Lerp(targetPos.y, player.position.y, 0.6f);
@@ -280,6 +311,7 @@ public class PunkPThrowAttack : MonoBehaviour
             Vector2 dir = (player.position - transform.position).normalized;
             rb.linearVelocity = dir * speed * 1.2f;
             ClampPositionToBounds();
+            UpdateAnimator();
             yield return null;
         }
     }
@@ -298,6 +330,7 @@ public class PunkPThrowAttack : MonoBehaviour
 
             Vector2 dir = (target - transform.position).normalized;
             rb.linearVelocity = dir * moveSpeed;
+            UpdateAnimator();
             yield return null;
         }
         StopMovement();
@@ -308,12 +341,21 @@ public class PunkPThrowAttack : MonoBehaviour
         isAttacking = true;
         isKnockedBack = true;
         StopMovement();
+        ForcePlayAnimation(attackAnimName, false);
 
         yield return new WaitForSeconds(throwWindupTime);
 
         isKnockedBack = false;
 
         if (knifePrefab == null || player == null || enemy.IsHit)
+        {
+            isAttacking = false;
+            yield break;
+        }
+
+        float dist = Vector2.Distance(transform.position, player.position);
+        bool isYAligned = Mathf.Abs(transform.position.y - player.position.y) <= yAxisTolerance;
+        if (!CanThrowAtPlayer(isYAligned, dist))
         {
             isAttacking = false;
             yield break;
@@ -327,6 +369,7 @@ public class PunkPThrowAttack : MonoBehaviour
         if (knifeScript != null)
         {
             knifeScript.SetDirection(throwDir);
+            knifeScript.SetLaneY(transform.position.y);
         }
 
         yield return new WaitForSeconds(0.3f);
@@ -337,5 +380,59 @@ public class PunkPThrowAttack : MonoBehaviour
     void StopMovement()
     {
         rb.linearVelocity = Vector2.zero;
+        UpdateAnimator();
+    }
+
+    void UpdateAnimator()
+    {
+        if (isAttacking)
+            return;
+
+        if (rb.linearVelocity.magnitude > 0.01f)
+            PlayAnimation(walkAnimName, true);
+        else
+            PlayAnimation(idleAnimName, true);
+    }
+
+    void PlayAnimation(string animName, bool loop, int trackIndex = 0)
+    {
+        if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
+            return;
+
+        if (!HasAnimation(animName))
+            return;
+
+        if (currentTrack != null && currentTrack.Animation != null &&
+            currentTrack.Animation.Name == animName && !currentTrack.IsComplete)
+        {
+            return;
+        }
+
+        currentTrack = skeletonAnimation.AnimationState.SetAnimation(trackIndex, animName, loop);
+    }
+
+    void ForcePlayAnimation(string animName, bool loop, int trackIndex = 0)
+    {
+        if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
+            return;
+
+        if (!HasAnimation(animName))
+            return;
+
+        currentTrack = skeletonAnimation.AnimationState.SetAnimation(trackIndex, animName, loop);
+    }
+
+    bool HasAnimation(string animName)
+    {
+        return skeletonAnimation.Skeleton != null
+            && skeletonAnimation.Skeleton.Data != null
+            && skeletonAnimation.Skeleton.Data.FindAnimation(animName) != null;
+    }
+
+    void StopMovementForEnemy()
+    {
+        isAttacking = false;
+        if (rb != null)
+            rb.linearVelocity = Vector2.zero;
     }
 }

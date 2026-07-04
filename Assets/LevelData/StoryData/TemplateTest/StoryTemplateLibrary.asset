@@ -12,6 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfc6f3b7c0a975e40975e80e5db5f8a6, type: 3}
   m_Name: StoryTemplateLibrary
   m_EditorClassIdentifier: Assembly-CSharp::StoryTemplateLibrary
+  speakerPresets:
+  - presetId: speaker_1
+    displayName: "\u5C0F\u5BAB\u679C\u7A57"
+    speakerName: "\u5C0F\u5BAB\u679C\u7A57"
+    styleId: protagonist
+    avatarId: kaho
+    avatarPosition: left
+  - presetId: speaker_2
+    displayName: "\u51DB\u4E16"
+    speakerName: "\u675C\u91CE\u51DB\u4E16"
+    styleId: boss
+    avatarId: muscle_p
+    avatarPosition: right
   styleTemplates:
   - {fileID: 11400000, guid: 3aebe20d79b002748b717ddb5c4ab880, type: 2}
   - {fileID: 11400000, guid: 89d07c5c96f961144982a51e33eeae4d, type: 2}

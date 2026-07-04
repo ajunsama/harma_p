@@ -33,6 +33,9 @@ public class LevelSceneBuilder : MonoBehaviour
     private Dictionary<string, List<LevelElement>> _elementsByGroup;
     private List<LevelElement> _ungroupedElements;
     private List<LevelElement> _pendingConditionElements;
+    private List<StoryTriggerPoint> _pendingStoryTriggers;
+    private readonly HashSet<StoryTriggerPoint> _createdStoryTriggers = new HashSet<StoryTriggerPoint>();
+    private readonly HashSet<StoryTriggerPoint> _completedStoryTriggers = new HashSet<StoryTriggerPoint>();
 
     // 关卡状态
     private bool _levelComplete;
@@ -57,6 +60,7 @@ public class LevelSceneBuilder : MonoBehaviour
         _variableManager.OnVariableChanged("*", OnAnyVariableChanged);
 
         BuildSceneInfrastructure();
+        LoadStoryCollection();
         CreateBackground();
         CreatePlayer();
         BuildLevel();
@@ -67,7 +71,22 @@ public class LevelSceneBuilder : MonoBehaviour
         StartCoroutine(PeriodicCheckLevelEnd());
 
         OnLevelReady?.Invoke();
+        TriggerStoriesByMode(StoryTriggerMode.LevelStart);
         Debug.Log($"[LevelSceneBuilder] 关卡 '{levelData.levelName}' 构建完成");
+    }
+
+    void LoadStoryCollection()
+    {
+        if (levelData.storyCollectionJson == null) return;
+
+        var manager = StoryManager.Instance ?? GameObject.FindObjectOfType<StoryManager>();
+        if (manager == null)
+        {
+            Debug.LogWarning("[LevelSceneBuilder] LevelData has a story collection, but no StoryManager exists in the scene.");
+            return;
+        }
+
+        manager.LoadStoryData(levelData.storyCollectionJson);
     }
 
     IEnumerator PeriodicCheckLevelEnd()
@@ -264,6 +283,7 @@ public class LevelSceneBuilder : MonoBehaviour
         _elementsByGroup = new Dictionary<string, List<LevelElement>>();
         _ungroupedElements = new List<LevelElement>();
         _pendingConditionElements = new List<LevelElement>();
+        _pendingStoryTriggers = new List<StoryTriggerPoint>();
 
         foreach (var el in levelData.elements)
         {
@@ -461,13 +481,26 @@ public class LevelSceneBuilder : MonoBehaviour
     {
         foreach (var stp in levelData.storyTriggers)
         {
-            SetupStoryTrigger(stp);
+            switch (stp.triggerMode)
+            {
+                case StoryTriggerMode.Position:
+                    if (_variableManager.CheckAllConditions(stp.triggerConditions))
+                        SetupStoryTrigger(stp);
+                    else
+                        _pendingStoryTriggers.Add(stp);
+                    break;
+                case StoryTriggerMode.Conditions:
+                    _pendingStoryTriggers.Add(stp);
+                    TryTriggerConditionStory(stp);
+                    break;
+            }
         }
     }
 
     void SetupStoryTrigger(StoryTriggerPoint stp)
     {
         if (string.IsNullOrEmpty(stp.storyId)) return;
+        if (_createdStoryTriggers.Contains(stp)) return;
 
         var go = new GameObject($"StoryTrigger_{stp.storyId}");
         go.transform.position = new Vector3(stp.positionX, 0, 0);
@@ -487,6 +520,7 @@ public class LevelSceneBuilder : MonoBehaviour
             trigger.OnAfterStory.AddListener(() => _variableManager.ApplySetActions(stp.onStoryCompleteSetVariables));
 
         _spawnedObjects.Add(go);
+        _createdStoryTriggers.Add(stp);
     }
 
     // ================================================================
@@ -507,6 +541,7 @@ public class LevelSceneBuilder : MonoBehaviour
         if (_levelComplete) return;
         _levelComplete = true;
         Debug.Log($"[LevelSceneBuilder] 关卡完成!");
+        TriggerStoriesByMode(StoryTriggerMode.LevelComplete);
         OnLevelComplete?.Invoke();
     }
 
@@ -551,8 +586,13 @@ public class LevelSceneBuilder : MonoBehaviour
 
     void OnAnyVariableChanged()
     {
-        if (_pendingConditionElements == null || _pendingConditionElements.Count == 0) return;
+        TrySpawnPendingConditionElements();
+        TryCreatePendingStoryTriggers();
+    }
 
+    void TrySpawnPendingConditionElements()
+    {
+        if (_pendingConditionElements == null || _pendingConditionElements.Count == 0) return;
         for (int i = _pendingConditionElements.Count - 1; i >= 0; i--)
         {
             var el = _pendingConditionElements[i];
@@ -562,6 +602,63 @@ public class LevelSceneBuilder : MonoBehaviour
                 _pendingConditionElements.RemoveAt(i);
             }
         }
+    }
+
+    void TryCreatePendingStoryTriggers()
+    {
+        if (_pendingStoryTriggers == null || _pendingStoryTriggers.Count == 0) return;
+
+        for (int i = _pendingStoryTriggers.Count - 1; i >= 0; i--)
+        {
+            var stp = _pendingStoryTriggers[i];
+            if (stp.triggerMode == StoryTriggerMode.Position && _variableManager.CheckAllConditions(stp.triggerConditions))
+            {
+                SetupStoryTrigger(stp);
+                _pendingStoryTriggers.RemoveAt(i);
+            }
+            else if (stp.triggerMode == StoryTriggerMode.Conditions && TryTriggerConditionStory(stp))
+            {
+                _pendingStoryTriggers.RemoveAt(i);
+            }
+        }
+    }
+
+    bool TryTriggerConditionStory(StoryTriggerPoint stp)
+    {
+        if (!_variableManager.CheckAllConditions(stp.triggerConditions))
+            return false;
+
+        TriggerStoryPoint(stp);
+        return true;
+    }
+
+    void TriggerStoriesByMode(StoryTriggerMode mode)
+    {
+        foreach (var stp in levelData.storyTriggers)
+        {
+            if (stp.triggerMode != mode) continue;
+            if (!_variableManager.CheckAllConditions(stp.triggerConditions)) continue;
+            TriggerStoryPoint(stp);
+        }
+    }
+
+    void TriggerStoryPoint(StoryTriggerPoint stp)
+    {
+        if (stp == null || string.IsNullOrEmpty(stp.storyId)) return;
+        if (stp.triggerOnce && _completedStoryTriggers.Contains(stp)) return;
+        if (StoryManager.Instance == null)
+        {
+            Debug.LogWarning($"[LevelSceneBuilder] Cannot trigger story '{stp.storyId}' because StoryManager is missing.");
+            return;
+        }
+        if (StoryManager.Instance.IsPlaying) return;
+
+        _completedStoryTriggers.Add(stp);
+        _variableManager.ApplySetActions(stp.onStoryStartSetVariables);
+        StoryManager.Instance.PlayStory(stp.storyId, () =>
+        {
+            _variableManager.ApplySetActions(stp.onStoryCompleteSetVariables);
+        });
     }
 
     // ================================================================
@@ -587,5 +684,7 @@ public class LevelSceneBuilder : MonoBehaviour
         }
         _spawnedObjects.Clear();
         _groupEnemyInstances.Clear();
+        _createdStoryTriggers.Clear();
+        _completedStoryTriggers.Clear();
     }
 }
