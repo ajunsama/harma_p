@@ -164,13 +164,28 @@ public class StoryUI : MonoBehaviour
     /// </summary>
     public void Show()
     {
+        Show(true);
+    }
+
+    public void Show(bool maskBackground)
+    {
         // 取消正在进行的淡入淡出，避免和Hide的协程竞态
         StopFade();
-        CaptureBackgroundForBlur();
-        PlayBackgroundBlur(backgroundBlurWeight);
 
         if (storyRoot != null)
             storyRoot.SetActive(true);
+
+        if (maskBackground)
+        {
+            CaptureBackgroundForBlur();
+            PlayBackgroundBlur(backgroundBlurWeight);
+        }
+        else
+        {
+            StopBlur();
+            ReleaseCapturedBlurTexture();
+            SetBackgroundBlurImmediate(0f, false);
+        }
 
         if (_canvasGroup != null)
             _fadeCoroutine = StartCoroutine(FadeCanvasGroup(0f, 1f, fadeTime));
@@ -545,19 +560,11 @@ public class StoryUI : MonoBehaviour
     /// </summary>
     public void SetupBothAvatars(Sprite leftSprite, float leftScale, Sprite rightSprite, float rightScale)
     {
-        // 只设置精灵和尺寸，不激活 GameObject
-        // 入场动画会在设好起始位置后再激活，避免在最终位置闪现一帧
-        if (avatarLeft != null && leftSprite != null)
-        {
-            avatarLeft.sprite = leftSprite;
-            FitAvatarToContainer(avatarLeft);
-        }
-
-        if (avatarRight != null && rightSprite != null)
-        {
-            avatarRight.sprite = rightSprite;
-            FitAvatarToContainer(avatarRight);
-        }
+        // 每段剧情都显式重建头像状态，避免缺少某一侧角色时复用上一段剧情的 Sprite。
+        // 只设置精灵和尺寸，不激活 GameObject；入场动画会在设好起始位置后再激活。
+        PrepareAvatarForEntrance(avatarLeft, leftSprite);
+        PrepareAvatarForEntrance(avatarRight, rightSprite);
+        PrepareAvatarForEntrance(avatarCenter, null);
     }
 
     /// <summary>
@@ -731,9 +738,11 @@ public class StoryUI : MonoBehaviour
         // 角色入场（不等待完成，与色块动画并行）
         RectTransform leftRT = avatarLeft != null ? avatarLeft.rectTransform : null;
         RectTransform rightRT = avatarRight != null ? avatarRight.rectTransform : null;
-        RectTransform leftBarRT = avatarBarController != null && avatarBarController.leftBar != null
+        bool hasLeftAvatar = avatarLeft != null && avatarLeft.sprite != null;
+        bool hasRightAvatar = avatarRight != null && avatarRight.sprite != null;
+        RectTransform leftBarRT = hasLeftAvatar && avatarBarController != null && avatarBarController.leftBar != null
             ? avatarBarController.leftBar.rectTransform : null;
-        RectTransform rightBarRT = avatarBarController != null && avatarBarController.rightBar != null
+        RectTransform rightBarRT = hasRightAvatar && avatarBarController != null && avatarBarController.rightBar != null
             ? avatarBarController.rightBar.rectTransform : null;
         Coroutine entranceCoroutine = animator.PlayFullEntrance(
             leftRT, rightRT, leftColor, rightColor, leftBarRT, rightBarRT);
@@ -826,6 +835,18 @@ public class StoryUI : MonoBehaviour
         if (avatarLeft != null) avatarLeft.gameObject.SetActive(false);
         if (avatarCenter != null) avatarCenter.gameObject.SetActive(false);
         if (avatarRight != null) avatarRight.gameObject.SetActive(false);
+    }
+
+    void PrepareAvatarForEntrance(Image avatar, Sprite sprite)
+    {
+        if (avatar == null) return;
+
+        avatar.gameObject.SetActive(false);
+        avatar.sprite = sprite;
+        avatar.color = Color.white;
+
+        if (sprite != null)
+            FitAvatarToContainer(avatar);
     }
 
     void HideImage()

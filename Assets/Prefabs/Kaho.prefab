@@ -516,6 +516,8 @@ MonoBehaviour:
   hangTimeFactor: 0.3
   bounceHeight: 1.5
   bounceDuration: 0.5
+  storyStandingBlendDuration: 0.15
+  storyStandingDelay: 0.25
   groundChecker: {fileID: 4278164982984701588}
   skeletonAnimation: {fileID: 6362422595469369606}
   idleAnimName: idle

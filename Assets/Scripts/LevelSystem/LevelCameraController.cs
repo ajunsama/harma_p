@@ -19,8 +19,14 @@ public class LevelCameraController : MonoBehaviour
     public float deadZone = 0.2f;
 
     [Header("边界限制")]
+    [Tooltip("未启用画面边界时，相机中心允许到达的最小 X")]
     public float minX = -20f;
+    [Tooltip("未启用画面边界时，相机中心允许到达的最大 X")]
     public float maxX = 100f;
+    [SerializeField, Tooltip("让整个相机画面保持在世界边界内，而不只是限制相机中心")]
+    private bool constrainViewportToWorldBounds;
+    [SerializeField] private float worldBoundsStartX;
+    [SerializeField] private float worldBoundsEndX = 50f;
 
     [Header("战斗锁屏")]
     public bool lockPosition;
@@ -32,6 +38,8 @@ public class LevelCameraController : MonoBehaviour
 
     private Camera _cam;
     private bool _didInitCenter;
+    private bool _flowOverride;
+    private Vector2 _flowPosition;
 
     void Start()
     {
@@ -41,6 +49,15 @@ public class LevelCameraController : MonoBehaviour
     void LateUpdate()
     {
         if (_cam == null) return;
+
+        if (_flowOverride)
+        {
+            _flowPosition.x = ClampCameraX(
+                _flowPosition.x,
+                _cam.orthographicSize * _cam.aspect);
+            transform.position = new Vector3(_flowPosition.x, _flowPosition.y, zOffset);
+            return;
+        }
 
         if (target == null)
         {
@@ -61,10 +78,18 @@ public class LevelCameraController : MonoBehaviour
         {
             float initX = useCustomInitialPosition ? initialPosition.x : playerX;
             float initY = useCustomInitialPosition ? initialPosition.y : fixedY;
-            initX = Mathf.Clamp(initX, minX, maxX);
+            initX = ClampCameraX(initX, halfWidth);
             fixedY = initY;
             transform.position = new Vector3(initX, initY, zOffset);
             _didInitCenter = true;
+            return;
+        }
+
+        if (lockPosition)
+        {
+            float lockedCameraX = ClampCameraX(lockX, halfWidth);
+            transform.position = new Vector3(lockedCameraX, fixedY, zOffset);
+            UpdateLockedBounds(lockedCameraX, halfWidth);
             return;
         }
 
@@ -79,7 +104,7 @@ public class LevelCameraController : MonoBehaviour
         else if (playerScreenPercent > (1f - deadZone))
             cameraLeft = playerX - (1f - deadZone) * screenWidth;
 
-        float cameraX = Mathf.Clamp(cameraLeft + halfWidth, minX, maxX);
+        float cameraX = ClampCameraX(cameraLeft + halfWidth, halfWidth);
         transform.position = new Vector3(cameraX, fixedY, zOffset);
     }
 
@@ -90,9 +115,8 @@ public class LevelCameraController : MonoBehaviour
         IsLocked = true;
         if (TryGetComponent<Camera>(out var cam))
         {
-            float half = cam.orthographicSize * cam.aspect;
-            LockedLeftBound = x - half + 0.5f;
-            LockedRightBound = x + half - 0.5f;
+            float halfWidth = cam.orthographicSize * cam.aspect;
+            UpdateLockedBounds(ClampCameraX(x, halfWidth), halfWidth);
         }
     }
 
@@ -100,6 +124,57 @@ public class LevelCameraController : MonoBehaviour
     {
         lockPosition = false;
         IsLocked = false;
+    }
+
+    public Vector2 CurrentPosition => new Vector2(transform.position.x, transform.position.y);
+
+    public void SetFlowPosition(Vector2 position)
+    {
+        _flowOverride = true;
+        float halfWidth = GetCameraHalfWidth();
+        _flowPosition = new Vector2(
+            ClampCameraX(position.x, halfWidth),
+            position.y);
+        transform.position = new Vector3(_flowPosition.x, _flowPosition.y, zOffset);
+    }
+
+    public void ResumeFollowing()
+    {
+        _flowOverride = false;
+    }
+
+    public void SetWorldBounds(float startX, float endX)
+    {
+        constrainViewportToWorldBounds = true;
+        worldBoundsStartX = Mathf.Min(startX, endX);
+        worldBoundsEndX = Mathf.Max(startX, endX);
+    }
+
+    public void ClearWorldBounds()
+    {
+        constrainViewportToWorldBounds = false;
+    }
+
+    float ClampCameraX(float requestedX, float halfWidth)
+    {
+        if (!constrainViewportToWorldBounds)
+            return Mathf.Clamp(requestedX, minX, maxX);
+
+        float minCenterX = worldBoundsStartX + halfWidth;
+        float maxCenterX = worldBoundsEndX - halfWidth;
+
+        // 边界比当前画面窄时不存在能完整容纳画面的坐标，固定在范围中点，
+        // 避免相机在反向的最小/最大值之间跳动。
+        if (minCenterX > maxCenterX)
+            return (worldBoundsStartX + worldBoundsEndX) * 0.5f;
+
+        return Mathf.Clamp(requestedX, minCenterX, maxCenterX);
+    }
+
+    void UpdateLockedBounds(float cameraX, float halfWidth)
+    {
+        LockedLeftBound = cameraX - halfWidth + 0.5f;
+        LockedRightBound = cameraX + halfWidth - 0.5f;
     }
 
     public float GetCameraHalfWidth()

@@ -22,11 +22,17 @@ public class LevelSceneBuilder : MonoBehaviour
     // 内部组件
     private LevelVariableManager _variableManager;
     private LevelCameraController _cameraController;
+    private LevelFlowRunner _flowRunner;
+    private PerformanceRunner _performanceRunner;
 
     // 生成追踪
     private readonly List<GameObject> _spawnedObjects = new List<GameObject>();
     private readonly Dictionary<string, List<GameObject>> _groupEnemyInstances = new Dictionary<string, List<GameObject>>();
     private readonly HashSet<string> _triggeredGroups = new HashSet<string>();
+    private readonly HashSet<string> _clearedGroups = new HashSet<string>();
+    private readonly HashSet<string> _finishedSpawningGroups = new HashSet<string>();
+    private readonly HashSet<string> _spawnedElementIds = new HashSet<string>();
+    private readonly Dictionary<string, GameObject> _elementInstances = new Dictionary<string, GameObject>();
     private readonly HashSet<string> _finishedStoryTriggers = new HashSet<string>();
 
     // 元素缓存
@@ -52,6 +58,8 @@ public class LevelSceneBuilder : MonoBehaviour
             return;
         }
 
+        levelData.MigrateLegacyStoryTriggers();
+
         _variableManager = GetComponent<LevelVariableManager>();
         if (_variableManager == null)
             _variableManager = gameObject.AddComponent<LevelVariableManager>();
@@ -60,10 +68,20 @@ public class LevelSceneBuilder : MonoBehaviour
         _variableManager.OnVariableChanged("*", OnAnyVariableChanged);
 
         BuildSceneInfrastructure();
-        LoadStoryCollection();
         CreateBackground();
         CreatePlayer();
         BuildLevel();
+
+        _flowRunner = GetComponent<LevelFlowRunner>();
+        if (_flowRunner == null)
+            _flowRunner = gameObject.AddComponent<LevelFlowRunner>();
+        _performanceRunner = GetComponent<PerformanceRunner>();
+        if (_performanceRunner == null)
+            _performanceRunner = gameObject.AddComponent<PerformanceRunner>();
+        _performanceRunner.Initialize(this, _cameraController);
+        _flowRunner.Initialize(levelData, _variableManager,
+            playerTransform != null ? playerTransform.GetComponent<PlayerMovement>() : null,
+            _cameraController, _performanceRunner);
 
         Enemy.OnEnemyDied += HandleEnemyDeath;
 
@@ -71,8 +89,15 @@ public class LevelSceneBuilder : MonoBehaviour
         StartCoroutine(PeriodicCheckLevelEnd());
 
         OnLevelReady?.Invoke();
-        TriggerStoriesByMode(StoryTriggerMode.LevelStart);
+        StartCoroutine(TriggerStoriesByModeNextFrame(StoryTriggerMode.LevelStart));
         Debug.Log($"[LevelSceneBuilder] 关卡 '{levelData.levelName}' 构建完成");
+    }
+
+    IEnumerator TriggerStoriesByModeNextFrame(StoryTriggerMode mode)
+    {
+        yield return null;
+        LoadStoryCollection();
+        _flowRunner?.TriggerMode(mode);
     }
 
     void LoadStoryCollection()
@@ -116,6 +141,7 @@ public class LevelSceneBuilder : MonoBehaviour
             CheckGroupTriggers();
             CheckLevelEnd();
             UpdateCameraLock();
+            _flowRunner?.Tick(playerTransform.position.x);
         }
         catch (System.Exception e)
         {
@@ -130,6 +156,7 @@ public class LevelSceneBuilder : MonoBehaviour
         {
             if (_cameraController != null)
                 _cameraController.target = player.transform;
+            ConfigurePlayerBounds(player.GetComponent<PlayerMovement>());
             return player.transform;
         }
         Debug.LogWarning("[LevelSceneBuilder] 找不到玩家，等待玩家生成...");
@@ -181,6 +208,25 @@ public class LevelSceneBuilder : MonoBehaviour
             _cameraController.target = playerTransform;
             _cameraController.minX = -20f;
             _cameraController.maxX = levelData.levelLength + 20f;
+            var backgroundSettings = levelData.backgroundSettings;
+            if (backgroundSettings != null && backgroundSettings.constrainCameraToBounds)
+            {
+                _cameraController.SetWorldBounds(
+                    backgroundSettings.cameraBoundsStartX,
+                    backgroundSettings.cameraBoundsEndX);
+
+                float viewportWidth = _cameraController.GetCameraHalfWidth() * 2f;
+                float boundsWidth =
+                    backgroundSettings.cameraBoundsEndX - backgroundSettings.cameraBoundsStartX;
+                if (boundsWidth < viewportWidth)
+                    Debug.LogWarning(
+                        $"[LevelSceneBuilder] 摄像机边界宽度({boundsWidth:0.###})小于当前画面宽度({viewportWidth:0.###})，" +
+                        "相机将固定在边界中点，画面仍会超出边界。");
+            }
+            else
+            {
+                _cameraController.ClearWorldBounds();
+            }
             _cameraController.deadZone = levelData.cameraDeadZone;
             _cameraController.useCustomInitialPosition = levelData.useCustomInitialCameraPosition;
             _cameraController.initialPosition = levelData.initialCameraPosition;
@@ -215,6 +261,62 @@ public class LevelSceneBuilder : MonoBehaviour
 
             _spawnedObjects.Add(bgGo);
         }
+        else if (bg.mode == BackgroundMode.SequentialTiles &&
+                 bg.sequence != null &&
+                 bg.sequence.Count > 0)
+        {
+            CreateSequentialBackground(bg);
+        }
+    }
+
+    void CreateSequentialBackground(BackgroundSettings bg)
+    {
+        var root = new GameObject("LevelBackgroundSequence");
+        float cursorX = bg.sequenceStartX;
+        int tileIndex = 0;
+
+        foreach (var entry in bg.sequence)
+        {
+            if (entry == null || entry.sprite == null || entry.repeatCount <= 0)
+                continue;
+
+            Sprite sprite = entry.sprite;
+            float width = sprite.bounds.size.x;
+            if (width <= Mathf.Epsilon)
+            {
+                Debug.LogWarning($"[LevelSceneBuilder] 顺序背景图片 '{sprite.name}' 的宽度无效，已跳过");
+                continue;
+            }
+
+            for (int repeatIndex = 0; repeatIndex < entry.repeatCount; repeatIndex++)
+            {
+                var tile = new GameObject($"BackgroundTile_{tileIndex:D3}_{sprite.name}");
+                tile.transform.SetParent(root.transform, false);
+
+                // sequenceStartX 表示第一张图的左边缘；通过 bounds 抵消非居中 Pivot。
+                float positionX = cursorX - sprite.bounds.min.x;
+                float positionY = bg.sequenceCenterY - sprite.bounds.center.y;
+                tile.transform.position = new Vector3(positionX, positionY, 10f);
+
+                var renderer = tile.AddComponent<SpriteRenderer>();
+                renderer.sprite = sprite;
+                renderer.sortingOrder = Mathf.Min(
+                    bg.sequenceSortingOrder,
+                    BackgroundSettings.DefaultSortingOrder);
+
+                cursorX += width;
+                tileIndex++;
+            }
+        }
+
+        if (tileIndex == 0)
+        {
+            Destroy(root);
+            Debug.LogWarning("[LevelSceneBuilder] 顺序背景没有可生成的图片");
+            return;
+        }
+
+        _spawnedObjects.Add(root);
     }
 
     // ================================================================
@@ -243,11 +345,30 @@ public class LevelSceneBuilder : MonoBehaviour
         playerTransform = playerGo.transform;
         _spawnedObjects.Add(playerGo);
 
+        ConfigurePlayerBounds(playerGo.GetComponent<PlayerMovement>());
+
         if (_cameraController != null)
             _cameraController.target = playerTransform;
 
         // 尝试为 PlayerHP 绑定场景中的 HPBar（即使未激活）
         TryBindPlayerHPBar(playerGo);
+    }
+
+    void ConfigurePlayerBounds(PlayerMovement playerMovement)
+    {
+        if (playerMovement == null) return;
+
+        var backgroundSettings = levelData?.backgroundSettings;
+        if (backgroundSettings != null && backgroundSettings.constrainCameraToBounds)
+        {
+            playerMovement.SetLevelHorizontalBounds(
+                backgroundSettings.cameraBoundsStartX,
+                backgroundSettings.cameraBoundsEndX);
+        }
+        else
+        {
+            playerMovement.ClearLevelHorizontalBounds();
+        }
     }
 
     void TryBindPlayerHPBar(GameObject playerGo)
@@ -287,7 +408,10 @@ public class LevelSceneBuilder : MonoBehaviour
 
         foreach (var el in levelData.elements)
         {
-            if (string.IsNullOrEmpty(el.groupId))
+            NormalizeElementGroups(el);
+
+            var spawnGroups = GetElementSpawnGroups(el);
+            if (spawnGroups.Count == 0)
             {
                 if (_variableManager.CheckAllConditions(el.appearConditions))
                     SpawnElement(el);
@@ -296,13 +420,54 @@ public class LevelSceneBuilder : MonoBehaviour
             }
             else
             {
-                if (!_elementsByGroup.ContainsKey(el.groupId))
-                    _elementsByGroup[el.groupId] = new List<LevelElement>();
-                _elementsByGroup[el.groupId].Add(el);
+                foreach (var group in spawnGroups)
+                {
+                    if (!_elementsByGroup.ContainsKey(group.groupId))
+                        _elementsByGroup[group.groupId] = new List<LevelElement>();
+                    _elementsByGroup[group.groupId].Add(el);
+                }
             }
         }
 
-        CreateStoryTriggerObjects();
+        foreach (var group in levelData.groups)
+        {
+            if (group.triggerMode == ElementGroupTriggerMode.None)
+            {
+                _triggeredGroups.Add(group.groupId);
+                _finishedSpawningGroups.Add(group.groupId);
+            }
+        }
+
+        // Story playback is represented by PlayStory steps in level events.
+    }
+
+    void NormalizeElementGroups(LevelElement el)
+    {
+        if (el == null) return;
+        if (el.groupIds == null) el.groupIds = new List<string>();
+        if (!string.IsNullOrEmpty(el.groupId) && !el.groupIds.Contains(el.groupId))
+            el.groupIds.Add(el.groupId);
+    }
+
+    List<ElementGroup> GetElementSpawnGroups(LevelElement el)
+    {
+        var result = new List<ElementGroup>();
+        foreach (var groupId in GetAllElementGroupIds(el))
+        {
+            var group = levelData.FindGroup(groupId);
+            if (group != null && group.triggerMode != ElementGroupTriggerMode.None)
+                result.Add(group);
+        }
+        return result;
+    }
+
+    List<string> GetAllElementGroupIds(LevelElement el)
+    {
+        var ids = new List<string>();
+        if (el == null) return ids;
+        if (!string.IsNullOrEmpty(el.groupId)) ids.Add(el.groupId);
+        if (el.groupIds != null) ids.AddRange(el.groupIds.Where(id => !string.IsNullOrEmpty(id)));
+        return ids.Distinct().ToList();
     }
 
     // ================================================================
@@ -311,16 +476,16 @@ public class LevelSceneBuilder : MonoBehaviour
 
     void CheckGroupTriggers()
     {
-        if (playerTransform == null) return;
-
-        float playerX = playerTransform.position.x;
+        float playerX = playerTransform != null ? playerTransform.position.x : float.NegativeInfinity;
 
         foreach (var group in levelData.groups)
         {
+            if (group.triggerMode == ElementGroupTriggerMode.None) continue;
             if (_triggeredGroups.Contains(group.groupId)) continue;
             if (!_variableManager.CheckAllConditions(group.triggerConditions)) continue;
 
-            if (playerX >= group.triggerPositionX)
+            if (group.triggerMode == ElementGroupTriggerMode.Conditions ||
+                (group.triggerMode == ElementGroupTriggerMode.Position && playerX >= group.triggerPositionX))
             {
                 TriggerGroup(group);
             }
@@ -343,6 +508,11 @@ public class LevelSceneBuilder : MonoBehaviour
         {
             StartCoroutine(SpawnGroupElements(group, elements));
         }
+        else
+        {
+            _finishedSpawningGroups.Add(group.groupId);
+            CheckGroupCleared(group);
+        }
     }
 
     IEnumerator SpawnGroupElements(ElementGroup group, List<LevelElement> elements)
@@ -359,6 +529,9 @@ public class LevelSceneBuilder : MonoBehaviour
             if (_variableManager.CheckAllConditions(el.appearConditions))
                 SpawnElement(el, group);
         }
+
+        _finishedSpawningGroups.Add(group.groupId);
+        CheckGroupCleared(group);
     }
 
     // ================================================================
@@ -367,6 +540,9 @@ public class LevelSceneBuilder : MonoBehaviour
 
     GameObject SpawnElement(LevelElement el, ElementGroup group = null)
     {
+        if (!string.IsNullOrEmpty(el.elementId) && _spawnedElementIds.Contains(el.elementId))
+            return null;
+
         if (el.prefab == null)
         {
             Debug.LogWarning($"[LevelSceneBuilder] 元素'{el.displayName}'的预制体为空");
@@ -385,17 +561,26 @@ public class LevelSceneBuilder : MonoBehaviour
 
         ApplyCustomParameters(go, el);
         _spawnedObjects.Add(go);
+        if (!string.IsNullOrEmpty(el.elementId))
+        {
+            _spawnedElementIds.Add(el.elementId);
+            _elementInstances[el.elementId] = go;
+        }
 
         // 敌人追踪
         if (el.elementType == ElementType.Enemy)
         {
             var enemy = go.GetComponent<Enemy>();
             if (enemy == null) enemy = go.GetComponentInChildren<Enemy>();
-            if (enemy != null && group != null && group.mustClearToProceed)
+            if (enemy != null)
             {
-                if (!_groupEnemyInstances.ContainsKey(group.groupId))
-                    _groupEnemyInstances[group.groupId] = new List<GameObject>();
-                _groupEnemyInstances[group.groupId].Add(go);
+                foreach (var groupId in GetAllElementGroupIds(el))
+                {
+                    if (!_groupEnemyInstances.ContainsKey(groupId))
+                        _groupEnemyInstances[groupId] = new List<GameObject>();
+                    if (!_groupEnemyInstances[groupId].Contains(go))
+                        _groupEnemyInstances[groupId].Add(go);
+                }
             }
 
             // 自动设置玩家引用
@@ -541,7 +726,7 @@ public class LevelSceneBuilder : MonoBehaviour
         if (_levelComplete) return;
         _levelComplete = true;
         Debug.Log($"[LevelSceneBuilder] 关卡完成!");
-        TriggerStoriesByMode(StoryTriggerMode.LevelComplete);
+        _flowRunner?.TriggerMode(StoryTriggerMode.LevelComplete);
         OnLevelComplete?.Invoke();
     }
 
@@ -566,10 +751,12 @@ public class LevelSceneBuilder : MonoBehaviour
             enemies.RemoveAll(e => e == null);
             if (enemies.Count <= 0)
             {
+                var clearedGroup = _activeLockGroup;
                 _activeLockGroup = null;
                 if (_cameraController != null)
                     _cameraController.Unlock();
                 Debug.Log($"[LevelSceneBuilder] 组内敌人清除，解锁");
+                ApplyGroupClearedActions(clearedGroup);
             }
         }
         else
@@ -586,8 +773,9 @@ public class LevelSceneBuilder : MonoBehaviour
 
     void OnAnyVariableChanged()
     {
+        CheckGroupTriggers();
         TrySpawnPendingConditionElements();
-        TryCreatePendingStoryTriggers();
+        _flowRunner?.NotifyConditionsChanged();
     }
 
     void TrySpawnPendingConditionElements()
@@ -673,7 +861,42 @@ public class LevelSceneBuilder : MonoBehaviour
 
     void HandleEnemyDeath(Enemy _)
     {
+        if (_ != null)
+        {
+            foreach (var enemies in _groupEnemyInstances.Values)
+                enemies.Remove(_.gameObject);
+        }
+
         UpdateCameraLock();
+        CheckAllClearedGroups();
+    }
+
+    void CheckAllClearedGroups()
+    {
+        foreach (var group in levelData.groups)
+            CheckGroupCleared(group);
+    }
+
+    void CheckGroupCleared(ElementGroup group)
+    {
+        if (group == null) return;
+        if (!_triggeredGroups.Contains(group.groupId)) return;
+        if (!_finishedSpawningGroups.Contains(group.groupId)) return;
+        if (_clearedGroups.Contains(group.groupId)) return;
+        if (!_groupEnemyInstances.TryGetValue(group.groupId, out var enemies)) return;
+
+        enemies.RemoveAll(e => e == null);
+        if (enemies.Count <= 0)
+            ApplyGroupClearedActions(group);
+    }
+
+    void ApplyGroupClearedActions(ElementGroup group)
+    {
+        if (group == null || _clearedGroups.Contains(group.groupId)) return;
+
+        _clearedGroups.Add(group.groupId);
+        _variableManager.ApplySetActions(group.onAllEnemiesClearedSetVariables);
+        Debug.Log($"[LevelSceneBuilder] 元素组 '{group.groupName}' 已清空，应用变量变化");
     }
 
     void ClearAll()
@@ -684,7 +907,32 @@ public class LevelSceneBuilder : MonoBehaviour
         }
         _spawnedObjects.Clear();
         _groupEnemyInstances.Clear();
+        _clearedGroups.Clear();
+        _finishedSpawningGroups.Clear();
+        _spawnedElementIds.Clear();
+        _elementInstances.Clear();
         _createdStoryTriggers.Clear();
         _completedStoryTriggers.Clear();
+    }
+
+    public bool TryResolvePerformanceActor(PerformanceActorBinding binding, out GameObject actor)
+    {
+        actor = null;
+        if (binding == null) return false;
+
+        if (binding.targetType == PerformanceActorTargetType.Player)
+        {
+            actor = playerTransform != null ? playerTransform.gameObject : null;
+            return actor != null;
+        }
+
+        if (string.IsNullOrEmpty(binding.elementId)) return false;
+        if (!_elementInstances.TryGetValue(binding.elementId, out actor) || actor == null)
+        {
+            _elementInstances.Remove(binding.elementId);
+            actor = null;
+            return false;
+        }
+        return true;
     }
 }

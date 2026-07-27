@@ -1,0 +1,156 @@
+{
+    "levelName": "test",
+    "difficulty": 1,
+    "levelLength": 50.0,
+    "playerPrefabGuid": "77103445a5cb7cb40ace3957835b2f01",
+    "playerSpawnX": 0.0,
+    "playerSpawnY": -3.5,
+    "playerFaceRight": true,
+    "useCustomInitialCameraPosition": true,
+    "initialCameraX": 7.329999923706055,
+    "initialCameraY": 0.0,
+    "cameraDeadZone": 0.20000000298023225,
+    "hasCameraSettings": true,
+    "levelEndPositionX": 99.9000015258789,
+    "storyCollectionGuid": "49a92a70e4a678a48acc2021c61c9ad9",
+    "backgroundMode": "SingleInfiniteScroll",
+    "backgroundSpriteGuid": "fcb81f9c453a6194eb812cfe80ac00ea",
+    "backgroundParallax": 0.0,
+    "backgroundSortingOrder": -10000,
+    "variables": [
+        {
+            "name": "var1",
+            "type": "Bool",
+            "defaultValue": "false",
+            "description": ""
+        },
+        {
+            "name": "var2",
+            "type": "Bool",
+            "defaultValue": "false",
+            "description": ""
+        },
+        {
+            "name": "var3",
+            "type": "Bool",
+            "defaultValue": "false",
+            "description": ""
+        },
+        {
+            "name": "var4",
+            "type": "Bool",
+            "defaultValue": "false",
+            "description": ""
+        },
+        {
+            "name": "var5",
+            "type": "Bool",
+            "defaultValue": "false",
+            "description": ""
+        },
+        {
+            "name": "var6",
+            "type": "Bool",
+            "defaultValue": "false",
+            "description": ""
+        }
+    ],
+    "elements": [
+        {
+            "id": "02b24b24-b371-4f1c-99f2-e5246f677c56",
+            "name": "MuscleP",
+            "type": "Enemy",
+            "prefabGuid": "0c06786d5294f9342adf2f5e052fcf02",
+            "posX": 12.0,
+            "posY": -1.0,
+            "faceRight": true,
+            "delay": 0.0,
+            "groupId": "",
+            "groupIds": [
+                "05316ed8-463f-4295-8acc-4a5bb9fa9b55"
+            ],
+            "conditions": []
+        },
+        {
+            "id": "b7104d6c-c837-4e3c-8baa-37751c8d8e9a",
+            "name": "Obstacle_ClayPot",
+            "type": "Obstacle",
+            "prefabGuid": "f781d74d7f8aac8419844898e4d78308",
+            "posX": 3.0,
+            "posY": -2.5,
+            "faceRight": true,
+            "delay": 0.0,
+            "groupId": "",
+            "groupIds": [],
+            "conditions": []
+        },
+        {
+            "id": "caac1e93-cf41-41db-8b53-ca6bae7985ea",
+            "name": "Obstacle_WoodenBarrel",
+            "type": "Obstacle",
+            "prefabGuid": "bd57a8920b5f0874cb86b536b4912d97",
+            "posX": 3.0,
+            "posY": -4.0,
+            "faceRight": true,
+            "delay": 0.0,
+            "groupId": "",
+            "groupIds": [],
+            "conditions": []
+        },
+        {
+            "id": "0bea2f52-5208-46f7-91b9-94f6a0a6fa7e",
+            "name": "MuscleP",
+            "type": "Enemy",
+            "prefabGuid": "0c06786d5294f9342adf2f5e052fcf02",
+            "posX": 12.0,
+            "posY": -2.5,
+            "faceRight": true,
+            "delay": 0.0,
+            "groupId": "",
+            "groupIds": [
+                "05316ed8-463f-4295-8acc-4a5bb9fa9b55"
+            ],
+            "conditions": []
+        }
+    ],
+    "storyTriggers": [
+        {
+            "triggerMode": "LevelStart",
+            "posX": 3.0,
+            "storyId": "story_20260705_031436",
+            "triggerOnce": true,
+            "triggerFromLeft": true,
+            "conditions": [
+                {
+                    "variable": "var1",
+                    "mode": "Equals",
+                    "value": "true"
+                }
+            ],
+            "onStartSetVariables": [],
+            "onCompleteSetVariables": []
+        }
+    ],
+    "groups": [
+        {
+            "id": "05316ed8-463f-4295-8acc-4a5bb9fa9b55",
+            "name": "第1组",
+            "triggerMode": "Position",
+            "triggerX": 9.699999809265137,
+            "mustClear": true,
+            "conditions": [
+                {
+                    "variable": "var1",
+                    "mode": "Equals",
+                    "value": ""
+                }
+            ],
+            "onClearedSetVariables": [
+                {
+                    "variable": "var1",
+                    "value": "true"
+                }
+            ]
+        }
+    ]
+}

@@ -119,6 +119,8 @@ public class DialogBoxEffectController : MonoBehaviour
     private readonly List<Image> _blockPool = new List<Image>();
     private Color _baseColor = Color.white;
     private Sequence _currentSequence;
+    private Material _stripeRuntimeMaterial;
+    private float _stripeAngleOffset;
 
     // 当前色块旋转角度（跟随说话方向变化：左=blockRotation，右=180-blockRotation）
     private float _currentRotation;
@@ -135,11 +137,29 @@ public class DialogBoxEffectController : MonoBehaviour
     {
         _currentRotation = blockRotation;
         CollectBlockPool();
+
+        if (stripeOverlay != null && stripeOverlay.material != null)
+        {
+            _stripeRuntimeMaterial = new Material(stripeOverlay.material)
+            {
+                name = stripeOverlay.material.name + " (Runtime)"
+            };
+            stripeOverlay.material = _stripeRuntimeMaterial;
+
+            if (_stripeRuntimeMaterial.HasProperty("_StripeAngle"))
+                _stripeAngleOffset = Mathf.DeltaAngle(_currentRotation, _stripeRuntimeMaterial.GetFloat("_StripeAngle"));
+        }
     }
 
     void OnDestroy()
     {
         KillCurrentSequence();
+
+        if (_stripeRuntimeMaterial != null)
+        {
+            Destroy(_stripeRuntimeMaterial);
+            _stripeRuntimeMaterial = null;
+        }
     }
 
     // ==============================
@@ -206,6 +226,7 @@ public class DialogBoxEffectController : MonoBehaviour
     {
         KillCurrentSequence();
         _baseColor = baseColor;
+        ResetDirection(fromLeft);
         RecalculateTiling();
 
         int nameLen = string.IsNullOrEmpty(speakerName) ? 3 : speakerName.Length;
@@ -360,6 +381,18 @@ public class DialogBoxEffectController : MonoBehaviour
     }
 
     /// <summary>
+    /// 每段剧情入场时按首位说话者重置色块与条纹方向，
+    /// 避免沿用上一段剧情结束时的镜像状态。
+    /// </summary>
+    void ResetDirection(bool fromLeft)
+    {
+        _currentRotation = fromLeft ? blockRotation : (180f - blockRotation);
+
+        if (_stripeRuntimeMaterial != null && _stripeRuntimeMaterial.HasProperty("_StripeAngle"))
+            _stripeRuntimeMaterial.SetFloat("_StripeAngle", _currentRotation + _stripeAngleOffset);
+    }
+
+    /// <summary>
     /// 换边过渡动画：色块散开→换色→聚合，与 IrregularDialogBox 形变两阶段同步
     /// IrregularDialogBox: mirrorProgress 0→0.5 (左→矩形), 0.5→1 (矩形→右), SmoothStep
     /// 色块: 散开+旋转到90° = 前半程, 聚合+旋转到目标 = 后半程
@@ -407,9 +440,9 @@ public class DialogBoxEffectController : MonoBehaviour
         }
 
         // ---- 条纹角度：前半程同步 ----
-        if (stripeOverlay != null && stripeOverlay.material != null)
+        if (_stripeRuntimeMaterial != null)
         {
-            Material mat = stripeOverlay.material;
+            Material mat = _stripeRuntimeMaterial;
             float stripeAngle = mat.GetFloat("_StripeAngle");
             float midDelta = midRotation - _currentRotation;
             float stripeMid = stripeAngle + midDelta;

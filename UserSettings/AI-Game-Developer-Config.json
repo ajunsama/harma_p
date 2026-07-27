@@ -6,7 +6,6 @@
   "transportMethod": "streamableHttp",
   "authOption": "none",
   "connectionMode": "Custom",
-  "cloudToken": "Uo1JEQrL2J4bu7t_hxosjy1jXR9A4_-4Ejv28uv6C80",
   "tools": [
     {
       "name": "animation-create",

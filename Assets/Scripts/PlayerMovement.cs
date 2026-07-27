@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;   // 新 InputSystem 命名空间
 using Spine.Unity;                // Spine 动画
@@ -19,6 +20,12 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] float bounceHeight = 1.5f;    // 反弹跳跃高度
     [SerializeField] float bounceDuration = 0.4f; // 反弹跳跃持续时间
 
+    [Header("过场准备")]
+    [SerializeField, Min(0f), InspectorName("站立过渡时间（秒）")]
+    float storyStandingBlendDuration = 0.15f;
+    [SerializeField, Min(0f), InspectorName("站稳延时（秒）")]
+    float storyStandingDelay = 0.25f;
+
     [Header("地面检测")]
     [SerializeField] GroundChecker groundChecker; // 拖影子进来
 
@@ -28,6 +35,11 @@ public class PlayerMovement : MonoBehaviour
     private float rightBound;
     private float bottomBound;
     private float topBound;
+    [SerializeField, Tooltip("用于计算角色左右边缘；未指定时自动使用玩家根对象上的 Collider2D")]
+    private Collider2D boundaryCollider;
+    private bool useLevelHorizontalBounds;
+    private float levelHorizontalStartX;
+    private float levelHorizontalEndX;
 
     [Header("Spine动画")]
     [SerializeField] SkeletonAnimation skeletonAnimation;   // 拖Spine对象进来
@@ -71,6 +83,15 @@ public class PlayerMovement : MonoBehaviour
     private bool canJumpAttack = true;
     private float jumpAttackCooldown = 0.3f; // 冷却时间
     private float jumpAttackCooldownTimer = 0f;
+
+    // Gameplay input may be locked by stories and level flows. The simulation
+    // (jump landing / knockback) intentionally keeps running while locked.
+    private readonly HashSet<int> controlLocks = new HashSet<int>();
+    private static int nextControlLockToken = 1;
+    private bool isScriptedMoving;
+    private int performanceAnimationControlCount;
+    private bool storyStandingPosePrepared;
+    private float storyStandingPosePreparedAt;
     
     // 攻击状态引用
     // PlayerAttack playerAttack; // 已移除
@@ -79,9 +100,165 @@ public class PlayerMovement : MonoBehaviour
     public bool IsJumping => isJumping;
     public bool IsKnockedBack => isKnockedBack;
     public float BaseY => baseY;
+    public bool IsSafeForStory =>
+        !isJumping &&
+        !isBouncing &&
+        !isKnockedBack &&
+        Mathf.Abs(jumpOffset) <= 0.001f;
+    public bool IsReadyForStory =>
+        IsSafeForStory &&
+        storyStandingPosePrepared &&
+        IsStandingAnimationActive &&
+        Time.unscaledTime - storyStandingPosePreparedAt >=
+            Mathf.Max(storyStandingDelay, storyStandingBlendDuration);
+    public bool IsGameplayControlEnabled => controlLocks.Count == 0;
+
+    private bool IsStandingAnimationActive =>
+        skeletonAnimation == null ||
+        string.IsNullOrEmpty(idleAnimName) ||
+        IsSpineTrackPlaying(idleAnimName);
     
     // 新 InputSystem 自动生成的回调
-    void OnMove(InputValue value) => moveInput = value.Get<Vector2>();
+    void OnMove(InputValue value)
+    {
+        if (!IsGameplayControlEnabled) return;
+        moveInput = value.Get<Vector2>();
+    }
+
+    public int AcquireControlLock(string owner)
+    {
+        int token = nextControlLockToken++;
+        if (nextControlLockToken <= 0) nextControlLockToken = 1;
+        controlLocks.Add(token);
+        moveInput = Vector2.zero;
+        return token;
+    }
+
+    public void ReleaseControlLock(int token)
+    {
+        if (token != 0) controlLocks.Remove(token);
+        if (controlLocks.Count == 0)
+            storyStandingPosePrepared = false;
+    }
+
+    public void PrepareStandingAnimationForStory()
+    {
+        if (!IsSafeForStory) return;
+        moveInput = Vector2.zero;
+        if (storyStandingPosePrepared) return;
+
+        storyStandingPosePrepared = true;
+        storyStandingPosePreparedAt = Time.unscaledTime;
+        if (skeletonAnimation == null || string.IsNullOrEmpty(idleAnimName)) return;
+
+        // Blend from the airborne pose into idle while gameplay time is still
+        // running. The story readiness delay guarantees this mix completes
+        // before StoryManager pauses scaled time.
+        currentTrack = skeletonAnimation.AnimationState.SetAnimation(0, idleAnimName, true);
+        if (currentTrack != null)
+            currentTrack.MixDuration = storyStandingBlendDuration;
+    }
+
+    private bool IsSpineTrackPlaying(string animationName)
+    {
+        if (skeletonAnimation == null) return true;
+        var actualTrack = skeletonAnimation.AnimationState?.GetCurrent(0);
+        return actualTrack != null && actualTrack.Animation != null &&
+               actualTrack.Animation.Name == animationName;
+    }
+
+    public bool MoveScriptedTowards(Vector2 target, float speed, float tolerance)
+    {
+        if (rb == null) return false;
+
+        tolerance = Mathf.Max(0.001f, tolerance);
+        speed = Mathf.Max(0.01f, speed);
+        target.x = ClampHorizontalPosition(target.x);
+        Vector2 current = new Vector2(rb.position.x, baseY);
+        Vector2 next = Vector2.MoveTowards(current, target, speed * Time.deltaTime);
+        Vector2 delta = next - current;
+
+        if (Mathf.Abs(delta.x) > 0.001f)
+            lastFaceDir = Mathf.Sign(delta.x);
+
+        baseY = next.y;
+        rb.position = new Vector2(next.x, next.y + jumpOffset);
+        isScriptedMoving = true;
+        if (!isJumping) PlayAnimation(runAnimName, true);
+        ApplyFacing();
+
+        if (Vector2.Distance(next, target) > tolerance) return false;
+
+        baseY = target.y;
+        rb.position = new Vector2(target.x, target.y + jumpOffset);
+        StopScriptedMovement();
+        return true;
+    }
+
+    public void StopScriptedMovement()
+    {
+        isScriptedMoving = false;
+        if (!isJumping) PlayAnimation(idleAnimName, true);
+    }
+
+    public void SetPerformancePosition(Vector2 position)
+    {
+        position.x = ClampHorizontalPosition(position.x);
+        baseY = position.y;
+        jumpOffset = 0f;
+        if (rb != null)
+            rb.position = position;
+        transform.position = new Vector3(position.x, position.y, transform.position.z);
+    }
+
+    public void SetPerformanceFacing(bool faceRight)
+    {
+        lastFaceDir = faceRight ? 1f : -1f;
+        ApplyFacing();
+    }
+
+    public void SetLevelHorizontalBounds(float startX, float endX)
+    {
+        useLevelHorizontalBounds = true;
+        levelHorizontalStartX = Mathf.Min(startX, endX);
+        levelHorizontalEndX = Mathf.Max(startX, endX);
+        ClampCurrentHorizontalPosition();
+    }
+
+    public void ClearLevelHorizontalBounds()
+    {
+        useLevelHorizontalBounds = false;
+    }
+
+    public void BeginPerformanceAnimationControl()
+    {
+        performanceAnimationControlCount++;
+    }
+
+    public void EndPerformanceAnimationControl()
+    {
+        performanceAnimationControlCount = Mathf.Max(0, performanceAnimationControlCount - 1);
+    }
+
+    public bool PlayPerformanceAnimation(string animName, bool loop, int trackIndex, float mixDuration)
+    {
+        if (skeletonAnimation == null || string.IsNullOrEmpty(animName))
+            return false;
+
+        currentTrack = skeletonAnimation.AnimationState.SetAnimation(
+            Mathf.Max(0, trackIndex), animName, loop);
+        if (currentTrack != null)
+            currentTrack.MixDuration = Mathf.Max(0f, mixDuration);
+        return currentTrack != null;
+    }
+
+    private void ApplyFacing()
+    {
+        transform.localScale = new Vector3(
+            -lastFaceDir * Mathf.Abs(originalScale.x),
+            originalScale.y,
+            originalScale.z);
+    }
 
     void Awake()
     {
@@ -124,6 +301,28 @@ public class PlayerMovement : MonoBehaviour
         if (isKnockedBack)
         {
             // 击退中不播放移动动画，由PlayerHP控制hited动画
+            return;
+        }
+
+        // PerformanceRunner owns the player's pose while a story performance
+        // is active. Story input locking would otherwise force idle here every
+        // frame and immediately overwrite the performance's move animation.
+        if (performanceAnimationControlCount > 0)
+        {
+            if (!IsGameplayControlEnabled)
+                moveInput = Vector2.zero;
+            ApplyFacing();
+            return;
+        }
+
+        if (!IsGameplayControlEnabled && !isScriptedMoving)
+        {
+            moveInput = Vector2.zero;
+            if (isJumping)
+                UpdateJump();
+            else
+                PlayAnimation(idleAnimName, true);
+            ApplyFacing();
             return;
         }
         
@@ -172,10 +371,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         // 2. 无论是否在走，都把 lastFaceDir 应用到缩放
-        transform.localScale = new Vector3(
-            -lastFaceDir * Mathf.Abs(originalScale.x),
-            originalScale.y,
-            originalScale.z);
+        ApplyFacing();
         
         // 更新跳跃状态
         if (isJumping)
@@ -190,6 +386,23 @@ public class PlayerMovement : MonoBehaviour
         if (isKnockedBack)
         {
             UpdateKnockback();
+            return;
+        }
+
+        if (!IsGameplayControlEnabled || isScriptedMoving)
+        {
+            // A control lock only disables gameplay input. Existing jump/bounce
+            // simulation must still be applied to the rigidbody so the player
+            // can visibly finish the trajectory before a story starts.
+            if (!isScriptedMoving && isJumping)
+            {
+                Vector2 lockedPos = rb.position;
+                lockedPos.x = ClampHorizontalPosition(lockedPos.x);
+                lockedPos.y = baseY + jumpOffset;
+                rb.MovePosition(lockedPos);
+                if (groundChecker != null)
+                    groundChecker.MovePosition(lockedPos, baseY - transform.localScale.y / 2 + 0.55f);
+            }
             return;
         }
         
@@ -209,8 +422,7 @@ public class PlayerMovement : MonoBehaviour
             moveInput.y * verticalSpeed);
 
         // 获取当前有效的左右边界 - 基于屏幕位置动态计算
-        float effectiveLeftBound = leftBound;
-        float effectiveRightBound = rightBound;
+        GetEffectiveHorizontalBounds(out float effectiveLeftBound, out float effectiveRightBound);
         
         // 如果有相机，使用屏幕边界
         // Camera mainCam = Camera.main;
@@ -225,11 +437,6 @@ public class PlayerMovement : MonoBehaviour
         // }
         
         // 战斗锁屏时限制玩家在相机视野内
-        if (LevelCameraController.IsLocked)
-        {
-            effectiveLeftBound = Mathf.Max(effectiveLeftBound, LevelCameraController.LockedLeftBound);
-            effectiveRightBound = Mathf.Min(effectiveRightBound, LevelCameraController.LockedRightBound);
-        }
 
         Vector2 pos = rb.position + velocity * Time.fixedDeltaTime;
         if (isJumping)
@@ -256,8 +463,77 @@ public class PlayerMovement : MonoBehaviour
         groundChecker.MovePosition(pos, baseY - transform.localScale.y / 2 + 0.55f);
     }
 
+    void GetEffectiveHorizontalBounds(out float effectiveLeftBound, out float effectiveRightBound)
+    {
+        float worldLeftBound = useLevelHorizontalBounds ? levelHorizontalStartX : leftBound;
+        float worldRightBound = useLevelHorizontalBounds ? levelHorizontalEndX : rightBound;
+
+        GetBoundaryPadding(out float leftPadding, out float rightPadding);
+        effectiveLeftBound = worldLeftBound + leftPadding;
+        effectiveRightBound = worldRightBound - rightPadding;
+
+        // 范围比玩家碰撞体还窄时，固定在中点，避免 Mathf.Clamp 收到反向边界。
+        if (effectiveLeftBound > effectiveRightBound)
+        {
+            float middle = (worldLeftBound + worldRightBound) * 0.5f;
+            effectiveLeftBound = middle;
+            effectiveRightBound = middle;
+        }
+
+        if (LevelCameraController.IsLocked)
+        {
+            float levelAllowedLeft = effectiveLeftBound;
+            float levelAllowedRight = effectiveRightBound;
+            effectiveLeftBound = Mathf.Max(effectiveLeftBound, LevelCameraController.LockedLeftBound);
+            effectiveRightBound = Mathf.Min(effectiveRightBound, LevelCameraController.LockedRightBound);
+            if (effectiveLeftBound > effectiveRightBound)
+            {
+                float lockedMiddle =
+                    (LevelCameraController.LockedLeftBound + LevelCameraController.LockedRightBound) * 0.5f;
+                float fallback = Mathf.Clamp(lockedMiddle, levelAllowedLeft, levelAllowedRight);
+                effectiveLeftBound = fallback;
+                effectiveRightBound = fallback;
+            }
+        }
+    }
+
+    float ClampHorizontalPosition(float positionX)
+    {
+        GetEffectiveHorizontalBounds(out float effectiveLeftBound, out float effectiveRightBound);
+        if (effectiveLeftBound > effectiveRightBound)
+            return (effectiveLeftBound + effectiveRightBound) * 0.5f;
+        return Mathf.Clamp(positionX, effectiveLeftBound, effectiveRightBound);
+    }
+
+    void ClampCurrentHorizontalPosition()
+    {
+        if (rb == null) return;
+        Vector2 position = rb.position;
+        position.x = ClampHorizontalPosition(position.x);
+        rb.position = position;
+    }
+
+    void GetBoundaryPadding(out float leftPadding, out float rightPadding)
+    {
+        if (boundaryCollider == null)
+            boundaryCollider = GetComponent<Collider2D>();
+
+        if (boundaryCollider == null)
+        {
+            leftPadding = 0f;
+            rightPadding = 0f;
+            return;
+        }
+
+        Bounds bounds = boundaryCollider.bounds;
+        float playerCenterX = transform.position.x;
+        leftPadding = Mathf.Max(0f, playerCenterX - bounds.min.x);
+        rightPadding = Mathf.Max(0f, bounds.max.x - playerCenterX);
+    }
+
     void Jump()
     {
+        storyStandingPosePrepared = false;
         isJumping = true;
         isBouncing = false;
         // 播放跳跃动画（不循环）
@@ -274,6 +550,7 @@ public class PlayerMovement : MonoBehaviour
     /// </summary>
     public void TriggerBounce()
     {
+        storyStandingPosePrepared = false;
         // 保存当前的跳跃高度偏移，反弹将从这个高度开始
         bounceStartOffset = jumpOffset;
         
@@ -331,7 +608,10 @@ public class PlayerMovement : MonoBehaviour
             canJumpAttack = true;
             
             // 强制修正位置到地面，防止下一帧 FixedUpdate 使用高空坐标
-            rb.position = new Vector2(rb.position.x, baseY);
+            Vector2 landedPosition = new Vector2(rb.position.x, baseY);
+            rb.position = landedPosition;
+            if (groundChecker != null)
+                groundChecker.MovePosition(landedPosition, baseY - transform.localScale.y / 2 + 0.55f);
         }
         else
         {
@@ -379,6 +659,8 @@ public class PlayerMovement : MonoBehaviour
     {
         if (isKnockedBack)
             return; // 已经在击退中，不重复触发
+
+        storyStandingPosePrepared = false;
             
         isKnockedBack = true;
         knockbackTimer = 0f;
@@ -411,7 +693,8 @@ public class PlayerMovement : MonoBehaviour
         knockbackTargetPos = knockbackStartPos + new Vector2(knockbackDir * knockbackDistance, 0);
         
         // 限制目标位置在边界内
-        knockbackTargetPos.x = Mathf.Clamp(knockbackTargetPos.x, leftBound, rightBound);
+        GetEffectiveHorizontalBounds(out float effectiveLeftBound, out float effectiveRightBound);
+        knockbackTargetPos.x = Mathf.Clamp(knockbackTargetPos.x, effectiveLeftBound, effectiveRightBound);
         knockbackTargetPos.y = Mathf.Clamp(knockbackTargetPos.y, bottomBound, topBound);
         
         // 记录基准Y坐标 (重要：防止瞬移到 0)
@@ -458,7 +741,8 @@ public class PlayerMovement : MonoBehaviour
             currentPos.y = baseY + jumpOffset;
             
             // 限制位置在边界内
-            currentPos.x = Mathf.Clamp(currentPos.x, leftBound, rightBound);
+            GetEffectiveHorizontalBounds(out float effectiveLeftBound, out float effectiveRightBound);
+            currentPos.x = Mathf.Clamp(currentPos.x, effectiveLeftBound, effectiveRightBound);
             currentPos.y = Mathf.Max(currentPos.y, bottomBound);
             
             rb.MovePosition(currentPos);

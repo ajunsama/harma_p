@@ -1,0 +1,100 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2eb526b989e8d6b43b8cf14428e0cc84, type: 3}
+  m_Name: "\u5355\u4E00\u573A\u666F"
+  m_EditorClassIdentifier: Assembly-CSharp::LevelData
+  levelName: "\u5355\u4E00\u573A\u666F"
+  difficulty: 1
+  levelLength: 50
+  playerPrefab: {fileID: 1743930696149737694, guid: 77103445a5cb7cb40ace3957835b2f01, type: 3}
+  backgroundSettings:
+    mode: 2
+    constrainCameraToBounds: 1
+    cameraBoundsStartX: 0
+    cameraBoundsEndX: 50
+    singleBackground: {fileID: 0}
+    singleParallaxFactor: 0
+    singleSortingOrder: -10000
+    parallaxLayers: []
+    sequenceStartX: 0
+    sequenceCenterY: 0
+    sequenceSortingOrder: -10000
+    sequence:
+    - sprite: {fileID: -9084149176029018482, guid: fcb81f9c453a6194eb812cfe80ac00ea, type: 3}
+      repeatCount: 1
+  playerSpawnPosition: {x: 4.8, y: -3.5}
+  playerFaceRight: 1
+  useCustomInitialCameraPosition: 1
+  initialCameraPosition: {x: 9.78, y: 0}
+  cameraDeadZone: 0.2
+  levelEndPositionX: 45
+  endConditions: []
+  variables: []
+  storyCollectionJson: {fileID: 4900000, guid: 29f93a9933497ea4797371a5b0b05444, type: 3}
+  elements:
+  - elementId: 185613ad-2092-46d2-bcee-83ca5384fcda
+    displayName: PunkP_Test
+    elementType: 0
+    prefab: {fileID: 3410753177876068644, guid: 58d2df485030bcf4bbdc906332ec6f4e, type: 3}
+    position: {x: 16.5, y: -3}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    groupIds: []
+    appearConditions: []
+    customParameters: []
+  storyTriggers: []
+  events:
+  - flowId: event
+    triggerMode: 2
+    positionX: 0
+    triggerFromLeft: 1
+    triggerOnce: 1
+    triggerConditions: []
+    steps:
+    - stepType: 0
+      duration: 1
+      targetPosition: {x: 0, y: 0}
+      speed: 3
+      tolerance: 0.05
+      easing: 1
+      setVariable:
+        variableName: 
+        stringValue: 
+      storyId: 
+      storyCastBindings: []
+      storyPerformanceScripts: []
+      storyPerformanceCues: []
+    - stepType: 6
+      duration: 1
+      targetPosition: {x: 0, y: 0}
+      speed: 3
+      tolerance: 0.05
+      easing: 1
+      setVariable:
+        variableName: 
+        stringValue: 
+      storyId: story_20260725_143515
+      storyCastBindings:
+      - scriptId: "\u7B80\u6613\u6F14\u51FA"
+        slotId: actor_1
+        targetType: 0
+        elementId: 
+        idleAnimationOverride: 
+        moveAnimationOverride: 
+      storyPerformanceScripts:
+      - {fileID: 11400000, guid: 80e953a0ac9b4d74398fde7500a36736, type: 2}
+      storyPerformanceCues: []
+  groups: []
+  enemyPrefabLibrary: []
+  itemPrefabLibrary: []
+  obstaclePrefabLibrary: []

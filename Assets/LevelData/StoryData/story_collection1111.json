@@ -1,0 +1,39 @@
+﻿{
+    "stories": [
+        {
+            "storyId": "story_20260705_215401",
+            "chapterId": "chapter_1",
+            "sectionId": "section_1",
+            "dialogues": [
+                {
+                    "id": 1,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "111",
+                    "styleId": "protagonist",
+                    "playSpeed": 0.05000000074505806,
+                    "avatarPosition": "left",
+                    "avatarId": "kaho",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "小宫果穗",
+                    "extraJson": ""
+                },
+                {
+                    "id": 2,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "2222",
+                    "styleId": "boss",
+                    "playSpeed": 0.05000000074505806,
+                    "avatarPosition": "right",
+                    "avatarId": "muscle_p",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "杜野凛世",
+                    "extraJson": ""
+                }
+            ]
+        }
+    ]
+}

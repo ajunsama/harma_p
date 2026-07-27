@@ -47,7 +47,9 @@ MonoBehaviour:
     position: {x: 7.5, y: -4}
     faceRight: 1
     appearDelay: 0
-    groupId: 
+    groupId: 79024b4b-19d7-4493-82c6-2fbad067f18b
+    groupIds:
+    - 79024b4b-19d7-4493-82c6-2fbad067f18b
     appearConditions: []
     customParameters: []
   - elementId: 87066976-1d64-436a-9468-781fae867561
@@ -57,17 +59,21 @@ MonoBehaviour:
     position: {x: 7, y: -1}
     faceRight: 1
     appearDelay: 0
-    groupId: 
+    groupId: 79024b4b-19d7-4493-82c6-2fbad067f18b
+    groupIds:
+    - 79024b4b-19d7-4493-82c6-2fbad067f18b
     appearConditions: []
     customParameters: []
   - elementId: 10f1ced7-afe2-43f2-9bb7-e5d019cf0bbe
     displayName: PunkP_Test
     elementType: 0
     prefab: {fileID: 3410753177876068644, guid: 58d2df485030bcf4bbdc906332ec6f4e, type: 3}
-    position: {x: 11.5, y: -0.5}
+    position: {x: 12, y: -0.5}
     faceRight: 1
     appearDelay: 0
-    groupId: 
+    groupId: 79024b4b-19d7-4493-82c6-2fbad067f18b
+    groupIds:
+    - 79024b4b-19d7-4493-82c6-2fbad067f18b
     appearConditions: []
     customParameters: []
   - elementId: 9fa9efd1-f715-4fce-9f69-168139a187ea
@@ -78,6 +84,7 @@ MonoBehaviour:
     faceRight: 1
     appearDelay: 0
     groupId: 
+    groupIds: []
     appearConditions: []
     customParameters: []
   - elementId: 8cc78b68-7c04-4857-8aff-7c2ea349257e
@@ -88,10 +95,47 @@ MonoBehaviour:
     faceRight: 1
     appearDelay: 0
     groupId: 
+    groupIds: []
+    appearConditions: []
+    customParameters: []
+  - elementId: 612ca75a-b9ed-413a-84a7-518c28a26197
+    displayName: PunkP_Test
+    elementType: 0
+    prefab: {fileID: 3410753177876068644, guid: 58d2df485030bcf4bbdc906332ec6f4e, type: 3}
+    position: {x: 25, y: -1.5}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    groupIds:
+    - 8d0a3707-6189-4962-93a1-06711b2281be
+    appearConditions: []
+    customParameters: []
+  - elementId: e54f69c1-0981-4dbd-a98b-18d3e173c3c6
+    displayName: PunkP_Test
+    elementType: 0
+    prefab: {fileID: 3410753177876068644, guid: 58d2df485030bcf4bbdc906332ec6f4e, type: 3}
+    position: {x: 25, y: -3.5}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    groupIds:
+    - 8d0a3707-6189-4962-93a1-06711b2281be
+    appearConditions: []
+    customParameters: []
+  - elementId: 45d3c935-32dd-49c0-a8f7-c959a9fe491d
+    displayName: PunkP_Test
+    elementType: 0
+    prefab: {fileID: 3410753177876068644, guid: 58d2df485030bcf4bbdc906332ec6f4e, type: 3}
+    position: {x: 25, y: 0.5}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    groupIds:
+    - 8d0a3707-6189-4962-93a1-06711b2281be
     appearConditions: []
     customParameters: []
   storyTriggers:
-  - triggerMode: 0
+  - triggerMode: 2
     positionX: 3.12
     storyId: story_20260705_031436
     triggerOnce: 1
@@ -99,15 +143,42 @@ MonoBehaviour:
     triggerConditions: []
     onStoryStartSetVariables: []
     onStoryCompleteSetVariables: []
-  - triggerMode: 0
-    positionX: 0.62
-    storyId: story_20260705_031436
+  - triggerMode: 1
+    positionX: 3.12
+    storyId: story_20260705_203156
+    triggerOnce: 1
+    triggerFromLeft: 1
+    triggerConditions:
+    - variableName: level1
+      mode: 0
+      compareValue: true
+    onStoryStartSetVariables: []
+    onStoryCompleteSetVariables: []
+  - triggerMode: 3
+    positionX: 3.12
+    storyId: story_20260705_203207
     triggerOnce: 1
     triggerFromLeft: 1
     triggerConditions: []
     onStoryStartSetVariables: []
     onStoryCompleteSetVariables: []
-  groups: []
+  groups:
+  - groupId: 79024b4b-19d7-4493-82c6-2fbad067f18b
+    groupName: "\u7B2C1\u7EC4"
+    triggerMode: 0
+    triggerPositionX: 35.875
+    mustClearToProceed: 0
+    triggerConditions: []
+    onAllEnemiesClearedSetVariables:
+    - variableName: level1
+      stringValue: true
+  - groupId: 8d0a3707-6189-4962-93a1-06711b2281be
+    groupName: "\u7B2C2\u7EC4"
+    triggerMode: 1
+    triggerPositionX: 23
+    mustClearToProceed: 1
+    triggerConditions: []
+    onAllEnemiesClearedSetVariables: []
   enemyPrefabLibrary: []
   itemPrefabLibrary: []
   obstaclePrefabLibrary: []

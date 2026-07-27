@@ -48,6 +48,76 @@
                     "extraJson": ""
                 }
             ]
+        },
+        {
+            "storyId": "story_20260705_203156",
+            "chapterId": "chapter_1",
+            "sectionId": "section_1",
+            "dialogues": [
+                {
+                    "id": 1,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "结束了。。。",
+                    "styleId": "protagonist",
+                    "playSpeed": 0.05000000074505806,
+                    "avatarPosition": "left",
+                    "avatarId": "kaho",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "小宫果穗",
+                    "extraJson": ""
+                },
+                {
+                    "id": 2,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "。。。",
+                    "styleId": "boss",
+                    "playSpeed": 0.05000000074505806,
+                    "avatarPosition": "right",
+                    "avatarId": "muscle_p",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "杜野凛世",
+                    "extraJson": ""
+                }
+            ]
+        },
+        {
+            "storyId": "story_20260705_203207",
+            "chapterId": "chapter_1",
+            "sectionId": "section_1",
+            "dialogues": [
+                {
+                    "id": 1,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "。。。",
+                    "styleId": "boss",
+                    "playSpeed": 0.05000000074505806,
+                    "avatarPosition": "right",
+                    "avatarId": "muscle_p",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "杜野凛世",
+                    "extraJson": ""
+                },
+                {
+                    "id": 2,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "。。。",
+                    "styleId": "protagonist",
+                    "playSpeed": 0.05000000074505806,
+                    "avatarPosition": "left",
+                    "avatarId": "kaho",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "小宫果穗",
+                    "extraJson": ""
+                }
+            ]
         }
     ]
 }

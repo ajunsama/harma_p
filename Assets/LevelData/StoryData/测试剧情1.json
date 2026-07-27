@@ -1,0 +1,49 @@
+﻿{
+    "stories": [
+        {
+            "storyId": "story_20260725_143515",
+            "chapterId": "chapter_1",
+            "sectionId": "section_1",
+            "dialogues": [
+                {
+                    "id": 1,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "原来这就是city……",
+                    "styleId": "protagonist",
+                    "playSpeed": 0.05000000074505806,
+                    "avatarPosition": "left",
+                    "avatarId": "kaho",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "小宫果穗",
+                    "extraJson": ""
+                },
+                {
+                    "id": 2,
+                    "chapterId": "chapter_1",
+                    "sectionId": "section_1",
+                    "content": "我要上了！",
+                    "styleId": "protagonist",
+                    "playSpeed": 0.05000000074505806,
+                    "avatarPosition": "left",
+                    "avatarId": "kaho",
+                    "showImage": false,
+                    "imageId": "",
+                    "speakerName": "小宫果穗",
+                    "extraJson": ""
+                }
+            ],
+            "performanceCues": [
+                {
+                    "dialogueId": 1,
+                    "delay": 0.0,
+                    "scriptId": "简易演出",
+                    "blockDialogueAdvance": true,
+                    "triggerTiming": 1
+                }
+            ],
+            "maskBackground": true
+        }
+    ]
+}

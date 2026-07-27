@@ -63,7 +63,9 @@
     <Compile Include="Assets\Scripts\StorySystem\StoryManager.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryStyleTemplate.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryAvatarTemplate.cs" />
+    <Compile Include="Assets\Scripts\StorySystem\PerformanceRunner.cs" />
     <Compile Include="Assets\Scripts\EnemyChargeAttack.cs" />
+    <Compile Include="Assets\Scripts\LevelSystem\LevelFlowRunner.cs" />
     <Compile Include="Assets\Scripts\StorySystem\StoryUI.cs" />
     <Compile Include="Assets\Scripts\UI\SpeakerNameAligner.cs" />
     <Compile Include="Assets\Scripts\PunkPThrowAttack.cs" />
@@ -85,6 +87,7 @@
     <Compile Include="Assets\Scripts\GroundChecker.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\LevelCameraController.cs" />
     <Compile Include="Assets\Scripts\EnemySpawner.cs" />
+    <Compile Include="Assets\Scripts\StorySystem\PerformanceScript.cs" />
     <Compile Include="Assets\Scripts\LevelSystem\LevelVariableManager.cs" />
     <Compile Include="Assets\Scripts\LevelManager.cs" />
     <Compile Include="Assets\Scripts\FatP_AI_Movement.cs" />
@@ -1403,10 +1406,6 @@
     </Reference>
     <Reference Include="Unity.Rendering.LightTransport.Editor">
       <HintPath>Library\ScriptAssemblies\Unity.Rendering.LightTransport.Editor.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Unity.Rider.Editor">
-      <HintPath>Library\ScriptAssemblies\Unity.Rider.Editor.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.2D.Aseprite.Editor">

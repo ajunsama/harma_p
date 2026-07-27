@@ -16,6 +16,8 @@ public class StoryEditorWindow : EditorWindow
     private const float DialogueCardPadding = 12f;
     private const float DialogueHeaderHeight = 24f;
     private const float DialogueFieldGap = 4f;
+    private const float PerformanceCueHeaderHeight = 30f;
+    private const float PerformanceCueRowHeight = 70f;
 
     private readonly string[] _tabNames = { "剧情编辑", "角色模板", "样式模板", "图片模板", "JSON预览" };
     private int _selectedTab;
@@ -36,6 +38,31 @@ public class StoryEditorWindow : EditorWindow
     {
         var window = GetWindow<StoryEditorWindow>("剧情编辑器");
         window.minSize = new Vector2(760, 520);
+    }
+
+    public static void OpenStory(TextAsset storyJson, string storyId)
+    {
+        var window = GetWindow<StoryEditorWindow>("剧情编辑器");
+        window.minSize = new Vector2(760, 520);
+        if (storyJson != null)
+        {
+            window._storyJsonAsset = storyJson;
+            window.LoadFromTextAsset(storyJson);
+        }
+
+        int storyIndex = window._data?.stories?.FindIndex(story =>
+            story != null && story.storyId == storyId) ?? -1;
+        if (storyIndex >= 0)
+        {
+            window._selectedTab = 0;
+            window._selectedStoryIndex = storyIndex;
+            var story = window._data.stories[storyIndex];
+            window._selectedDialogueIndex = story.dialogues != null && story.dialogues.Count > 0 ? 0 : -1;
+            window._dialogueListStory = null;
+            window._dialogueList = null;
+        }
+        window.Show();
+        window.Focus();
     }
 
     private void OnEnable()
@@ -66,7 +93,9 @@ public class StoryEditorWindow : EditorWindow
     private void DrawHeader()
     {
         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-        EditorGUILayout.LabelField("剧情编辑器只负责编辑对话数据，并导出给关卡编辑器引用。播放 UI 仍由 StoryManager/StoryUI 处理。", EditorStyles.wordWrappedLabel);
+        EditorGUILayout.LabelField(
+            "剧情编辑器负责台词及“哪句进入演出”；演出动作在独立演出编辑器中制作，具体角色在关卡编辑器中绑定。",
+            EditorStyles.wordWrappedLabel);
 
         EditorGUILayout.BeginHorizontal();
         EditorGUI.BeginChangeCheck();
@@ -156,6 +185,8 @@ public class StoryEditorWindow : EditorWindow
         var story = _data.stories[_selectedStoryIndex];
         if (story.dialogues == null)
             story.dialogues = new List<StoryDialogue>();
+        if (story.performanceCues == null)
+            story.performanceCues = new List<StoryPerformanceCueDefinition>();
 
         EditorGUILayout.LabelField("段落信息", EditorStyles.boldLabel);
         EditorGUILayout.BeginHorizontal();
@@ -165,6 +196,8 @@ public class StoryEditorWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
         story.chapterId = EditorGUILayout.TextField("章节 ID", story.chapterId);
         story.sectionId = EditorGUILayout.TextField("小节 ID", story.sectionId);
+        story.maskBackground = EditorGUILayout.Toggle(
+            "对游戏背景应用遮罩/模糊", story.maskBackground);
 
         EditorGUILayout.Space(8);
         DrawDialogueCards(story);
@@ -180,8 +213,7 @@ public class StoryEditorWindow : EditorWindow
         if (GUILayout.Button("+ 新增对话", GUILayout.Height(40)))
         {
             Undo.RecordObject(this, "Add Story Dialogue");
-            story.dialogues.Add(CreateDialogue(story, story.dialogues.Count + 1));
-            RenumberDialogues(story);
+            story.dialogues.Add(CreateDialogue(story, GetNextDialogueId(story)));
             _dialogueList.index = story.dialogues.Count - 1;
             _selectedDialogueIndex = _dialogueList.index;
         }
@@ -195,9 +227,17 @@ public class StoryEditorWindow : EditorWindow
         _dialogueListStory = story;
         _dialogueList = new ReorderableList(story.dialogues, typeof(StoryDialogue), true, false, false, false)
         {
-            elementHeight = DialogueCardHeight,
             footerHeight = 0f,
             showDefaultBackground = false
+        };
+
+        _dialogueList.elementHeightCallback = index =>
+        {
+            if (index < 0 || index >= story.dialogues.Count) return DialogueCardHeight;
+            int cueCount = story.performanceCues?.Count(cue =>
+                cue != null && cue.dialogueId == story.dialogues[index].id) ?? 0;
+            return DialogueCardHeight + PerformanceCueHeaderHeight +
+                   cueCount * PerformanceCueRowHeight;
         };
 
         _dialogueList.drawElementCallback = (rect, index, active, focused) =>
@@ -206,7 +246,7 @@ public class StoryEditorWindow : EditorWindow
             DrawDialogueCard(rect, story, index);
         };
 
-        _dialogueList.onReorderCallback = _ => RenumberDialogues(story);
+        _dialogueList.onReorderCallback = _ => GUI.changed = true;
     }
 
     private void DrawDialogueCard(Rect rect, StorySequence story, int index)
@@ -224,8 +264,7 @@ public class StoryEditorWindow : EditorWindow
         var deleteRect = new Rect(headerRect.xMax - 56f, headerRect.y, 52f, headerRect.height);
         if (GUI.Button(addRect, "添加"))
         {
-            story.dialogues.Insert(index + 1, CreateDialogue(story, index + 2));
-            RenumberDialogues(story);
+            story.dialogues.Insert(index + 1, CreateDialogue(story, GetNextDialogueId(story)));
             _dialogueList.index = index + 1;
             _selectedDialogueIndex = _dialogueList.index;
             GUI.changed = true;
@@ -233,8 +272,8 @@ public class StoryEditorWindow : EditorWindow
 
         if (GUI.Button(deleteRect, "删除"))
         {
+            story.performanceCues?.RemoveAll(cue => cue != null && cue.dialogueId == dialogue.id);
             story.dialogues.RemoveAt(index);
-            RenumberDialogues(story);
             _dialogueList.index = Mathf.Clamp(index - 1, -1, story.dialogues.Count - 1);
             _selectedDialogueIndex = _dialogueList.index;
             GUI.changed = true;
@@ -251,6 +290,86 @@ public class StoryEditorWindow : EditorWindow
 
         DrawDialogueMetaFields(leftRect, story, dialogue);
         DrawDialogueContentFields(rightRect, dialogue);
+        DrawDialoguePerformanceCues(rect, story, dialogue);
+    }
+
+    private void DrawDialoguePerformanceCues(Rect cardRect, StorySequence story, StoryDialogue dialogue)
+    {
+        if (story.performanceCues == null)
+            story.performanceCues = new List<StoryPerformanceCueDefinition>();
+
+        var cues = story.performanceCues
+            .Where(cue => cue != null && cue.dialogueId == dialogue.id)
+            .ToList();
+        float x = cardRect.x + DialogueCardPadding;
+        float width = cardRect.width - DialogueCardPadding * 2f;
+        float y = cardRect.y + DialogueCardHeight - 6f;
+
+        EditorGUI.LabelField(new Rect(x, y, width - 120f, 22f),
+            cues.Count == 0 ? "演出 Cue：无" : $"演出 Cue：{cues.Count} 个",
+            EditorStyles.miniBoldLabel);
+        if (GUI.Button(new Rect(x + width - 116f, y, 116f, 22f), "+ 添加演出 Cue"))
+        {
+            story.performanceCues.Add(new StoryPerformanceCueDefinition
+            {
+                dialogueId = dialogue.id
+            });
+            GUI.changed = true;
+            return;
+        }
+        y += PerformanceCueHeaderHeight;
+
+        foreach (var cue in cues)
+        {
+            var row = new Rect(x, y, width, PerformanceCueRowHeight - 4f);
+            GUI.Box(row, GUIContent.none, EditorStyles.helpBox);
+
+            var script = FindPerformanceScript(cue.scriptId);
+            var scriptRect = new Rect(row.x + 6f, row.y + 4f, row.width - 174f, 18f);
+            var selected = (PerformanceScript)EditorGUI.ObjectField(
+                scriptRect, "演出脚本", script, typeof(PerformanceScript), false);
+            if (selected != script)
+                cue.scriptId = selected != null ? selected.scriptId : "";
+
+            if (GUI.Button(new Rect(row.xMax - 162f, row.y + 4f, 50f, 18f), "新建"))
+            {
+                selected = PerformanceScriptEditorWindow.CreateAsset();
+                if (selected != null)
+                {
+                    cue.scriptId = selected.scriptId;
+                    PerformanceScriptEditorWindow.Open(selected);
+                }
+                GUI.changed = true;
+            }
+            using (new EditorGUI.DisabledScope(selected == null))
+            {
+                if (GUI.Button(new Rect(row.xMax - 108f, row.y + 4f, 50f, 18f), "编辑"))
+                    PerformanceScriptEditorWindow.Open(selected);
+            }
+            if (GUI.Button(new Rect(row.xMax - 54f, row.y + 4f, 48f, 18f), "删除"))
+            {
+                story.performanceCues.Remove(cue);
+                GUI.changed = true;
+                return;
+            }
+
+            cue.delay = Mathf.Max(0f, EditorGUI.FloatField(
+                new Rect(row.x + 6f, row.y + 26f, Mathf.Min(210f, row.width * 0.48f), 18f),
+                "触发延迟（未缩放秒）", cue.delay));
+            cue.blockDialogueAdvance = EditorGUI.ToggleLeft(
+                new Rect(row.x + Mathf.Min(222f, row.width * 0.5f), row.y + 26f,
+                    row.width - Mathf.Min(228f, row.width * 0.5f), 18f),
+                "演出完成前禁止下一句", cue.blockDialogueAdvance);
+            cue.triggerTiming = (StoryPerformanceCueTriggerTiming)EditorGUI.Popup(
+                new Rect(row.x + 6f, row.y + 48f, row.width - 12f, 18f),
+                "触发时机", (int)cue.triggerTiming,
+                new[] { "台词开始显示时", "玩家点击进入下一句后" });
+
+            if (!string.IsNullOrEmpty(cue.scriptId) && selected == null)
+                EditorGUI.LabelField(new Rect(row.x + 76f, row.y + 4f, row.width - 250f, 18f),
+                    $"找不到脚本 ID：{cue.scriptId}", EditorStyles.miniLabel);
+            y += PerformanceCueRowHeight;
+        }
     }
 
     private void DrawDialogueMetaFields(Rect rect, StorySequence story, StoryDialogue dialogue)
@@ -312,7 +431,7 @@ public class StoryEditorWindow : EditorWindow
         EditorGUILayout.Space();
         if (GUILayout.Button("+ 新对话"))
         {
-            story.dialogues.Add(CreateDialogue(story, story.dialogues.Count + 1));
+            story.dialogues.Add(CreateDialogue(story, GetNextDialogueId(story)));
             _selectedDialogueIndex = story.dialogues.Count - 1;
         }
 
@@ -323,13 +442,11 @@ public class StoryEditorWindow : EditorWindow
             {
                 Swap(story.dialogues, _selectedDialogueIndex, _selectedDialogueIndex - 1);
                 _selectedDialogueIndex--;
-                RenumberDialogues(story);
             }
             if (GUILayout.Button("下移") && _selectedDialogueIndex < story.dialogues.Count - 1)
             {
                 Swap(story.dialogues, _selectedDialogueIndex, _selectedDialogueIndex + 1);
                 _selectedDialogueIndex++;
-                RenumberDialogues(story);
             }
             EditorGUILayout.EndHorizontal();
 
@@ -337,7 +454,6 @@ public class StoryEditorWindow : EditorWindow
             {
                 story.dialogues.RemoveAt(_selectedDialogueIndex);
                 _selectedDialogueIndex = Mathf.Clamp(_selectedDialogueIndex, -1, story.dialogues.Count - 1);
-                RenumberDialogues(story);
             }
         }
 
@@ -630,6 +746,9 @@ public class StoryEditorWindow : EditorWindow
 
     private void SaveJson(bool saveAs)
     {
+        if (!ValidateDialogueIds())
+            return;
+
         string path = _loadedAssetPath;
         if (saveAs || string.IsNullOrEmpty(path))
         {
@@ -651,7 +770,8 @@ public class StoryEditorWindow : EditorWindow
             storyId = GenerateStoryId(),
             chapterId = "chapter_1",
             sectionId = "section_1",
-            dialogues = new List<StoryDialogue>()
+            dialogues = new List<StoryDialogue>(),
+            performanceCues = new List<StoryPerformanceCueDefinition>()
         };
     }
 
@@ -792,10 +912,76 @@ public class StoryEditorWindow : EditorWindow
         (list[a], list[b]) = (list[b], list[a]);
     }
 
-    private static void RenumberDialogues(StorySequence story)
+    private static int GetNextDialogueId(StorySequence story)
     {
-        for (int i = 0; i < story.dialogues.Count; i++)
-            story.dialogues[i].id = i + 1;
+        if (story?.dialogues == null || story.dialogues.Count == 0) return 1;
+        return story.dialogues.Where(dialogue => dialogue != null).Select(dialogue => dialogue.id)
+            .DefaultIfEmpty(0).Max() + 1;
+    }
+
+    private bool ValidateDialogueIds()
+    {
+        foreach (var story in _data?.stories ?? new List<StorySequence>())
+        {
+            if (story?.dialogues == null) continue;
+            var ids = new HashSet<int>();
+            foreach (var dialogue in story.dialogues)
+            {
+                if (dialogue == null || dialogue.id <= 0 || !ids.Add(dialogue.id))
+                {
+                    EditorUtility.DisplayDialog("无法保存",
+                        $"剧情 '{story.storyId}' 中存在空对话、非正数或重复的对话 ID。对话 ID 是演出 Cue 的稳定引用，不能自动重新编号。",
+                        "确定");
+                    return false;
+                }
+            }
+
+            foreach (var cue in story.performanceCues ?? new List<StoryPerformanceCueDefinition>())
+            {
+                if (cue == null || !ids.Contains(cue.dialogueId))
+                {
+                    EditorUtility.DisplayDialog("无法保存",
+                        $"剧情 '{story.storyId}' 中存在未绑定到有效台词的演出 Cue。",
+                        "确定");
+                    return false;
+                }
+                if (cue.delay < 0f || string.IsNullOrWhiteSpace(cue.scriptId))
+                {
+                    EditorUtility.DisplayDialog("无法保存",
+                        $"剧情 '{story.storyId}' 的台词 #{cue.dialogueId} 存在无效演出 Cue。",
+                        "确定");
+                    return false;
+                }
+
+                var matches = FindPerformanceScripts(cue.scriptId);
+                if (matches.Count != 1)
+                {
+                    string reason = matches.Count == 0 ? "找不到" : "存在重复 ID";
+                    EditorUtility.DisplayDialog("无法保存",
+                        $"剧情 '{story.storyId}' 的演出脚本 '{cue.scriptId}' {reason}。",
+                        "确定");
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static PerformanceScript FindPerformanceScript(string scriptId)
+    {
+        return FindPerformanceScripts(scriptId).FirstOrDefault();
+    }
+
+    private static List<PerformanceScript> FindPerformanceScripts(string scriptId)
+    {
+        if (string.IsNullOrWhiteSpace(scriptId))
+            return new List<PerformanceScript>();
+
+        return AssetDatabase.FindAssets("t:PerformanceScript")
+            .Select(guid => AssetDatabase.LoadAssetAtPath<PerformanceScript>(
+                AssetDatabase.GUIDToAssetPath(guid)))
+            .Where(asset => asset != null && asset.scriptId == scriptId)
+            .ToList();
     }
 
     private static string Trim(string value, int max)

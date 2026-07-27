@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4947d3b0c96b0fc4ea383b5f24d62fe0, type: 3}
+  m_Name: "\u7B80\u6613\u6F14\u51FA"
+  m_EditorClassIdentifier: Assembly-CSharp::PerformanceScript
+  scriptId: "\u7B80\u6613\u6F14\u51FA"
+  actorSlots:
+  - slotId: actor_1
+    displayName: "\u89D2\u8272 1"
+    defaultIdleAnimation: idle
+    defaultMoveAnimation: run
+  clips:
+  - clipName: "\u7247\u6BB5 1"
+    clipType: 0
+    startTime: 0
+    duration: 2
+    actorSlotId: actor_1
+    positionMode: 1
+    targetPosition: {x: 5, y: 2}
+    easing: 0
+    autoFaceMovement: 1
+    playMoveAnimation: 1
+    moveAnimationOverride: run
+    moveAnimationTrack: 0
+    moveAnimationMixDuration: 0.1
+    restoreIdleAfterMove: 1
+    animationName: 
+    loopAnimation: 0
+    animationTrack: 0
+    animationMixDuration: 0.1
+    keepAnimationAfterStory: 0
+    faceRight: 1
+  restoreCameraFollowOnStoryEnd: 1

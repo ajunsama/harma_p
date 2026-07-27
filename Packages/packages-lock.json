@@ -10,7 +10,7 @@
       "hash": "70937d2ce39b61c29c4feb4d13642c65bb553d6c"
     },
     "com.ivanmurzak.unity.mcp": {
-      "version": "0.82.3",
+      "version": "0.86.1",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -152,15 +152,6 @@
       "depth": 1,
       "source": "builtin",
       "dependencies": {}
-    },
-    "com.unity.ide.rider": {
-      "version": "3.0.37",
-      "depth": 0,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.ext.nunit": "1.0.6"
-      },
-      "url": "https://packages.unity.com"
     },
     "com.unity.ide.visualstudio": {
       "version": "2.0.23",

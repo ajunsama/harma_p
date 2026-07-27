@@ -49,6 +49,37 @@ public class StoryDialogue
     public string extraJson;
 }
 
+public enum StoryPerformanceCueTriggerTiming
+{
+    DialogueStart,
+    AfterAdvanceInput
+}
+
+/// <summary>
+/// 剧情中的演出触发点。只描述“哪句台词触发哪个演出”，
+/// 不包含任何关卡角色引用；角色槽位由关卡中的 PlayStory 实例绑定。
+/// </summary>
+[Serializable]
+public class StoryPerformanceCueDefinition
+{
+    [Tooltip("触发演出的稳定台词 ID")]
+    public int dialogueId;
+
+    [Tooltip("台词开始显示后等待的未缩放秒数")]
+    [Min(0f)]
+    public float delay;
+
+    [Tooltip("PerformanceScript.scriptId")]
+    public string scriptId;
+
+    [Tooltip("演出完成前禁止进入下一句")]
+    public bool blockDialogueAdvance;
+
+    [Tooltip("台词出现时触发，或玩家点击进入下一句后触发")]
+    public StoryPerformanceCueTriggerTiming triggerTiming =
+        StoryPerformanceCueTriggerTiming.DialogueStart;
+}
+
 /// <summary>
 /// 一段完整剧情（由多条对话组成）
 /// </summary>
@@ -66,6 +97,13 @@ public class StorySequence
 
     [Tooltip("对话列表")]
     public List<StoryDialogue> dialogues = new List<StoryDialogue>();
+
+    [Tooltip("按台词触发的演出 Cue；具体角色由关卡 PlayStory 步骤绑定")]
+    public List<StoryPerformanceCueDefinition> performanceCues =
+        new List<StoryPerformanceCueDefinition>();
+
+    [Tooltip("剧情播放时是否对游戏背景应用模糊/遮罩")]
+    public bool maskBackground = true;
 }
 
 /// <summary>

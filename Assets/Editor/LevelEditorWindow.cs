@@ -8,10 +8,18 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Spine.Unity;
 
 [InitializeOnLoad]
 public class LevelEditorWindow : EditorWindow
 {
+    private enum InspectorSection
+    {
+        Overview,
+        Variables,
+        Events
+    }
+
     private const string RestoreAfterPlayKey = "LevelEditorWindow.RestoreAfterPlay";
     private const string RestoreLevelPathKey = "LevelEditorWindow.RestoreLevelPath";
 
@@ -29,7 +37,10 @@ public class LevelEditorWindow : EditorWindow
     private string _selectedElementId;
     private string _selectedGroupId;
     private int _selectedStoryTriggerIndex = -1;
+    private int _selectedFlowIndex = -1;
+    private InspectorSection _inspectorSection = InspectorSection.Overview;
     private bool _showBottomList = true;
+    private string _elementSearch = "";
 
     // ========== 画布 ==========
     private float _canvasScale = 8f;
@@ -39,6 +50,7 @@ public class LevelEditorWindow : EditorWindow
     private bool _isPanning;
     private Vector2 _panStartMouse;
     private Vector2 _panStartScroll;
+    private Rect _lastCanvasRect;
     private const string TemplateScenePath = "Assets/Scenes/LevelEditorTestTemplate.unity";
     private const double FloorBoundsRefreshInterval = 1.0;
     private bool _hasPreviewFloorBounds;
@@ -112,6 +124,13 @@ public class LevelEditorWindow : EditorWindow
             return;
         }
 
+        if (_level.MigrateLegacyStoryTriggers())
+        {
+            ClearObjectSelection();
+            _inspectorSection = InspectorSection.Events;
+            EditorUtility.SetDirty(_level);
+        }
+
         EditorGUILayout.BeginHorizontal();
 
         // 左侧面板
@@ -125,7 +144,7 @@ public class LevelEditorWindow : EditorWindow
         EditorGUILayout.EndVertical();
 
         // 右侧属性面板
-        EditorGUILayout.BeginVertical(GUILayout.Width(260));
+        EditorGUILayout.BeginVertical(GUILayout.Width(380));
         DrawPropertyPanel();
         EditorGUILayout.EndVertical();
 
@@ -164,13 +183,15 @@ public class LevelEditorWindow : EditorWindow
 
         if (GUILayout.Button("清空", EditorStyles.toolbarButton, GUILayout.Width(40)))
         {
-            if (EditorUtility.DisplayDialog("清空关卡", "确定要清空所有元素？", "清空", "取消"))
+            if (_level != null && EditorUtility.DisplayDialog("清空关卡", "将删除所有元素、组、变量和演出事件，确定继续？", "清空", "取消"))
             {
                 Undo.RecordObject(_level, "Clear Level");
                 _level.elements.Clear();
                 _level.groups.Clear();
                 _level.storyTriggers.Clear();
+                _level.events?.Clear();
                 _level.variables.Clear();
+                ShowSection(InspectorSection.Overview);
                 EditorUtility.SetDirty(_level);
             }
         }
@@ -185,6 +206,7 @@ public class LevelEditorWindow : EditorWindow
             GUILayout.Label(_level.levelName, EditorStyles.toolbarButton);
             GUILayout.Label($"元素: {_level.elements.Count}", EditorStyles.toolbarButton);
             GUILayout.Label($"组: {_level.groups.Count}", EditorStyles.toolbarButton);
+            GUILayout.Label($"演出: {_level.events?.Count ?? 0}", EditorStyles.toolbarButton);
         }
 
         EditorGUILayout.EndHorizontal();
@@ -216,11 +238,17 @@ public class LevelEditorWindow : EditorWindow
 
     void DrawElementPalette()
     {
+        DrawEditorNavigation();
+        EditorGUILayout.Space(8);
+
         _paletteScroll = EditorGUILayout.BeginScrollView(_paletteScroll);
 
         DrawPaletteCategory("敌人", ElementType.Enemy, _scannedEnemies, ref _level.enemyPrefabLibrary);
         DrawPaletteCategory("道具", ElementType.Item, _scannedItems, ref _level.itemPrefabLibrary);
         DrawPaletteCategory("障碍物", ElementType.Obstacle, _scannedObstacles, ref _level.obstaclePrefabLibrary);
+
+        GUILayout.Space(10);
+        DrawGroupManagementPanel();
 
         GUILayout.Space(10);
         if (GUILayout.Button("扫描预制体"))
@@ -230,6 +258,21 @@ public class LevelEditorWindow : EditorWindow
         }
 
         EditorGUILayout.EndScrollView();
+    }
+
+    void DrawEditorNavigation()
+    {
+        EditorGUILayout.LabelField("编辑导航", EditorStyles.boldLabel);
+        DrawNavigationButton("关卡概览", InspectorSection.Overview);
+        DrawNavigationButton($"变量 ({_level.variables.Count})", InspectorSection.Variables);
+        DrawNavigationButton($"演出事件 ({(_level.events?.Count ?? 0)})", InspectorSection.Events);
+    }
+
+    void DrawNavigationButton(string label, InspectorSection section)
+    {
+        bool active = !HasObjectSelection() && _inspectorSection == section;
+        if (GUILayout.Toggle(active, label, "Button") && !active)
+            ShowSection(section);
     }
 
     void DrawPaletteCategory(string title, ElementType type, List<ElementPrefabEntry> scanned, ref List<ElementPrefabEntry> library)
@@ -252,6 +295,34 @@ public class LevelEditorWindow : EditorWindow
         GUILayout.Space(5);
     }
 
+    void DrawGroupManagementPanel()
+    {
+        GUILayout.Label("元素组", EditorStyles.boldLabel);
+        foreach (var group in _level.groups)
+        {
+            EditorGUILayout.BeginHorizontal(GUI.skin.box);
+            bool selected = _selectedGroupId == group.groupId;
+            if (GUILayout.Toggle(selected, group.groupName, "Button") && !selected)
+                SelectGroup(group.groupId);
+            EditorGUILayout.EndHorizontal();
+        }
+
+        if (GUILayout.Button("+ 新建元素组"))
+        {
+            Undo.RecordObject(_level, "Add Group");
+            var group = new ElementGroup
+            {
+                groupId = Guid.NewGuid().ToString(),
+                groupName = $"第{_level.groups.Count + 1}组",
+                triggerMode = ElementGroupTriggerMode.None,
+                triggerPositionX = Mathf.Clamp(_level.playerSpawnPosition.x + 3f, 0f, _level.levelLength)
+            };
+            _level.groups.Add(group);
+            SelectGroup(group.groupId);
+            EditorUtility.SetDirty(_level);
+        }
+    }
+
     // ================================================================
     // 中央 — 2D 画布
     // ================================================================
@@ -265,7 +336,8 @@ public class LevelEditorWindow : EditorWindow
         GUILayout.FlexibleSpace();
         GUILayout.Label("缩放:", GUILayout.Width(35));
         _canvasScale = GUILayout.HorizontalSlider(_canvasScale, 3f, 15f, GUILayout.Width(80));
-        if (GUILayout.Button("复位", GUILayout.Width(45))) { _canvasScale = 8f; _canvasScroll = Vector2.zero; }
+        if (GUILayout.Button("适应关卡", GUILayout.Width(68))) FitCanvasToLevel();
+        if (GUILayout.Button("回到起点", GUILayout.Width(68))) CenterCanvasOn(_level.playerSpawnPosition);
         EditorGUILayout.EndHorizontal();
 
         // 图例
@@ -273,14 +345,17 @@ public class LevelEditorWindow : EditorWindow
         DrawLegendItem(PlayerColor, "玩家起点");
         DrawLegendItem(EndColor, "终点");
         DrawLegendItem(TriggerLineColor, "过场");
+        DrawLegendItem(new Color(0.75f, 0.35f, 1f), "演出事件");
         DrawLegendItem(EnemyColor, "敌人");
         DrawLegendItem(ItemColor, "道具");
         DrawLegendItem(ObstacleColor, "障碍物");
         GUILayout.FlexibleSpace();
         EditorGUILayout.EndHorizontal();
+        EditorGUILayout.LabelField("鼠标滚轮缩放 · 中键或 Alt+左键拖动 · 右键打开添加菜单 · Esc 返回上一级", EditorStyles.miniLabel);
 
         Rect canvasRect = GUILayoutUtility.GetRect(GUIContent.none, GUIStyle.none,
             GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+        _lastCanvasRect = canvasRect;
         EditorGUI.DrawRect(canvasRect, new Color(0.1f, 0.1f, 0.13f));
 
         HandleCanvasInput(canvasRect);
@@ -306,14 +381,18 @@ public class LevelEditorWindow : EditorWindow
 
         if (e.type == EventType.ScrollWheel)
         {
-            _canvasScale -= e.delta.y * 0.3f;
-            _canvasScale = Mathf.Clamp(_canvasScale, 3f, 15f);
+            Vector2 worldUnderMouse = ScreenToWorld(e.mousePosition, rect);
+            float oldScale = _canvasScale;
+            _canvasScale = Mathf.Clamp(_canvasScale - e.delta.y * 0.3f, 3f, 15f);
+            _canvasScroll.x += worldUnderMouse.x * (_canvasScale - oldScale);
+            _canvasScroll.y -= worldUnderMouse.y * (_canvasScale - oldScale);
             e.Use();
             Repaint();
             return;
         }
 
-        if (e.type == EventType.MouseDown && e.button == 2)
+        bool panGesture = e.button == 2 || (e.button == 0 && e.alt);
+        if (e.type == EventType.MouseDown && panGesture)
         {
             _isPanning = true;
             _panStartMouse = e.mousePosition;
@@ -322,7 +401,7 @@ public class LevelEditorWindow : EditorWindow
             return;
         }
 
-        if (_isPanning && e.type == EventType.MouseDrag && e.button == 2)
+        if (_isPanning && e.type == EventType.MouseDrag && (e.button == 2 || e.button == 0))
         {
             _canvasScroll = _panStartScroll + (_panStartMouse - e.mousePosition);
             e.Use();
@@ -330,7 +409,7 @@ public class LevelEditorWindow : EditorWindow
             return;
         }
 
-        if (e.type == EventType.MouseUp && e.button == 2)
+        if (_isPanning && e.type == EventType.MouseUp && (e.button == 2 || e.button == 0))
         {
             _isPanning = false;
             e.Use();
@@ -357,9 +436,7 @@ public class LevelEditorWindow : EditorWindow
                 return;
             }
 
-            _selectedElementId = null;
-            _selectedGroupId = null;
-            _selectedStoryTriggerIndex = -1;
+            ClearObjectSelection();
             e.Use();
             Repaint();
         }
@@ -399,7 +476,7 @@ public class LevelEditorWindow : EditorWindow
             position = SnapToGrid(worldPos)
         };
         _level.elements.Add(el);
-        _selectedElementId = el.elementId;
+        SelectElement(el.elementId);
         EditorUtility.SetDirty(_level);
     }
 
@@ -426,9 +503,7 @@ public class LevelEditorWindow : EditorWindow
 
         if (closest != null)
         {
-            _selectedElementId = closest.elementId;
-            _selectedGroupId = null;
-            _selectedStoryTriggerIndex = -1;
+            SelectElement(closest.elementId);
             return true;
         }
 
@@ -440,22 +515,47 @@ public class LevelEditorWindow : EditorWindow
             Vector2 screenPos = WorldToScreen(new Vector2(st.positionX, 0), rect);
             if (Vector2.Distance(mousePos, screenPos) < 10f)
             {
-                _selectedStoryTriggerIndex = i;
-                _selectedElementId = null;
-                _selectedGroupId = null;
+                SelectStoryTrigger(i);
                 return true;
+            }
+        }
+
+        if (_level.events != null)
+        {
+            for (int i = 0; i < _level.events.Count; i++)
+            {
+                var flow = _level.events[i];
+                if (flow == null) continue;
+                if (flow.triggerMode == StoryTriggerMode.Position)
+                {
+                    Vector2 triggerScreen = WorldToScreen(new Vector2(flow.positionX, 0f), rect);
+                    if (Mathf.Abs(mousePos.x - triggerScreen.x) < 8f)
+                    {
+                        SelectFlow(i);
+                        return true;
+                    }
+                }
+                if (flow.steps == null) continue;
+                foreach (var step in flow.steps)
+                {
+                    if (step == null || (step.stepType != LevelFlowStepType.MovePlayer && step.stepType != LevelFlowStepType.MoveCamera)) continue;
+                    if (Vector2.Distance(mousePos, WorldToScreen(step.targetPosition, rect)) < 12f)
+                    {
+                        SelectFlow(i);
+                        return true;
+                    }
+                }
             }
         }
 
         // 检查组
         foreach (var g in _level.groups)
         {
+            if (g.triggerMode != ElementGroupTriggerMode.Position) continue;
             Vector2 screenPos = WorldToScreen(new Vector2(g.triggerPositionX, 0), rect);
             if (Mathf.Abs(mousePos.x - screenPos.x) < 8f && mousePos.y > rect.y + rect.height * 0.3f)
             {
-                _selectedGroupId = g.groupId;
-                _selectedElementId = null;
-                _selectedStoryTriggerIndex = -1;
+                SelectGroup(g.groupId);
                 return true;
             }
         }
@@ -487,7 +587,7 @@ public class LevelEditorWindow : EditorWindow
                     Undo.RecordObject(_level, "Place Enemy");
                     _level.elements.Add(el);
                     EditorUtility.SetDirty(_level);
-                    _selectedElementId = el.elementId;
+                    SelectElement(el.elementId);
                 });
             }
         }
@@ -508,29 +608,37 @@ public class LevelEditorWindow : EditorWindow
                     faceRight = src.faceRight,
                     appearDelay = src.appearDelay,
                     groupId = src.groupId,
+                    groupIds = new List<string>(src.groupIds ?? new List<string>()),
                     appearConditions = new List<LevelVariableCondition>(src.appearConditions),
                     customParameters = new List<ElementCustomParameter>(src.customParameters)
                 };
                 Undo.RecordObject(_level, "Duplicate Element");
                 _level.elements.Add(copy);
-                _selectedElementId = copy.elementId;
+                SelectElement(copy.elementId);
                 EditorUtility.SetDirty(_level);
             });
         }
 
         menu.AddSeparator("");
-        menu.AddItem(new GUIContent("添加过场触发器"), false, () =>
+        menu.AddItem(new GUIContent("添加演出事件/直接播放过场"), false, () =>
         {
-            Undo.RecordObject(_level, "Add StoryTrigger");
-            _level.storyTriggers.Add(new StoryTriggerPoint
+            if (_level.events == null) _level.events = new List<LevelFlowData>();
+            Undo.RecordObject(_level, "Add Performance Event");
+            _level.events.Add(new LevelFlowData
             {
                 triggerMode = StoryTriggerMode.Position,
                 positionX = worldPos.x,
-                storyId = GetStoryIds().FirstOrDefault() ?? ""
+                flowId = GetUniqueFlowId("event_story"),
+                steps = new List<LevelFlowStep>
+                {
+                    new LevelFlowStep
+                    {
+                        stepType = LevelFlowStepType.PlayStory,
+                        storyId = GetStoryIds().FirstOrDefault() ?? ""
+                    }
+                }
             });
-            _selectedStoryTriggerIndex = _level.storyTriggers.Count - 1;
-            _selectedElementId = null;
-            _selectedGroupId = null;
+            SelectFlow(_level.events.Count - 1);
             EditorUtility.SetDirty(_level);
         });
         menu.AddItem(new GUIContent("添加元素组"), false, () =>
@@ -540,6 +648,7 @@ public class LevelEditorWindow : EditorWindow
             {
                 groupId = Guid.NewGuid().ToString(),
                 groupName = $"第{_level.groups.Count + 1}组",
+                triggerMode = ElementGroupTriggerMode.Position,
                 triggerPositionX = worldPos.x
             });
             EditorUtility.SetDirty(_level);
@@ -554,14 +663,14 @@ public class LevelEditorWindow : EditorWindow
     Vector2 WorldToScreen(Vector2 world, Rect rect)
     {
         float screenX = rect.x + 50 - _canvasScroll.x + world.x * _canvasScale;
-        float screenY = rect.y + rect.height * 0.55f - world.y * _canvasScale;
+        float screenY = rect.y + rect.height * 0.55f - _canvasScroll.y - world.y * _canvasScale;
         return new Vector2(screenX, screenY);
     }
 
     Vector2 ScreenToWorld(Vector2 screen, Rect rect)
     {
         float worldX = (screen.x - rect.x - 50 + _canvasScroll.x) / _canvasScale;
-        float worldY = (rect.y + rect.height * 0.55f - screen.y) / _canvasScale;
+        float worldY = (rect.y + rect.height * 0.55f - _canvasScroll.y - screen.y) / _canvasScale;
         return new Vector2(worldX, worldY);
     }
 
@@ -572,7 +681,25 @@ public class LevelEditorWindow : EditorWindow
 
     float WorldToScreenY(float worldY, Rect rect)
     {
-        return rect.y + rect.height * 0.55f - worldY * _canvasScale;
+        return rect.y + rect.height * 0.55f - _canvasScroll.y - worldY * _canvasScale;
+    }
+
+    void CenterCanvasOn(Vector2 worldPosition)
+    {
+        float width = _lastCanvasRect.width > 1f ? _lastCanvasRect.width : 600f;
+        float height = _lastCanvasRect.height > 1f ? _lastCanvasRect.height : 400f;
+        _canvasScroll.x = 50f + worldPosition.x * _canvasScale - width * 0.5f;
+        _canvasScroll.y = height * 0.05f - worldPosition.y * _canvasScale;
+        Repaint();
+    }
+
+    void FitCanvasToLevel()
+    {
+        float width = _lastCanvasRect.width > 1f ? _lastCanvasRect.width : 600f;
+        float usableWidth = Mathf.Max(100f, width - 100f);
+        _canvasScale = Mathf.Clamp(usableWidth / Mathf.Max(1f, _level.levelLength), 3f, 15f);
+        _canvasScroll = new Vector2(0f, (_lastCanvasRect.height > 1f ? _lastCanvasRect.height : 400f) * 0.05f);
+        Repaint();
     }
 
     void DrawCanvasContent(Rect rect)
@@ -585,6 +712,7 @@ public class LevelEditorWindow : EditorWindow
 
         DrawPreviewBackground(local);
         DrawPreviewFloor(local);
+        DrawCameraBounds(local);
         DrawInitialCameraFrame(local);
 
         // 地面线
@@ -608,6 +736,7 @@ public class LevelEditorWindow : EditorWindow
 
         // 过场触发器
         DrawStoryTriggers(local);
+        DrawFlowTargets(local);
 
         // 元素
         DrawElements(local);
@@ -617,6 +746,14 @@ public class LevelEditorWindow : EditorWindow
 
     void DrawPreviewBackground(Rect local)
     {
+        var backgroundSettings = _level.backgroundSettings;
+        if (backgroundSettings != null &&
+            backgroundSettings.mode == BackgroundMode.SequentialTiles)
+        {
+            DrawPreviewBackgroundSequence(local, backgroundSettings);
+            return;
+        }
+
         Sprite sprite = GetPreviewBackgroundSprite();
         if (sprite == null || sprite.texture == null) return;
 
@@ -645,6 +782,176 @@ public class LevelEditorWindow : EditorWindow
 
         Rect levelRect = WorldRectToScreenRect(new Rect(0f, -spriteSize.y * 0.5f, _level.levelLength, spriteSize.y), local);
         Handles.DrawSolidRectangleWithOutline(levelRect, new Color(0.05f, 0.08f, 0.12f, 0.08f), new Color(0.35f, 0.45f, 0.6f, 0.35f));
+    }
+
+    void DrawPreviewBackgroundSequence(Rect local, BackgroundSettings settings)
+    {
+        if (settings.sequence == null || settings.sequence.Count == 0) return;
+
+        Vector2 viewMin = ScreenToWorld(new Vector2(0f, local.height), local);
+        Vector2 viewMax = ScreenToWorld(new Vector2(local.width, 0f), local);
+        float cursorX = settings.sequenceStartX;
+        float minY = float.PositiveInfinity;
+        float maxY = float.NegativeInfinity;
+
+        Color oldColor = GUI.color;
+        GUI.color = new Color(1f, 1f, 1f, 0.55f);
+
+        foreach (var entry in settings.sequence)
+        {
+            if (entry == null || entry.sprite == null || entry.sprite.texture == null)
+                continue;
+
+            Sprite sprite = entry.sprite;
+            float width = sprite.bounds.size.x;
+            float height = sprite.bounds.size.y;
+            if (width <= 0f || height <= 0f) continue;
+
+            int repeatCount = Mathf.Max(0, entry.repeatCount);
+            Rect uv = GetSpriteUv(sprite);
+            float bottomY = settings.sequenceCenterY - height * 0.5f;
+            minY = Mathf.Min(minY, bottomY);
+            maxY = Mathf.Max(maxY, bottomY + height);
+
+            for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++)
+            {
+                float tileLeft = cursorX;
+                float tileRight = cursorX + width;
+                if (tileRight >= viewMin.x && tileLeft <= viewMax.x)
+                {
+                    Rect worldRect = new Rect(tileLeft, bottomY, width, height);
+                    Rect screenRect = WorldRectToScreenRect(worldRect, local);
+                    GUI.DrawTextureWithTexCoords(screenRect, sprite.texture, uv, true);
+                    Handles.DrawSolidRectangleWithOutline(
+                        screenRect,
+                        Color.clear,
+                        new Color(0.5f, 0.65f, 0.85f, 0.2f));
+                }
+                cursorX = tileRight;
+            }
+        }
+
+        GUI.color = oldColor;
+
+        if (!float.IsInfinity(minY) && cursorX > settings.sequenceStartX)
+        {
+            Rect sequenceRect = WorldRectToScreenRect(
+                new Rect(settings.sequenceStartX, minY, cursorX - settings.sequenceStartX, maxY - minY),
+                local);
+            Handles.DrawSolidRectangleWithOutline(
+                sequenceRect,
+                new Color(0.05f, 0.08f, 0.12f, 0.06f),
+                new Color(0.35f, 0.6f, 0.9f, 0.5f));
+        }
+    }
+
+    void DrawFlowTargets(Rect local)
+    {
+        if (_level.events == null) return;
+        for (int flowIndex = 0; flowIndex < _level.events.Count; flowIndex++)
+        {
+            var flow = _level.events[flowIndex];
+            if (flow == null) continue;
+            bool selected = _selectedFlowIndex == flowIndex;
+            if (flow.triggerMode == StoryTriggerMode.Position)
+            {
+                float triggerX = WorldToScreenX(flow.positionX, local);
+                Handles.color = selected ? new Color(0.75f, 0.35f, 1f, 1f) : new Color(0.75f, 0.35f, 1f, 0.45f);
+                Handles.DrawAAPolyLine(selected ? 2f : 1f, new Vector3(triggerX, 0f), new Vector3(triggerX, local.height));
+                Handles.Label(new Vector3(triggerX + 3f, 40f), $"演出:{flow.flowId}");
+            }
+            if (flow?.steps == null) continue;
+            foreach (var step in flow.steps)
+            {
+                if (step == null) continue;
+                if (step.stepType == LevelFlowStepType.PlayStory)
+                {
+                    DrawPerformanceCueTargets(flow, step, local, selected);
+                    continue;
+                }
+                if (step.stepType != LevelFlowStepType.MovePlayer && step.stepType != LevelFlowStepType.MoveCamera)
+                    continue;
+
+                Vector2 point = WorldToScreen(step.targetPosition, local);
+                bool isPlayer = step.stepType == LevelFlowStepType.MovePlayer;
+                Handles.color = isPlayer
+                    ? new Color(0.2f, 0.9f, 1f, selected ? 1f : 0.65f)
+                    : new Color(1f, 0.45f, 0.9f, selected ? 1f : 0.65f);
+                Handles.DrawWireDisc(point, Vector3.forward, 7f);
+                Handles.DrawLine(point + Vector2.left * 9f, point + Vector2.right * 9f);
+                Handles.DrawLine(point + Vector2.up * 9f, point + Vector2.down * 9f);
+                Handles.Label(point + new Vector2(10f, -10f), $"{flow.flowId}:{(isPlayer ? "P" : "C")}");
+            }
+        }
+    }
+
+    void DrawPerformanceCueTargets(LevelFlowData flow, LevelFlowStep step, Rect local, bool selected)
+    {
+        foreach (var script in step.storyPerformanceScripts ?? new List<PerformanceScript>())
+        {
+            if (script?.clips == null) continue;
+            foreach (var clip in script.clips)
+            {
+                if (clip == null ||
+                    (clip.clipType != PerformanceClipType.MoveActor &&
+                     clip.clipType != PerformanceClipType.MoveCamera))
+                    continue;
+
+                Vector2 target;
+                string suffix;
+                if (clip.clipType == PerformanceClipType.MoveCamera)
+                {
+                    Vector2 cameraBase = _level.useCustomInitialCameraPosition
+                        ? _level.initialCameraPosition
+                        : _level.playerSpawnPosition;
+                    target = clip.positionMode == PerformancePositionMode.World
+                        ? clip.targetPosition
+                        : cameraBase + clip.targetPosition;
+                    suffix = "Cam";
+                }
+                else
+                {
+                    var binding = step.storyCastBindings?.FirstOrDefault(item =>
+                        item != null && item.scriptId == script.scriptId &&
+                        item.slotId == clip.actorSlotId);
+                    binding ??= step.storyCastBindings?.FirstOrDefault(item =>
+                        item != null && string.IsNullOrEmpty(item.scriptId) &&
+                        item.slotId == clip.actorSlotId);
+                    if (!TryGetPerformanceActorStart(binding, out Vector2 actorStart))
+                        continue;
+                    target = clip.positionMode == PerformancePositionMode.World
+                        ? clip.targetPosition
+                        : actorStart + clip.targetPosition;
+                    suffix = clip.actorSlotId;
+                }
+
+                Vector2 point = WorldToScreen(target, local);
+                Handles.color = clip.clipType == PerformanceClipType.MoveCamera
+                    ? new Color(1f, 0.45f, 0.9f, selected ? 1f : 0.65f)
+                    : new Color(1f, 0.75f, 0.15f, selected ? 1f : 0.65f);
+                Handles.DrawWireDisc(point, Vector3.forward, 6f);
+                Handles.DrawLine(point + Vector2.left * 8f, point + Vector2.right * 8f);
+                Handles.DrawLine(point + Vector2.up * 8f, point + Vector2.down * 8f);
+                Handles.Label(point + new Vector2(9f, -9f), $"{flow.flowId}:{suffix}");
+            }
+        }
+    }
+
+    bool TryGetPerformanceActorStart(PerformanceActorBinding binding, out Vector2 position)
+    {
+        position = Vector2.zero;
+        if (binding == null) return false;
+        if (binding.targetType == PerformanceActorTargetType.Player)
+        {
+            position = _level.playerSpawnPosition;
+            return true;
+        }
+
+        var element = _level.elements?.FirstOrDefault(item =>
+            item != null && item.elementId == binding.elementId);
+        if (element == null) return false;
+        position = element.position;
+        return true;
     }
 
     Sprite GetPreviewBackgroundSprite()
@@ -719,6 +1026,21 @@ public class LevelEditorWindow : EditorWindow
             new Color(1f, 1f, 1f, 0.04f),
             new Color(1f, 1f, 1f, 0.7f));
         Handles.Label(new Vector3(screenRect.xMin + 6f, screenRect.yMin + 6f), "Initial Camera");
+    }
+
+    void DrawCameraBounds(Rect local)
+    {
+        var backgroundSettings = _level.backgroundSettings;
+        if (backgroundSettings == null || !backgroundSettings.constrainCameraToBounds)
+            return;
+
+        float startX = WorldToScreenX(backgroundSettings.cameraBoundsStartX, local);
+        float endX = WorldToScreenX(backgroundSettings.cameraBoundsEndX, local);
+        Handles.color = new Color(1f, 0.55f, 0.1f, 0.9f);
+        Handles.DrawAAPolyLine(3f, new Vector3(startX, 0f), new Vector3(startX, local.height));
+        Handles.DrawAAPolyLine(3f, new Vector3(endX, 0f), new Vector3(endX, local.height));
+        Handles.Label(new Vector3(startX + 4f, 18f), "Camera Start");
+        Handles.Label(new Vector3(endX + 4f, 18f), "Camera End");
     }
 
     Rect WorldBoundsToScreenRect(Bounds bounds, Rect rect)
@@ -933,6 +1255,7 @@ public class LevelEditorWindow : EditorWindow
         Rect rect = new Rect(0, 0, local.width, local.height);
         foreach (var g in _level.groups)
         {
+            if (g.triggerMode != ElementGroupTriggerMode.Position) continue;
             float sx = WorldToScreenX(g.triggerPositionX, rect);
             if (sx < 0 || sx > local.width) continue;
 
@@ -1157,8 +1480,98 @@ public class LevelEditorWindow : EditorWindow
     // 右侧 — 属性面板
     // ================================================================
 
+    bool HasObjectSelection()
+    {
+        return !string.IsNullOrEmpty(_selectedElementId) ||
+               !string.IsNullOrEmpty(_selectedGroupId) ||
+               _selectedStoryTriggerIndex >= 0 ||
+               _selectedFlowIndex >= 0;
+    }
+
+    void ClearObjectSelection()
+    {
+        _selectedElementId = null;
+        _selectedGroupId = null;
+        _selectedStoryTriggerIndex = -1;
+        _selectedFlowIndex = -1;
+    }
+
+    void ShowSection(InspectorSection section)
+    {
+        ClearObjectSelection();
+        _inspectorSection = section;
+        _propertyScroll = Vector2.zero;
+        GUI.FocusControl(null);
+        Repaint();
+    }
+
+    void SelectElement(string elementId)
+    {
+        ClearObjectSelection();
+        _selectedElementId = elementId;
+        _inspectorSection = InspectorSection.Overview;
+        _propertyScroll = Vector2.zero;
+    }
+
+    void SelectGroup(string groupId)
+    {
+        ClearObjectSelection();
+        _selectedGroupId = groupId;
+        _inspectorSection = InspectorSection.Overview;
+        _propertyScroll = Vector2.zero;
+    }
+
+    void SelectStoryTrigger(int index)
+    {
+        ClearObjectSelection();
+        _selectedStoryTriggerIndex = index;
+        _inspectorSection = InspectorSection.Events;
+        _propertyScroll = Vector2.zero;
+    }
+
+    void SelectFlow(int index)
+    {
+        ClearObjectSelection();
+        _selectedFlowIndex = index;
+        _inspectorSection = InspectorSection.Events;
+        _propertyScroll = Vector2.zero;
+    }
+
+    void ReturnToParent()
+    {
+        InspectorSection parent = _inspectorSection;
+        if (_selectedStoryTriggerIndex >= 0 || _selectedFlowIndex >= 0) parent = InspectorSection.Events;
+        else parent = InspectorSection.Overview;
+        ShowSection(parent);
+    }
+
+    string GetSelectionBreadcrumb()
+    {
+        if (_selectedFlowIndex >= 0 && _selectedFlowIndex < (_level.events?.Count ?? 0))
+            return $"演出事件 / {_level.events[_selectedFlowIndex].flowId}";
+        if (_selectedStoryTriggerIndex >= 0 && _selectedStoryTriggerIndex < _level.storyTriggers.Count)
+            return $"过场触发 / {_level.storyTriggers[_selectedStoryTriggerIndex].storyId}";
+        if (!string.IsNullOrEmpty(_selectedGroupId))
+            return $"元素组 / {_level.FindGroup(_selectedGroupId)?.groupName}";
+        if (!string.IsNullOrEmpty(_selectedElementId))
+            return $"关卡元素 / {_level.elements.Find(e => e.elementId == _selectedElementId)?.displayName}";
+        return "关卡";
+    }
+
+    static string GetSectionLabel(InspectorSection section)
+    {
+        switch (section)
+        {
+            case InspectorSection.Variables: return "变量";
+            case InspectorSection.Events: return "演出事件";
+            default: return "概览";
+        }
+    }
+
     void DrawPropertyPanel()
     {
+        DrawPropertyNavigationHeader();
+        EditorGUILayout.Space(4);
         _propertyScroll = EditorGUILayout.BeginScrollView(_propertyScroll);
 
         if (!string.IsNullOrEmpty(_selectedElementId))
@@ -1167,10 +1580,63 @@ public class LevelEditorWindow : EditorWindow
             DrawStoryTriggerProperties();
         else if (!string.IsNullOrEmpty(_selectedGroupId))
             DrawGroupProperties();
+        else if (_selectedFlowIndex >= 0 && _selectedFlowIndex < (_level.events?.Count ?? 0))
+            DrawFlowProperties();
         else
-            DrawLevelProperties();
+            DrawSelectedSection();
 
         EditorGUILayout.EndScrollView();
+    }
+
+    void DrawPropertyNavigationHeader()
+    {
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+        EditorGUILayout.BeginHorizontal();
+        if (HasObjectSelection())
+        {
+            if (GUILayout.Button("← 返回", GUILayout.Width(72), GUILayout.Height(24)))
+                ReturnToParent();
+            GUILayout.Label(GetSelectionBreadcrumb(), EditorStyles.boldLabel);
+        }
+        else
+        {
+            GUILayout.Label($"关卡 / {GetSectionLabel(_inspectorSection)}", EditorStyles.boldLabel);
+        }
+        GUILayout.FlexibleSpace();
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.EndVertical();
+    }
+
+    void DrawSelectedSection()
+    {
+        switch (_inspectorSection)
+        {
+            case InspectorSection.Variables:
+                DrawVariablesPage();
+                break;
+            case InspectorSection.Events:
+                DrawEventsPage();
+                break;
+            default:
+                DrawLevelProperties();
+                break;
+        }
+    }
+
+    void DrawVariablesPage()
+    {
+        EditorGUILayout.LabelField("关卡变量", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("变量用于表达持久的关卡事实，例如“本波敌人已清空”。", MessageType.Info);
+        DrawVariables();
+        if (GUI.changed) EditorUtility.SetDirty(_level);
+    }
+
+    void DrawEventsPage()
+    {
+        EditorGUILayout.LabelField("演出事件", EditorStyles.boldLabel);
+        _level.storyCollectionJson = (TextAsset)EditorGUILayout.ObjectField("过场动画集 JSON", _level.storyCollectionJson, typeof(TextAsset), false);
+        DrawFlowQuickPanel();
+        if (GUI.changed) EditorUtility.SetDirty(_level);
     }
 
     void DrawLevelProperties()
@@ -1201,29 +1667,134 @@ public class LevelEditorWindow : EditorWindow
 
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("背景设置", EditorStyles.boldLabel);
-        var bg = _level.backgroundSettings;
-        bg.mode = (BackgroundMode)EditorGUILayout.EnumPopup("模式", bg.mode);
+        var bg = _level.backgroundSettings ?? (_level.backgroundSettings = new BackgroundSettings());
+        bg.constrainCameraToBounds = EditorGUILayout.Toggle("限制关卡范围（相机+玩家）", bg.constrainCameraToBounds);
+        using (new EditorGUI.DisabledScope(!bg.constrainCameraToBounds))
+        {
+            bg.cameraBoundsStartX = EditorGUILayout.FloatField("关卡起始 X", bg.cameraBoundsStartX);
+            bg.cameraBoundsEndX = EditorGUILayout.FloatField("关卡结束 X", bg.cameraBoundsEndX);
+        }
+        if (bg.constrainCameraToBounds)
+        {
+            if (bg.cameraBoundsEndX <= bg.cameraBoundsStartX)
+                EditorGUILayout.HelpBox("关卡结束 X 必须大于关卡起始 X。", MessageType.Error);
+            else
+                EditorGUILayout.HelpBox(
+                    "相机画面和玩家碰撞体都不能越界；普通移动、击退、关卡流程和剧情演出都会使用此范围。",
+                    MessageType.Info);
+        }
+        EditorGUILayout.Space(4);
+        bg.mode = DrawBackgroundModePopup("模式", bg.mode);
         if (bg.mode == BackgroundMode.SingleInfiniteScroll)
         {
             bg.singleBackground = (Sprite)EditorGUILayout.ObjectField("背景图", bg.singleBackground, typeof(Sprite), false);
             bg.singleParallaxFactor = EditorGUILayout.Slider("视差系数", bg.singleParallaxFactor, 0f, 1f);
             bg.singleSortingOrder = EditorGUILayout.IntField("排序层", bg.singleSortingOrder);
         }
+        else if (bg.mode == BackgroundMode.SequentialTiles)
+        {
+            DrawSequentialBackgroundSettings(bg);
+        }
 
         EditorGUILayout.Space(12);
-        EditorGUILayout.LabelField("关卡变量", EditorStyles.boldLabel);
-        DrawVariables();
-
-        EditorGUILayout.Space(10);
-        EditorGUILayout.LabelField("剧情数据", EditorStyles.boldLabel);
-        _level.storyCollectionJson = (TextAsset)EditorGUILayout.ObjectField("过场动画集 JSON", _level.storyCollectionJson, typeof(TextAsset), false);
-        DrawStoryTriggerQuickPanel();
-
-        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("数据交换", EditorStyles.boldLabel);
         if (GUILayout.Button("导出JSON", GUILayout.Height(22))) ExportJson();
         if (GUILayout.Button("导入JSON", GUILayout.Height(22))) ImportJson();
 
         if (GUI.changed) EditorUtility.SetDirty(_level);
+    }
+
+    void DrawSequentialBackgroundSettings(BackgroundSettings bg)
+    {
+        bg.sequenceStartX = EditorGUILayout.FloatField("起始 X（左边缘）", bg.sequenceStartX);
+        bg.sequenceCenterY = EditorGUILayout.FloatField("背景中心 Y", bg.sequenceCenterY);
+        bg.sequenceSortingOrder = EditorGUILayout.IntField("排序层", bg.sequenceSortingOrder);
+
+        if (bg.sequence == null)
+            bg.sequence = new List<BackgroundSequenceEntry>();
+
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("从左到右的图片顺序", EditorStyles.miniBoldLabel);
+
+        for (int i = 0; i < bg.sequence.Count; i++)
+        {
+            var entry = bg.sequence[i] ?? (bg.sequence[i] = new BackgroundSequenceEntry());
+            int moveTo = -1;
+            bool remove = false;
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField($"{i + 1}.", GUILayout.Width(24));
+            entry.sprite = (Sprite)EditorGUILayout.ObjectField(entry.sprite, typeof(Sprite), false);
+            EditorGUILayout.LabelField("重复", GUILayout.Width(30));
+            entry.repeatCount = Mathf.Max(1, EditorGUILayout.IntField(entry.repeatCount, GUILayout.Width(42)));
+
+            using (new EditorGUI.DisabledScope(i == 0))
+            {
+                if (GUILayout.Button("↑", GUILayout.Width(24)))
+                    moveTo = i - 1;
+            }
+            using (new EditorGUI.DisabledScope(i == bg.sequence.Count - 1))
+            {
+                if (GUILayout.Button("↓", GUILayout.Width(24)))
+                    moveTo = i + 1;
+            }
+            if (GUILayout.Button("X", GUILayout.Width(24)))
+                remove = true;
+            EditorGUILayout.EndHorizontal();
+
+            if (entry.sprite != null)
+            {
+                float itemWidth = entry.sprite.bounds.size.x * entry.repeatCount;
+                EditorGUILayout.LabelField(
+                    $"单图宽 {entry.sprite.bounds.size.x:0.###}，本段宽 {itemWidth:0.###}",
+                    EditorStyles.miniLabel);
+            }
+            EditorGUILayout.EndVertical();
+
+            if (remove)
+            {
+                bg.sequence.RemoveAt(i);
+                GUI.changed = true;
+                break;
+            }
+            if (moveTo >= 0)
+            {
+                var movedEntry = bg.sequence[i];
+                bg.sequence[i] = bg.sequence[moveTo];
+                bg.sequence[moveTo] = movedEntry;
+                GUI.changed = true;
+                break;
+            }
+        }
+
+        if (GUILayout.Button("+ 添加背景段"))
+        {
+            bg.sequence.Add(new BackgroundSequenceEntry());
+            GUI.changed = true;
+        }
+
+        if (bg.sequence.Count == 0)
+        {
+            EditorGUILayout.HelpBox("添加背景段，并为每段选择图片和重复次数。", MessageType.Info);
+            return;
+        }
+
+        float totalWidth = bg.CalculateSequenceWidth();
+        float endX = bg.sequenceStartX + totalWidth;
+        EditorGUILayout.HelpBox(
+            $"背景覆盖 X：{bg.sequenceStartX:0.###} → {endX:0.###}（总宽 {totalWidth:0.###}）",
+            endX < Mathf.Max(_level.levelLength, _level.levelEndPositionX)
+                ? MessageType.Warning
+                : MessageType.Info);
+
+        if (GUILayout.Button("将摄像机范围设为背景覆盖范围"))
+        {
+            bg.constrainCameraToBounds = true;
+            bg.cameraBoundsStartX = bg.sequenceStartX;
+            bg.cameraBoundsEndX = endX;
+            GUI.changed = true;
+        }
     }
 
     void DrawVariables()
@@ -1233,7 +1804,7 @@ public class LevelEditorWindow : EditorWindow
             var v = _level.variables[i];
             EditorGUILayout.BeginHorizontal();
             v.variableName = EditorGUILayout.TextField(v.variableName, GUILayout.Width(80));
-            v.type = (LevelVariableType)EditorGUILayout.EnumPopup(v.type, GUILayout.Width(55));
+            v.type = DrawVariableTypePopup(v.type, GUILayout.Width(70));
             v.defaultValue = EditorGUILayout.TextField(v.defaultValue, GUILayout.Width(60));
             if (GUILayout.Button("X", GUILayout.Width(22)))
             {
@@ -1257,19 +1828,91 @@ public class LevelEditorWindow : EditorWindow
         }
     }
 
+    void DrawFlowQuickPanel()
+    {
+        EditorGUILayout.Space(12);
+        EditorGUILayout.HelpBox("演出事件统一管理“何时触发”和“依次做什么”。直接播放过场是只包含一个“播放过场”步骤的简单事件。", MessageType.Info);
+
+        if (_level.events == null) _level.events = new List<LevelFlowData>();
+        for (int i = 0; i < _level.events.Count; i++)
+        {
+            var flow = _level.events[i];
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+            bool selected = _selectedFlowIndex == i;
+            if (GUILayout.Toggle(selected, string.IsNullOrEmpty(flow.flowId) ? "(未命名事件)" : flow.flowId, "Button") && !selected)
+                SelectFlow(i);
+            GUILayout.Label(GetStoryTriggerModeLabel(flow.triggerMode), GUILayout.Width(42));
+            GUILayout.Label(GetEventStorySummary(flow), EditorStyles.miniLabel, GUILayout.Width(90));
+            using (new EditorGUI.DisabledScope(flow.triggerMode != StoryTriggerMode.Position))
+                if (GUILayout.Button("定位", GUILayout.Width(46)))
+                {
+                    SelectFlow(i);
+                    CenterCanvasOn(new Vector2(flow.positionX, 0f));
+                }
+            if (GUILayout.Button("删除", GUILayout.Width(46)))
+            {
+                SelectFlow(i);
+                DeleteSelectedObject();
+                EditorGUILayout.EndHorizontal();
+                break;
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        var storyIds = GetStoryIds();
+        using (new EditorGUI.DisabledScope(storyIds.Count == 0))
+        if (GUILayout.Button("+ 直接播放过场"))
+        {
+            Undo.RecordObject(_level, "Add Direct Story Event");
+            _level.events.Add(new LevelFlowData
+            {
+                flowId = GetUniqueFlowId("event_story"),
+                triggerMode = StoryTriggerMode.Conditions,
+                triggerOnce = true,
+                steps = new List<LevelFlowStep>
+                {
+                    new LevelFlowStep { stepType = LevelFlowStepType.PlayStory, storyId = storyIds[0] }
+                }
+            });
+            SelectFlow(_level.events.Count - 1);
+            EditorUtility.SetDirty(_level);
+        }
+
+        if (storyIds.Count == 0)
+            EditorGUILayout.HelpBox("需要先指定包含 storyId 的过场动画集 JSON，才能创建“直接播放过场”。", MessageType.Warning);
+
+        if (GUILayout.Button("+ 自定义演出事件"))
+        {
+            Undo.RecordObject(_level, "Add Performance Event");
+            _level.events.Add(new LevelFlowData
+            {
+                flowId = GetUniqueFlowId("event"),
+                triggerMode = StoryTriggerMode.Conditions,
+                triggerOnce = true,
+                steps = new List<LevelFlowStep> { new LevelFlowStep { stepType = LevelFlowStepType.WaitForPlayerSafe } }
+            });
+            SelectFlow(_level.events.Count - 1);
+            EditorUtility.SetDirty(_level);
+        }
+    }
+
+    static string GetEventStorySummary(LevelFlowData levelEvent)
+    {
+        string storyId = levelEvent?.steps?
+            .FirstOrDefault(s => s != null && s.stepType == LevelFlowStepType.PlayStory)?.storyId;
+        return string.IsNullOrEmpty(storyId) ? "无过场" : $"过场:{storyId}";
+    }
+
     void DrawStoryTriggerQuickPanel()
     {
         var storyIds = GetStoryIds();
         if (_level.storyCollectionJson == null)
         {
-            EditorGUILayout.HelpBox("先导入剧情编辑器导出的 JSON，再为其中的剧情添加触发器。", MessageType.Info);
-            return;
+            EditorGUILayout.HelpBox("尚未指定过场 JSON。仍可查看和删除现有触发器，但无法新建有效的过场触发。", MessageType.Warning);
         }
-
-        if (storyIds.Count == 0)
+        else if (storyIds.Count == 0)
         {
             EditorGUILayout.HelpBox("当前剧情 JSON 中没有可用的 storyId，或 JSON 解析失败。", MessageType.Warning);
-            return;
         }
 
         EditorGUILayout.Space(4);
@@ -1282,14 +1925,10 @@ public class LevelEditorWindow : EditorWindow
             EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
             string storyLabel = string.IsNullOrEmpty(trigger.storyId) ? "(未选择剧情)" : trigger.storyId;
             bool selected = _selectedStoryTriggerIndex == i;
-            if (GUILayout.Toggle(selected, storyLabel, "Button", GUILayout.Width(120)))
-            {
-                _selectedStoryTriggerIndex = i;
-                _selectedElementId = null;
-                _selectedGroupId = null;
-            }
+            if (GUILayout.Toggle(selected, storyLabel, "Button", GUILayout.Width(120)) && !selected)
+                SelectStoryTrigger(i);
 
-            trigger.triggerMode = (StoryTriggerMode)EditorGUILayout.EnumPopup(trigger.triggerMode, GUILayout.Width(88));
+            trigger.triggerMode = DrawStoryTriggerModePopup(trigger.triggerMode, GUILayout.Width(88));
 
             if (trigger.triggerMode == StoryTriggerMode.Position)
             {
@@ -1306,9 +1945,7 @@ public class LevelEditorWindow : EditorWindow
             {
                 if (GUILayout.Button("定位", GUILayout.Width(46)))
                 {
-                    _selectedStoryTriggerIndex = i;
-                    _selectedElementId = null;
-                    _selectedGroupId = null;
+                    SelectStoryTrigger(i);
                     _canvasScroll.x = trigger.positionX * _canvasScale - 200f;
                     Repaint();
                 }
@@ -1316,16 +1953,15 @@ public class LevelEditorWindow : EditorWindow
 
             if (GUILayout.Button("删除", GUILayout.Width(46)))
             {
-                Undo.RecordObject(_level, "Remove Story Trigger");
-                _level.storyTriggers.RemoveAt(i);
-                _selectedStoryTriggerIndex = -1;
-                EditorUtility.SetDirty(_level);
+                SelectStoryTrigger(i);
+                DeleteSelectedObject();
                 EditorGUILayout.EndHorizontal();
                 break;
             }
             EditorGUILayout.EndHorizontal();
         }
 
+        using (new EditorGUI.DisabledScope(storyIds.Count == 0))
         if (GUILayout.Button("+ 为剧情添加位置触发器", GUILayout.Height(30)))
         {
             Undo.RecordObject(_level, "Add Story Trigger");
@@ -1337,9 +1973,7 @@ public class LevelEditorWindow : EditorWindow
                 triggerOnce = true,
                 triggerFromLeft = true
             });
-            _selectedStoryTriggerIndex = _level.storyTriggers.Count - 1;
-            _selectedElementId = null;
-            _selectedGroupId = null;
+            SelectStoryTrigger(_level.storyTriggers.Count - 1);
             EditorUtility.SetDirty(_level);
         }
     }
@@ -1354,6 +1988,62 @@ public class LevelEditorWindow : EditorWindow
             case StoryTriggerMode.LevelComplete: return "完成";
             default: return mode.ToString();
         }
+    }
+
+    StoryTriggerMode DrawStoryTriggerModePopup(StoryTriggerMode current, params GUILayoutOption[] options)
+    {
+        var values = new[]
+        {
+            StoryTriggerMode.Position,
+            StoryTriggerMode.Conditions,
+            StoryTriggerMode.LevelStart,
+            StoryTriggerMode.LevelComplete
+        };
+        var labels = values.Select(GetStoryTriggerModeLabel).ToArray();
+        int index = Mathf.Max(0, Array.IndexOf(values, current));
+        index = EditorGUILayout.Popup(index, labels, options);
+        return values[index];
+    }
+
+    StoryTriggerMode DrawStoryTriggerModePopup(string label, StoryTriggerMode current)
+    {
+        var values = new[]
+        {
+            StoryTriggerMode.Position,
+            StoryTriggerMode.Conditions,
+            StoryTriggerMode.LevelStart,
+            StoryTriggerMode.LevelComplete
+        };
+        var labels = values.Select(GetStoryTriggerModeLabel).ToArray();
+        int index = Mathf.Max(0, Array.IndexOf(values, current));
+        index = EditorGUILayout.Popup(label, index, labels);
+        return values[index];
+    }
+
+    ElementGroupTriggerMode DrawElementGroupTriggerModePopup(string label, ElementGroupTriggerMode current)
+    {
+        var values = new[]
+        {
+            ElementGroupTriggerMode.None,
+            ElementGroupTriggerMode.Position,
+            ElementGroupTriggerMode.Conditions
+        };
+        var labels = new[] { "无触发", "位置触发", "条件触发" };
+        int index = Mathf.Max(0, Array.IndexOf(values, current));
+        index = EditorGUILayout.Popup(label, index, labels);
+        return values[index];
+    }
+
+    string GetElementGroupNames(LevelElement el)
+    {
+        if (el == null) return "无";
+        var names = new List<string>();
+        foreach (var group in _level.groups)
+        {
+            if (el.IsInGroup(group.groupId))
+                names.Add(group.groupName);
+        }
+        return names.Count > 0 ? string.Join(",", names) : "无";
     }
 
     void ExportJson()
@@ -1387,20 +2077,13 @@ public class LevelEditorWindow : EditorWindow
         EditorGUILayout.Space(5);
 
         el.displayName = EditorGUILayout.TextField("名称", el.displayName);
-        el.elementType = (ElementType)EditorGUILayout.EnumPopup("类型", el.elementType);
+        el.elementType = DrawElementTypePopup("类型", el.elementType);
         el.prefab = (GameObject)EditorGUILayout.ObjectField("预制体", el.prefab, typeof(GameObject), false);
         el.position = EditorGUILayout.Vector2Field("位置", el.position);
         el.faceRight = EditorGUILayout.Toggle("朝向右边", el.faceRight);
         el.appearDelay = EditorGUILayout.FloatField("出现延迟(s)", el.appearDelay);
 
-        // 所属组
-        var groupNames = new List<string> { "无" };
-        foreach (var g in _level.groups) groupNames.Add(g.groupName);
-        int currentGroupIdx = string.IsNullOrEmpty(el.groupId) ? 0 :
-            groupNames.FindIndex(n => _level.groups.Any(g => g.groupName == n && g.groupId == el.groupId));
-        if (currentGroupIdx < 0) currentGroupIdx = 0;
-        int newGroupIdx = EditorGUILayout.Popup("所属组", currentGroupIdx, groupNames.ToArray());
-        el.groupId = newGroupIdx > 0 ? _level.groups[newGroupIdx - 1].groupId : "";
+        DrawElementGroupMembership(el);
 
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("出现条件", EditorStyles.boldLabel);
@@ -1414,7 +2097,7 @@ public class LevelEditorWindow : EditorWindow
         if (GUILayout.Button("删除元素", GUILayout.Height(25)))
         {
             _level.elements.Remove(el);
-            _selectedElementId = null;
+            ShowSection(InspectorSection.Overview);
         }
 
         if (GUI.changed) EditorUtility.SetDirty(_level);
@@ -1429,7 +2112,7 @@ public class LevelEditorWindow : EditorWindow
         EditorGUILayout.Space(5);
 
         st.storyId = DrawStoryIdField("故事ID", st.storyId);
-        st.triggerMode = (StoryTriggerMode)EditorGUILayout.EnumPopup("触发方式", st.triggerMode);
+        st.triggerMode = DrawStoryTriggerModePopup("触发方式", st.triggerMode);
         st.triggerOnce = EditorGUILayout.Toggle("只触发一次", st.triggerOnce);
 
         switch (st.triggerMode)
@@ -1462,12 +2145,532 @@ public class LevelEditorWindow : EditorWindow
 
         EditorGUILayout.Space(10);
         if (GUILayout.Button("删除触发器", GUILayout.Height(25)))
-        {
-            _level.storyTriggers.RemoveAt(_selectedStoryTriggerIndex);
-            _selectedStoryTriggerIndex = -1;
-        }
+            DeleteSelectedObject();
 
         if (GUI.changed) EditorUtility.SetDirty(_level);
+    }
+
+    void DrawElementGroupMembership(LevelElement el)
+    {
+        if (el.groupIds == null)
+            el.groupIds = new List<string>();
+        if (!string.IsNullOrEmpty(el.groupId) && !el.groupIds.Contains(el.groupId))
+            el.groupIds.Add(el.groupId);
+
+        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("所属元素组", EditorStyles.boldLabel);
+        if (_level.groups.Count == 0)
+        {
+            EditorGUILayout.HelpBox("还没有元素组，可在关卡设置或左侧元素组面板中新建。", MessageType.Info);
+            return;
+        }
+
+        foreach (var group in _level.groups)
+        {
+            bool has = el.IsInGroup(group.groupId);
+            bool next = EditorGUILayout.ToggleLeft(group.groupName, has);
+            if (next != has)
+            {
+                Undo.RecordObject(_level, "Edit Element Groups");
+                if (next)
+                    el.AddGroup(group.groupId);
+                else
+                    el.RemoveGroup(group.groupId);
+                EditorUtility.SetDirty(_level);
+            }
+        }
+    }
+
+    void DrawFlowProperties()
+    {
+        var flow = _level.events[_selectedFlowIndex];
+        if (flow == null) return;
+        if (flow.steps == null) flow.steps = new List<LevelFlowStep>();
+        if (flow.triggerConditions == null) flow.triggerConditions = new List<LevelVariableCondition>();
+
+        Undo.RecordObject(_level, "Edit Performance Event");
+        EditorGUILayout.LabelField("演出事件", EditorStyles.boldLabel);
+        flow.flowId = EditorGUILayout.TextField("事件 ID", flow.flowId);
+        flow.triggerMode = DrawStoryTriggerModePopup("触发方式", flow.triggerMode);
+        flow.triggerOnce = EditorGUILayout.Toggle("只触发一次", flow.triggerOnce);
+        if (flow.triggerMode == StoryTriggerMode.Position)
+        {
+            flow.positionX = EditorGUILayout.FloatField("触发位置 X", flow.positionX);
+            flow.triggerFromLeft = EditorGUILayout.Toggle("从左向右触发", flow.triggerFromLeft);
+        }
+
+        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("触发条件", EditorStyles.boldLabel);
+        DrawConditions(flow.triggerConditions);
+
+        EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("执行步骤", EditorStyles.boldLabel);
+        for (int i = 0; i < flow.steps.Count; i++)
+        {
+            var step = flow.steps[i] ?? (flow.steps[i] = new LevelFlowStep());
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.BeginHorizontal();
+            step.stepType = DrawEventStepTypePopup($"步骤 {i + 1}", step.stepType);
+            using (new EditorGUI.DisabledScope(i == 0))
+                if (GUILayout.Button("↑", GUILayout.Width(24))) { Swap(flow.steps, i, i - 1); GUIUtility.ExitGUI(); }
+            using (new EditorGUI.DisabledScope(i == flow.steps.Count - 1))
+                if (GUILayout.Button("↓", GUILayout.Width(24))) { Swap(flow.steps, i, i + 1); GUIUtility.ExitGUI(); }
+            if (GUILayout.Button("复制", GUILayout.Width(42)))
+            {
+                flow.steps.Insert(i + 1, CloneFlowStep(step));
+                GUIUtility.ExitGUI();
+            }
+            if (GUILayout.Button("X", GUILayout.Width(24)))
+            {
+                flow.steps.RemoveAt(i);
+                GUIUtility.ExitGUI();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            switch (step.stepType)
+            {
+                case LevelFlowStepType.Wait:
+                    step.duration = Mathf.Max(0f, EditorGUILayout.FloatField("等待秒数", step.duration));
+                    break;
+                case LevelFlowStepType.MovePlayer:
+                    step.targetPosition = EditorGUILayout.Vector2Field("目标位置", step.targetPosition);
+                    step.speed = EditorGUILayout.FloatField("移动速度", step.speed);
+                    step.tolerance = EditorGUILayout.FloatField("到达容差", step.tolerance);
+                    break;
+                case LevelFlowStepType.MoveCamera:
+                    step.targetPosition = EditorGUILayout.Vector2Field("镜头目标", step.targetPosition);
+                    step.duration = Mathf.Max(0f, EditorGUILayout.FloatField("持续时间", step.duration));
+                    step.easing = DrawEventEasingPopup("缓动方式", step.easing);
+                    break;
+                case LevelFlowStepType.SetVariable:
+                    if (step.setVariable == null) step.setVariable = new VariableSetAction();
+                    DrawSingleVariableSetAction(step.setVariable);
+                    break;
+                case LevelFlowStepType.PlayStory:
+                    step.storyId = DrawStoryIdField("过场 ID", step.storyId);
+                    DrawStoryCastBindings(step);
+                    break;
+                case LevelFlowStepType.WaitForPlayerSafe:
+                    EditorGUILayout.HelpBox("等待角色完成跳跃、反弹或击退，超时为 5 秒。", MessageType.None);
+                    break;
+                case LevelFlowStepType.ResumeCameraFollow:
+                    EditorGUILayout.HelpBox("释放流程镜头接管，恢复跟随玩家。", MessageType.None);
+                    break;
+            }
+            EditorGUILayout.EndVertical();
+        }
+
+        if (GUILayout.Button("+ 添加步骤"))
+            flow.steps.Add(new LevelFlowStep());
+
+        EditorGUILayout.Space(10);
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("复制事件"))
+            DuplicateSelectedFlow();
+        if (GUILayout.Button("删除事件"))
+            DeleteSelectedObject();
+        EditorGUILayout.EndHorizontal();
+
+        if (GUI.changed) EditorUtility.SetDirty(_level);
+    }
+
+    void DrawStoryCastBindings(LevelFlowStep step)
+    {
+        var story = GetStorySequence(step.storyId);
+        EditorGUILayout.Space(6);
+        EditorGUILayout.LabelField("剧情演出", EditorStyles.boldLabel);
+        if (story == null)
+        {
+            EditorGUILayout.HelpBox("选择有效的剧情后才能查看演出和绑定演员。", MessageType.Info);
+            return;
+        }
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField(
+            $"Cue 在剧情编辑器中配置；本步骤只负责绑定本关演员。共 {story.performanceCues?.Count ?? 0} 个 Cue。",
+            EditorStyles.wordWrappedMiniLabel);
+        if (GUILayout.Button("编辑剧情演出", GUILayout.Width(110f)))
+            StoryEditorWindow.OpenStory(_level.storyCollectionJson, step.storyId);
+        EditorGUILayout.EndHorizontal();
+
+        if (story.performanceCues == null || story.performanceCues.Count == 0)
+        {
+            EditorGUILayout.HelpBox("这段剧情还没有演出 Cue，可点击“编辑剧情演出”添加。", MessageType.Info);
+            step.storyPerformanceScripts = new List<PerformanceScript>();
+            step.storyCastBindings = new List<PerformanceActorBinding>();
+            return;
+        }
+
+        var scripts = new List<PerformanceScript>();
+        foreach (var cue in story.performanceCues)
+        {
+            if (cue == null) continue;
+            var dialogue = story.dialogues?.FirstOrDefault(item =>
+                item != null && item.id == cue.dialogueId);
+            string summary = dialogue == null
+                ? $"不存在的台词 #{cue.dialogueId}"
+                : $"#{dialogue.id} {dialogue.speakerName}: {TruncateStoryText(dialogue.content, 18)}";
+            string timing = cue.triggerTiming == StoryPerformanceCueTriggerTiming.AfterAdvanceInput
+                ? "点击下一句后"
+                : "台词出现时";
+            var script = FindPerformanceScriptAsset(cue.scriptId);
+            EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+            EditorGUILayout.LabelField(
+                $"{summary}  →  {cue.scriptId}（{timing}）",
+                EditorStyles.wordWrappedMiniLabel);
+            using (new EditorGUI.DisabledScope(script == null))
+                if (GUILayout.Button("编辑演出", GUILayout.Width(72f)))
+                    PerformanceScriptEditorWindow.Open(script);
+            EditorGUILayout.EndHorizontal();
+
+            if (script == null)
+                EditorGUILayout.HelpBox($"找不到演出脚本 '{cue.scriptId}'。", MessageType.Error);
+            else if (!scripts.Contains(script))
+                scripts.Add(script);
+        }
+
+        if (!AreSameScripts(step.storyPerformanceScripts, scripts))
+        {
+            step.storyPerformanceScripts = scripts;
+            EditorUtility.SetDirty(_level);
+        }
+
+        if (step.storyCastBindings == null)
+            step.storyCastBindings = new List<PerformanceActorBinding>();
+
+        var slots = scripts
+            .SelectMany(script => (script.actorSlots ?? new List<PerformanceActorSlot>())
+                .Where(slot => slot != null && !string.IsNullOrWhiteSpace(slot.slotId))
+                .Select(slot => (script, slot)))
+            .ToList();
+        step.storyCastBindings.RemoveAll(binding => binding == null ||
+            slots.All(entry => entry.slot.slotId != binding.slotId ||
+                (!string.IsNullOrEmpty(binding.scriptId) &&
+                 entry.script.scriptId != binding.scriptId)));
+
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("本关演员绑定", EditorStyles.miniBoldLabel);
+        foreach (var entry in slots)
+        {
+            var script = entry.script;
+            var slot = entry.slot;
+            var binding = step.storyCastBindings.FirstOrDefault(item =>
+                item.scriptId == script.scriptId && item.slotId == slot.slotId);
+            if (binding == null)
+            {
+                var legacy = step.storyCastBindings.FirstOrDefault(item =>
+                    string.IsNullOrEmpty(item.scriptId) && item.slotId == slot.slotId);
+                binding = new PerformanceActorBinding
+                {
+                    scriptId = script.scriptId,
+                    slotId = slot.slotId,
+                    targetType = legacy?.targetType ?? PerformanceActorTargetType.Player,
+                    elementId = legacy?.elementId,
+                    idleAnimationOverride = legacy?.idleAnimationOverride,
+                    moveAnimationOverride = legacy?.moveAnimationOverride
+                };
+                step.storyCastBindings.Add(binding);
+            }
+
+            string displayName = string.IsNullOrEmpty(slot.displayName) ? slot.slotId : slot.displayName;
+            string slotLabel = $"{displayName} [{script.scriptId}]";
+            var labels = new List<string> { "主角" };
+            var elements = (_level.elements ?? new List<LevelElement>())
+                .Where(element => element != null && !string.IsNullOrEmpty(element.elementId)).ToList();
+            labels.AddRange(elements.Select(element =>
+                $"{element.displayName} ({element.elementId})"));
+
+            int current = 0;
+            if (binding.targetType == PerformanceActorTargetType.LevelElement)
+            {
+                int elementIndex = elements.FindIndex(element => element.elementId == binding.elementId);
+                current = elementIndex >= 0 ? elementIndex + 1 : 0;
+            }
+            int selected = EditorGUILayout.Popup(slotLabel, current, labels.ToArray());
+            if (selected == 0)
+            {
+                binding.targetType = PerformanceActorTargetType.Player;
+                binding.elementId = "";
+            }
+            else
+            {
+                binding.targetType = PerformanceActorTargetType.LevelElement;
+                binding.elementId = elements[selected - 1].elementId;
+            }
+            binding.idleAnimationOverride = EditorGUILayout.TextField(
+                $"{slotLabel} 待机覆盖", binding.idleAnimationOverride);
+            binding.moveAnimationOverride = EditorGUILayout.TextField(
+                $"{slotLabel} 移动动画覆盖", binding.moveAnimationOverride);
+        }
+
+        foreach (var script in scripts)
+        foreach (var clip in script.clips ?? new List<PerformanceClip>())
+        {
+            if (clip == null) continue;
+            var binding = step.storyCastBindings.FirstOrDefault(item =>
+                item != null && item.scriptId == script.scriptId &&
+                item.slotId == clip.actorSlotId);
+            string animationName = null;
+            if (clip.clipType == PerformanceClipType.PlayAnimation)
+                animationName = clip.animationName;
+            else if (clip.clipType == PerformanceClipType.MoveActor && clip.playMoveAnimation)
+            {
+                var slot = script.FindSlot(clip.actorSlotId);
+                animationName = !string.IsNullOrEmpty(clip.moveAnimationOverride)
+                    ? clip.moveAnimationOverride
+                    : !string.IsNullOrEmpty(binding?.moveAnimationOverride)
+                        ? binding.moveAnimationOverride
+                        : slot?.defaultMoveAnimation;
+            }
+            if (!string.IsNullOrEmpty(animationName) &&
+                !PerformanceAnimationExists(binding, animationName))
+                EditorGUILayout.HelpBox(
+                    $"槽位 '{clip.actorSlotId}' 的目标预制体中找不到动画 '{animationName}'。",
+                    MessageType.Warning);
+        }
+
+        step.storyCastBindings.RemoveAll(binding =>
+            binding != null && string.IsNullOrEmpty(binding.scriptId) &&
+            slots.Any(entry => entry.slot.slotId == binding.slotId));
+
+        if (step.storyPerformanceCues != null && step.storyPerformanceCues.Count > 0)
+            EditorGUILayout.HelpBox(
+                "检测到旧版关卡内 Cue。新剧情 Cue 存在时运行时会使用剧情编辑器中的配置；旧数据仍保留用于兼容。",
+                MessageType.Warning);
+    }
+
+    static bool AreSameScripts(List<PerformanceScript> current, List<PerformanceScript> expected)
+    {
+        current ??= new List<PerformanceScript>();
+        expected ??= new List<PerformanceScript>();
+        return current.Count == expected.Count && !current.Where((script, index) =>
+            script != expected[index]).Any();
+    }
+
+    static PerformanceScript FindPerformanceScriptAsset(string scriptId)
+    {
+        if (string.IsNullOrWhiteSpace(scriptId)) return null;
+        return AssetDatabase.FindAssets("t:PerformanceScript")
+            .Select(guid => AssetDatabase.LoadAssetAtPath<PerformanceScript>(
+                AssetDatabase.GUIDToAssetPath(guid)))
+            .FirstOrDefault(asset => asset != null && asset.scriptId == scriptId);
+    }
+
+    bool PerformanceAnimationExists(PerformanceActorBinding binding, string animationName)
+    {
+        if (binding == null || string.IsNullOrEmpty(animationName)) return false;
+        GameObject prefab = null;
+        if (binding.targetType == PerformanceActorTargetType.Player)
+            prefab = _level.playerPrefab;
+        else
+            prefab = _level.elements?.FirstOrDefault(element =>
+                element != null && element.elementId == binding.elementId)?.prefab;
+        if (prefab == null) return false;
+
+        var spine = prefab.GetComponentInChildren<SkeletonAnimation>(true);
+        var skeletonData = spine != null && spine.skeletonDataAsset != null
+            ? spine.skeletonDataAsset.GetSkeletonData(true)
+            : null;
+        if (skeletonData?.FindAnimation(animationName) != null)
+            return true;
+
+        var animator = prefab.GetComponentInChildren<Animator>(true);
+        return animator != null && animator.runtimeAnimatorController != null &&
+               animator.runtimeAnimatorController.animationClips.Any(clip =>
+                   clip != null && clip.name == animationName);
+    }
+
+    StorySequence GetStorySequence(string storyId)
+    {
+        if (_level?.storyCollectionJson == null || string.IsNullOrEmpty(storyId)) return null;
+        try
+        {
+            var collection = JsonUtility.FromJson<StoryDataCollection>(_level.storyCollectionJson.text);
+            return collection?.stories?.FirstOrDefault(story => story != null && story.storyId == storyId);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    static string TruncateStoryText(string value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...";
+    }
+
+    void DrawSingleVariableSetAction(VariableSetAction action)
+    {
+        var names = _level.variables.Select(v => v.variableName).ToList();
+        if (names.Count == 0)
+        {
+            EditorGUILayout.HelpBox("请先定义关卡变量。", MessageType.Warning);
+            return;
+        }
+        int index = Mathf.Max(0, names.IndexOf(action.variableName));
+        index = EditorGUILayout.Popup("变量", index, names.ToArray());
+        action.variableName = names[index];
+        action.stringValue = EditorGUILayout.TextField("值", action.stringValue);
+    }
+
+    LevelFlowStepType DrawEventStepTypePopup(string label, LevelFlowStepType current)
+    {
+        var values = new[]
+        {
+            LevelFlowStepType.WaitForPlayerSafe,
+            LevelFlowStepType.Wait,
+            LevelFlowStepType.SetVariable,
+            LevelFlowStepType.MovePlayer,
+            LevelFlowStepType.MoveCamera,
+            LevelFlowStepType.ResumeCameraFollow,
+            LevelFlowStepType.PlayStory
+        };
+        var labels = new[]
+        {
+            "等待主角安全",
+            "等待指定时间",
+            "设置关卡变量",
+            "主角自动移动",
+            "镜头移动",
+            "恢复镜头跟随",
+            "播放过场"
+        };
+        int index = Mathf.Max(0, Array.IndexOf(values, current));
+        index = EditorGUILayout.Popup(label, index, labels);
+        return values[index];
+    }
+
+    LevelFlowEasing DrawEventEasingPopup(string label, LevelFlowEasing current)
+    {
+        var values = new[] { LevelFlowEasing.Linear, LevelFlowEasing.SmoothStep };
+        var labels = new[] { "线性", "平滑过渡" };
+        int index = Mathf.Max(0, Array.IndexOf(values, current));
+        index = EditorGUILayout.Popup(label, index, labels);
+        return values[index];
+    }
+
+    static LevelFlowStep CloneFlowStep(LevelFlowStep source)
+    {
+        return new LevelFlowStep
+        {
+            stepType = source.stepType,
+            duration = source.duration,
+            targetPosition = source.targetPosition,
+            speed = source.speed,
+            tolerance = source.tolerance,
+            easing = source.easing,
+            storyId = source.storyId,
+            storyCastBindings = source.storyCastBindings?.Where(binding => binding != null)
+                .Select(ClonePerformanceActorBinding).ToList()
+                ?? new List<PerformanceActorBinding>(),
+            storyPerformanceScripts = source.storyPerformanceScripts?.Where(script => script != null).ToList()
+                ?? new List<PerformanceScript>(),
+            storyPerformanceCues = source.storyPerformanceCues?.Select(CloneStoryPerformanceCue).ToList()
+                ?? new List<StoryPerformanceCue>(),
+            setVariable = source.setVariable == null ? new VariableSetAction() : new VariableSetAction
+            {
+                variableName = source.setVariable.variableName,
+                stringValue = source.setVariable.stringValue
+            }
+        };
+    }
+
+    static StoryPerformanceCue CloneStoryPerformanceCue(StoryPerformanceCue source)
+    {
+        return new StoryPerformanceCue
+        {
+            dialogueId = source.dialogueId,
+            delay = source.delay,
+            performanceScript = source.performanceScript,
+            blockDialogueAdvance = source.blockDialogueAdvance,
+            triggerTiming = source.triggerTiming,
+            actorBindings = source.actorBindings?.Where(binding => binding != null)
+                .Select(ClonePerformanceActorBinding).ToList()
+                ?? new List<PerformanceActorBinding>()
+        };
+    }
+
+    static PerformanceActorBinding ClonePerformanceActorBinding(PerformanceActorBinding source)
+    {
+        return new PerformanceActorBinding
+        {
+            scriptId = source.scriptId,
+            slotId = source.slotId,
+            targetType = source.targetType,
+            elementId = source.elementId,
+            idleAnimationOverride = source.idleAnimationOverride,
+            moveAnimationOverride = source.moveAnimationOverride
+        };
+    }
+
+    void DuplicateSelectedFlow()
+    {
+        if (_selectedFlowIndex < 0 || _selectedFlowIndex >= _level.events.Count) return;
+        var source = _level.events[_selectedFlowIndex];
+        var copy = new LevelFlowData
+        {
+            flowId = GetUniqueFlowId(source.flowId + "_copy"),
+            triggerMode = source.triggerMode,
+            positionX = source.positionX,
+            triggerFromLeft = source.triggerFromLeft,
+            triggerOnce = source.triggerOnce,
+            triggerConditions = source.triggerConditions?.Select(c => new LevelVariableCondition
+            {
+                variableName = c.variableName,
+                mode = c.mode,
+                compareValue = c.compareValue
+            }).ToList() ?? new List<LevelVariableCondition>(),
+            steps = source.steps?.Select(CloneFlowStep).ToList() ?? new List<LevelFlowStep>()
+        };
+        Undo.RecordObject(_level, "Duplicate Level Flow");
+        _level.events.Insert(_selectedFlowIndex + 1, copy);
+        SelectFlow(_selectedFlowIndex + 1);
+        EditorUtility.SetDirty(_level);
+    }
+
+    string GetUniqueFlowId(string requested)
+    {
+        string root = string.IsNullOrWhiteSpace(requested) ? "flow" : requested;
+        string candidate = root;
+        int suffix = 2;
+        while (_level.events.Any(f => f != null && f.flowId == candidate))
+            candidate = $"{root}_{suffix++}";
+        return candidate;
+    }
+
+    static void Swap<T>(List<T> list, int a, int b)
+    {
+        T value = list[a];
+        list[a] = list[b];
+        list[b] = value;
+    }
+
+    void DrawGroupMembersEditor(ElementGroup group)
+    {
+        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("组成员", EditorStyles.boldLabel);
+        if (_level.elements.Count == 0)
+        {
+            EditorGUILayout.HelpBox("当前关卡还没有对象。", MessageType.Info);
+            return;
+        }
+
+        foreach (var el in _level.elements)
+        {
+            string label = string.IsNullOrEmpty(el.displayName) ? el.elementId : el.displayName;
+            bool has = el.IsInGroup(group.groupId);
+            bool next = EditorGUILayout.ToggleLeft(label, has);
+            if (next != has)
+            {
+                Undo.RecordObject(_level, "Edit Group Members");
+                if (next)
+                    el.AddGroup(group.groupId);
+                else
+                    el.RemoveGroup(group.groupId);
+                EditorUtility.SetDirty(_level);
+            }
+        }
     }
 
     void DrawGroupProperties()
@@ -1481,22 +2684,30 @@ public class LevelEditorWindow : EditorWindow
         EditorGUILayout.Space(5);
 
         g.groupName = EditorGUILayout.TextField("组名", g.groupName);
-        g.triggerPositionX = EditorGUILayout.FloatField("触发位置 X", g.triggerPositionX);
+        g.triggerMode = DrawElementGroupTriggerModePopup("触发方式", g.triggerMode);
+        if (g.triggerMode == ElementGroupTriggerMode.Position)
+            g.triggerPositionX = EditorGUILayout.FloatField("触发位置 X", g.triggerPositionX);
+        else if (g.triggerMode == ElementGroupTriggerMode.None)
+            EditorGUILayout.HelpBox("无触发组不会控制对象生成，只作为逻辑集合使用，例如组内敌人全清后设置变量。", MessageType.Info);
+        else
+            EditorGUILayout.HelpBox("条件满足时触发该组，生成组内未出现的元素。", MessageType.Info);
         g.mustClearToProceed = EditorGUILayout.Toggle("必须清怪", g.mustClearToProceed);
 
-        int groupElements = _level.elements.Count(e => e.groupId == g.groupId);
+        int groupElements = _level.elements.Count(e => e.IsInGroup(g.groupId));
         EditorGUILayout.LabelField("组内元素数", groupElements.ToString());
+
+        DrawGroupMembersEditor(g);
 
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("触发条件", EditorStyles.boldLabel);
         DrawConditions(g.triggerConditions);
 
         EditorGUILayout.Space(10);
+        DrawVariableSetActions(g.onAllEnemiesClearedSetVariables, "组内敌人全清后设置变量");
+
+        EditorGUILayout.Space(10);
         if (GUILayout.Button("删除组", GUILayout.Height(25)))
-        {
-            _level.groups.Remove(g);
-            _selectedGroupId = null;
-        }
+            DeleteSelectedObject();
 
         if (GUI.changed) EditorUtility.SetDirty(_level);
     }
@@ -1518,12 +2729,18 @@ public class LevelEditorWindow : EditorWindow
             EditorGUILayout.BeginVertical(GUI.skin.box);
             EditorGUILayout.BeginHorizontal();
 
-            int varIdx = varNames.IndexOf(c.variableName);
-            varIdx = EditorGUILayout.Popup(varIdx >= 0 ? varIdx : 0, varNames.ToArray(), GUILayout.Width(80));
-            if (varNames.Count > 0 && varIdx >= 0)
-                c.variableName = varNames[varIdx];
+            if (varNames.Count > 0)
+            {
+                int varIdx = varNames.IndexOf(c.variableName);
+                varIdx = EditorGUILayout.Popup(varIdx >= 0 ? varIdx : 0, varNames.ToArray(), GUILayout.Width(100));
+                if (varIdx >= 0) c.variableName = varNames[varIdx];
+            }
+            else
+            {
+                EditorGUILayout.LabelField(string.IsNullOrEmpty(c.variableName) ? "(无变量)" : c.variableName, GUILayout.Width(100));
+            }
 
-            c.mode = (LevelVariableCondition.CompareMode)EditorGUILayout.EnumPopup(c.mode, GUILayout.Width(80));
+            c.mode = DrawConditionCompareModePopup(c.mode, GUILayout.Width(100));
             EditorGUILayout.EndHorizontal();
 
             if (c.mode != LevelVariableCondition.CompareMode.IsTrue &&
@@ -1555,6 +2772,69 @@ public class LevelEditorWindow : EditorWindow
         }
     }
 
+    static BackgroundMode DrawBackgroundModePopup(string label, BackgroundMode value)
+    {
+        var values = new[]
+        {
+            BackgroundMode.SingleInfiniteScroll,
+            BackgroundMode.ParallaxLayers,
+            BackgroundMode.SequentialTiles
+        };
+        var labels = new[] { "单图无限滚动", "多层视差", "顺序铺图" };
+        int index = System.Array.IndexOf(values, value);
+        index = EditorGUILayout.Popup(label, Mathf.Max(0, index), labels);
+        return values[Mathf.Clamp(index, 0, values.Length - 1)];
+    }
+
+    static ElementType DrawElementTypePopup(string label, ElementType value)
+    {
+        var values = new[] { ElementType.Enemy, ElementType.Item, ElementType.Obstacle };
+        var labels = new[] { "敌人", "道具", "障碍物" };
+        int index = System.Array.IndexOf(values, value);
+        index = EditorGUILayout.Popup(label, Mathf.Max(0, index), labels);
+        return values[Mathf.Clamp(index, 0, values.Length - 1)];
+    }
+
+    static LevelVariableType DrawVariableTypePopup(LevelVariableType value, params GUILayoutOption[] options)
+    {
+        var values = new[]
+        {
+            LevelVariableType.Bool,
+            LevelVariableType.Int,
+            LevelVariableType.Float,
+            LevelVariableType.String
+        };
+        var labels = new[] { "布尔", "整数", "小数", "文本" };
+        int index = System.Array.IndexOf(values, value);
+        index = EditorGUILayout.Popup(Mathf.Max(0, index), labels, options);
+        return values[Mathf.Clamp(index, 0, values.Length - 1)];
+    }
+
+    static LevelVariableCondition.CompareMode DrawConditionCompareModePopup(
+        LevelVariableCondition.CompareMode value,
+        params GUILayoutOption[] options)
+    {
+        var values = new[]
+        {
+            LevelVariableCondition.CompareMode.Equals,
+            LevelVariableCondition.CompareMode.NotEquals,
+            LevelVariableCondition.CompareMode.Greater,
+            LevelVariableCondition.CompareMode.GreaterOrEqual,
+            LevelVariableCondition.CompareMode.Less,
+            LevelVariableCondition.CompareMode.LessOrEqual,
+            LevelVariableCondition.CompareMode.Contains,
+            LevelVariableCondition.CompareMode.IsTrue,
+            LevelVariableCondition.CompareMode.IsFalse
+        };
+        var labels = new[]
+        {
+            "等于", "不等于", "大于", "大于或等于", "小于", "小于或等于", "包含", "为真", "为假"
+        };
+        int index = System.Array.IndexOf(values, value);
+        index = EditorGUILayout.Popup(Mathf.Max(0, index), labels, options);
+        return values[Mathf.Clamp(index, 0, values.Length - 1)];
+    }
+
     void DrawVariableSetActions(List<VariableSetAction> actions, string label)
     {
         if (actions == null) return;
@@ -1567,10 +2847,16 @@ public class LevelEditorWindow : EditorWindow
         {
             var a = actions[i];
             EditorGUILayout.BeginHorizontal();
-            int varIdx = varNames.IndexOf(a.variableName);
-            varIdx = EditorGUILayout.Popup(varIdx >= 0 ? varIdx : 0, varNames.ToArray(), GUILayout.Width(80));
-            if (varNames.Count > 0 && varIdx >= 0)
-                a.variableName = varNames[varIdx];
+            if (varNames.Count > 0)
+            {
+                int varIdx = varNames.IndexOf(a.variableName);
+                varIdx = EditorGUILayout.Popup(varIdx >= 0 ? varIdx : 0, varNames.ToArray(), GUILayout.Width(100));
+                if (varIdx >= 0) a.variableName = varNames[varIdx];
+            }
+            else
+            {
+                EditorGUILayout.LabelField(string.IsNullOrEmpty(a.variableName) ? "(无变量)" : a.variableName, GUILayout.Width(100));
+            }
             a.stringValue = EditorGUILayout.TextField(a.stringValue, GUILayout.Width(90));
             if (GUILayout.Button("X", GUILayout.Width(22)))
             {
@@ -1736,6 +3022,13 @@ public class LevelEditorWindow : EditorWindow
     {
         EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
         _showBottomList = GUILayout.Toggle(_showBottomList, "列表视图", EditorStyles.toolbarButton, GUILayout.Width(80));
+        if (_showBottomList)
+        {
+            GUILayout.Space(8);
+            GUILayout.Label("搜索", GUILayout.Width(30));
+            _elementSearch = GUILayout.TextField(_elementSearch, EditorStyles.toolbarSearchField, GUILayout.Width(160));
+            GUILayout.Label($"共 {_level.elements.Count} 个元素", EditorStyles.miniLabel);
+        }
         GUILayout.FlexibleSpace();
         EditorGUILayout.EndHorizontal();
 
@@ -1751,28 +3044,32 @@ public class LevelEditorWindow : EditorWindow
         GUILayout.Label("延迟", GUILayout.Width(45));
         GUILayout.Label("组", GUILayout.Width(80));
         GUILayout.Label("条件", GUILayout.Width(50));
+        GUILayout.Label("操作", GUILayout.Width(48));
         EditorGUILayout.EndHorizontal();
 
         for (int i = 0; i < _level.elements.Count; i++)
         {
             var el = _level.elements[i];
+            if (!string.IsNullOrWhiteSpace(_elementSearch) &&
+                (el.displayName == null || el.displayName.IndexOf(_elementSearch, StringComparison.OrdinalIgnoreCase) < 0))
+                continue;
             var bg = i % 2 == 0 ? GUI.skin.box : GUIStyle.none;
             EditorGUILayout.BeginHorizontal(bg);
 
-            if (GUILayout.Button(i.ToString(), GUILayout.Width(30)))
-            {
-                _selectedElementId = el.elementId;
-                _selectedGroupId = null;
-                _selectedStoryTriggerIndex = -1;
-            }
-            GUILayout.Label(el.displayName, GUILayout.Width(100));
+            GUILayout.Label(i.ToString(), GUILayout.Width(30));
+            if (GUILayout.Button(el.displayName, EditorStyles.miniButton, GUILayout.Width(100)))
+                SelectElement(el.elementId);
             GUILayout.Label(el.elementType.ToString(), GUILayout.Width(50));
             GUILayout.Label(el.position.x.ToString("F1"), GUILayout.Width(55));
             GUILayout.Label(el.position.y.ToString("F1"), GUILayout.Width(55));
             GUILayout.Label($"{el.appearDelay:F1}s", GUILayout.Width(45));
-            var group = _level.FindGroup(el.groupId);
-            GUILayout.Label(group?.groupName ?? "无", GUILayout.Width(80));
+            GUILayout.Label(GetElementGroupNames(el), GUILayout.Width(80));
             GUILayout.Label(el.appearConditions.Count > 0 ? "有" : "无", GUILayout.Width(50));
+            if (GUILayout.Button("定位", EditorStyles.miniButton, GUILayout.Width(48)))
+            {
+                SelectElement(el.elementId);
+                CenterCanvasOn(el.position);
+            }
 
             EditorGUILayout.EndHorizontal();
         }
@@ -1788,21 +3085,24 @@ public class LevelEditorWindow : EditorWindow
         Event e = Event.current;
         if (e.type != EventType.KeyDown) return;
 
-        if (e.keyCode == KeyCode.Delete || e.keyCode == KeyCode.Backspace)
+        if (e.keyCode == KeyCode.Escape)
         {
-            if (!string.IsNullOrEmpty(_selectedElementId))
-            {
-                var el = _level.elements.Find(x => x.elementId == _selectedElementId);
-                if (el != null)
-                {
-                    Undo.RecordObject(_level, "Delete Element");
-                    _level.elements.Remove(el);
-                    _selectedElementId = null;
-                    EditorUtility.SetDirty(_level);
-                    e.Use();
-                    Repaint();
-                }
-            }
+            if (EditorGUIUtility.editingTextField)
+                GUI.FocusControl(null);
+            else if (_isPlacingMode)
+                _isPlacingMode = false;
+            else if (HasObjectSelection())
+                ReturnToParent();
+            e.Use();
+            Repaint();
+            return;
+        }
+
+        if (!EditorGUIUtility.editingTextField && (e.keyCode == KeyCode.Delete || e.keyCode == KeyCode.Backspace))
+        {
+            if (DeleteSelectedObject()) e.Use();
+            Repaint();
+            return;
         }
 
         if (e.control && e.keyCode == KeyCode.S)
@@ -1810,6 +3110,47 @@ public class LevelEditorWindow : EditorWindow
             SaveLevel();
             e.Use();
         }
+    }
+
+    bool DeleteSelectedObject()
+    {
+        if (!string.IsNullOrEmpty(_selectedElementId))
+        {
+            var element = _level.elements.Find(x => x.elementId == _selectedElementId);
+            if (element == null) return false;
+            Undo.RecordObject(_level, "Delete Element");
+            _level.elements.Remove(element);
+            ShowSection(InspectorSection.Overview);
+        }
+        else if (_selectedFlowIndex >= 0 && _selectedFlowIndex < (_level.events?.Count ?? 0))
+        {
+            var flow = _level.events[_selectedFlowIndex];
+            if (!EditorUtility.DisplayDialog("删除演出事件", $"确定删除 '{flow.flowId}'？", "删除", "取消")) return false;
+            Undo.RecordObject(_level, "Delete Performance Event");
+            _level.events.RemoveAt(_selectedFlowIndex);
+            ShowSection(InspectorSection.Events);
+        }
+        else if (_selectedStoryTriggerIndex >= 0 && _selectedStoryTriggerIndex < _level.storyTriggers.Count)
+        {
+            var trigger = _level.storyTriggers[_selectedStoryTriggerIndex];
+            if (!EditorUtility.DisplayDialog("删除过场触发", $"确定删除 '{trigger.storyId}' 的触发器？", "删除", "取消")) return false;
+            Undo.RecordObject(_level, "Delete Story Trigger");
+            _level.storyTriggers.RemoveAt(_selectedStoryTriggerIndex);
+            ShowSection(InspectorSection.Events);
+        }
+        else if (!string.IsNullOrEmpty(_selectedGroupId))
+        {
+            var group = _level.FindGroup(_selectedGroupId);
+            if (group == null || !EditorUtility.DisplayDialog("删除元素组", $"确定删除 '{group.groupName}'？组内元素不会被删除。", "删除", "取消")) return false;
+            Undo.RecordObject(_level, "Delete Group");
+            foreach (var element in _level.elements) element.RemoveGroup(group.groupId);
+            _level.groups.Remove(group);
+            ShowSection(InspectorSection.Overview);
+        }
+        else return false;
+
+        EditorUtility.SetDirty(_level);
+        return true;
     }
 
     // ================================================================
@@ -1826,8 +3167,7 @@ public class LevelEditorWindow : EditorWindow
         AssetDatabase.CreateAsset(newLevel, path);
         AssetDatabase.SaveAssets();
         _level = newLevel;
-        _selectedElementId = null;
-        _selectedGroupId = null;
+        ShowSection(InspectorSection.Overview);
         ScanPrefabs();
     }
 
@@ -1842,8 +3182,7 @@ public class LevelEditorWindow : EditorWindow
         if (level != null)
         {
             _level = level;
-            _selectedElementId = null;
-            _selectedGroupId = null;
+            ShowSection(InspectorSection.Overview);
             ScanPrefabs();
         }
         else

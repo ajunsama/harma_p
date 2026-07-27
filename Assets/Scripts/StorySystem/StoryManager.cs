@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 /// <summary>
 /// 剧情播放管理器 - 单例，控制整个剧情播放流程
@@ -50,13 +51,34 @@ public class StoryManager : MonoBehaviour
 
     // 剧情完成后的回调
     private Action _onComplete;
+    private IStoryPerformanceSession _performanceSession;
+    private Coroutine _prepareCoroutine;
+    private bool _isPreparing;
+    private Coroutine _skipCoroutine;
+    private bool _isSkipping;
+    private CanvasGroup _blackoutCanvasGroup;
+    private PlayerMovement _lockedPlayer;
+    private int _controlLockToken;
+    private const float SafeStateTimeout = 5f;
 
     // 剧情标志位系统（用于游戏主循环中的flag触发）
     private HashSet<string> _storyFlags = new HashSet<string>();
 
     // 属性
-    public bool IsPlaying => isPlaying;
+    public bool IsPlaying => isPlaying || _isPreparing || _isSkipping;
     public StorySequence CurrentSequence => _currentSequence;
+
+    public bool HasStory(string storyId)
+    {
+        return !string.IsNullOrEmpty(storyId) && _storyLookup.ContainsKey(storyId);
+    }
+
+    public StorySequence GetStory(string storyId)
+    {
+        if (string.IsNullOrEmpty(storyId)) return null;
+        _storyLookup.TryGetValue(storyId, out var story);
+        return story;
+    }
 
     void Awake()
     {
@@ -70,12 +92,14 @@ public class StoryManager : MonoBehaviour
         // 初始化模板缓存
         if (templateLibrary != null)
             templateLibrary.BuildCache();
+
+        CreateBlackoutCurtain();
     }
 
     void Start()
     {
         // 自动加载JSON数据
-        if (storyJsonFile != null)
+        if (storyJsonFile != null && _storyLookup.Count == 0)
         {
             LoadStoryData(storyJsonFile.text);
         }
@@ -119,11 +143,12 @@ public class StoryManager : MonoBehaviour
     /// </summary>
     /// <param name="storyId">剧情ID</param>
     /// <param name="onComplete">播放完成后的回调</param>
-    public void PlayStory(string storyId, Action onComplete = null)
+    public void PlayStory(string storyId, Action onComplete = null,
+        IStoryPerformanceSession performanceSession = null)
     {
         Debug.Log($"[StoryManager] PlayStory被调用, storyId={storyId}, isPlaying={isPlaying}, 已加载剧情数={_storyLookup.Count}");
 
-        if (isPlaying)
+        if (IsPlaying)
         {
             Debug.LogWarning($"[StoryManager] 正在播放中，忽略请求: {storyId}");
             return;
@@ -137,15 +162,16 @@ public class StoryManager : MonoBehaviour
         }
 
         Debug.Log($"[StoryManager] 找到剧情 {storyId}，共 {sequence.dialogues?.Count ?? 0} 条对话，开始播放");
-        PlayStory(sequence, onComplete);
+        PlayStory(sequence, onComplete, performanceSession);
     }
 
     /// <summary>
     /// 播放指定的剧情序列
     /// </summary>
-    public void PlayStory(StorySequence sequence, Action onComplete = null)
+    public void PlayStory(StorySequence sequence, Action onComplete = null,
+        IStoryPerformanceSession performanceSession = null)
     {
-        if (isPlaying)
+        if (IsPlaying)
         {
             Debug.LogWarning("[StoryManager] 正在播放中，忽略请求");
             return;
@@ -158,9 +184,74 @@ public class StoryManager : MonoBehaviour
             return;
         }
 
-        _currentSequence = sequence;
+        _isPreparing = true;
         _onComplete = onComplete;
+        _performanceSession = performanceSession;
+        _prepareCoroutine = StartCoroutine(PrepareAndPlay(sequence));
+    }
+
+    IEnumerator PrepareAndPlay(StorySequence sequence)
+    {
+        var playerObject = GameObject.FindGameObjectWithTag("Player");
+        _lockedPlayer = playerObject != null ? playerObject.GetComponent<PlayerMovement>() : null;
+        if (_lockedPlayer == null)
+        {
+            Debug.LogError($"[StoryManager] Cannot start story '{sequence.storyId}': player is missing.");
+            AbortPreparation();
+            yield break;
+        }
+
+        _controlLockToken = _lockedPlayer.AcquireControlLock($"Story:{sequence.storyId}");
+
+        float elapsed = 0f;
+        while (true)
+        {
+            while (!_lockedPlayer.IsSafeForStory)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                if (elapsed >= SafeStateTimeout)
+                {
+                    Debug.LogError($"[StoryManager] Timed out waiting for a safe state before story '{sequence.storyId}'.");
+                    AbortPreparation();
+                    yield break;
+                }
+                yield return null;
+            }
+
+            _lockedPlayer.PrepareStandingAnimationForStory();
+            yield return new WaitForFixedUpdate();
+            yield return null;
+            if (_lockedPlayer == null)
+            {
+                AbortPreparation();
+                yield break;
+            }
+            elapsed += Time.unscaledDeltaTime;
+            if (elapsed >= SafeStateTimeout)
+            {
+                Debug.LogError($"[StoryManager] Timed out waiting for the standing animation before story '{sequence.storyId}'.");
+                AbortPreparation();
+                yield break;
+            }
+            if (_lockedPlayer.IsReadyForStory)
+                break;
+        }
+
+        _isPreparing = false;
+        _prepareCoroutine = null;
+        _currentSequence = sequence;
         _playCoroutine = StartCoroutine(PlaySequenceCoroutine(sequence));
+    }
+
+    void AbortPreparation()
+    {
+        _isPreparing = false;
+        _prepareCoroutine = null;
+        _performanceSession = null;
+        ReleasePlayerControlLock();
+        var callback = _onComplete;
+        _onComplete = null;
+        callback?.Invoke();
     }
 
     /// <summary>
@@ -168,6 +259,13 @@ public class StoryManager : MonoBehaviour
     /// </summary>
     public void SkipStory()
     {
+        if (_isSkipping) return;
+        if (_isPreparing)
+        {
+            if (_prepareCoroutine != null) StopCoroutine(_prepareCoroutine);
+            AbortPreparation();
+            return;
+        }
         if (!isPlaying) return;
 
         if (_playCoroutine != null)
@@ -176,7 +274,7 @@ public class StoryManager : MonoBehaviour
             _playCoroutine = null;
         }
 
-        EndStory();
+        _skipCoroutine = StartCoroutine(SkipStoryCoroutine());
     }
 
     /// <summary>
@@ -216,7 +314,7 @@ public class StoryManager : MonoBehaviour
 
         // 2. 显示UI
         if (storyUI != null)
-            storyUI.Show();
+            storyUI.Show(sequence.maskBackground);
 
         OnStoryStart?.Invoke();
 
@@ -288,6 +386,8 @@ public class StoryManager : MonoBehaviour
             StoryDialogue dialogue = sequence.dialogues[i];
 
             OnDialogueStart?.Invoke(dialogue);
+            _performanceSession?.BeginDialogue(
+                dialogue, StoryPerformanceCueTriggerTiming.DialogueStart);
 
             string currentSide = dialogue.avatarPosition?.ToLower() ?? "left";
             bool sideChanged = previousSide != null && previousSide != currentSide;
@@ -329,8 +429,20 @@ public class StoryManager : MonoBehaviour
             // 确保文字完整显示
             storyUI.CompleteTypewriter();
 
+            // 阻塞型 Cue 完成前不接受进入下一句的输入
+            if (_performanceSession != null)
+                yield return _performanceSession.WaitForBlockingCue(dialogue.id);
+
             // 等待玩家点击继续
             yield return WaitForPlayerInput();
+
+            // 配置为“玩家点击下一句后”的 Cue 在本次点击被消费后才启动。
+            if (_performanceSession != null)
+            {
+                _performanceSession.BeginDialogue(
+                    dialogue, StoryPerformanceCueTriggerTiming.AfterAdvanceInput);
+                yield return _performanceSession.WaitForBlockingCue(dialogue.id);
+            }
 
             OnDialogueEnd?.Invoke(dialogue);
         }
@@ -540,10 +652,14 @@ public class StoryManager : MonoBehaviour
     /// <summary>
     /// 结束剧情播放
     /// </summary>
-    void EndStory()
+    void EndStory(bool deferFinalize = false, bool skipped = false)
     {
         isPlaying = false;
         _waitingForInput = false;
+        _playCoroutine = null;
+
+        _performanceSession?.Complete(skipped);
+        _performanceSession = null;
 
         // 隐藏UI
         if (storyUI != null)
@@ -551,14 +667,94 @@ public class StoryManager : MonoBehaviour
 
         OnStoryEnd?.Invoke();
 
-        // 恢复游戏
-        ResumeGame();
+        _currentSequence = null;
+        if (!deferFinalize)
+            FinalizeStoryEnd();
+    }
 
-        // 执行完成回调
+    void FinalizeStoryEnd()
+    {
+        ResumeGame();
+        ReleasePlayerControlLock();
+
         var callback = _onComplete;
         _onComplete = null;
-        _currentSequence = null;
         callback?.Invoke();
+    }
+
+    IEnumerator SkipStoryCoroutine()
+    {
+        _isSkipping = true;
+        storyUI?.StopTypewriter();
+
+        yield return FadeBlackout(1f, 0.12f);
+        EndStory(true, true);
+        yield return null;
+        yield return FadeBlackout(0f, 0.12f);
+
+        FinalizeStoryEnd();
+        _isSkipping = false;
+        _skipCoroutine = null;
+    }
+
+    void ReleasePlayerControlLock()
+    {
+        if (_lockedPlayer != null && _controlLockToken != 0)
+            _lockedPlayer.ReleaseControlLock(_controlLockToken);
+        _lockedPlayer = null;
+        _controlLockToken = 0;
+    }
+
+    void OnDestroy()
+    {
+        if ((isPlaying || _isPreparing || _isSkipping) && Time.timeScale == 0f)
+            Time.timeScale = _previousTimeScale > 0f ? _previousTimeScale : 1f;
+        ReleasePlayerControlLock();
+        if (Instance == this) Instance = null;
+    }
+
+    void CreateBlackoutCurtain()
+    {
+        var go = new GameObject("StorySkipCurtain",
+            typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler),
+            typeof(CanvasGroup), typeof(Image));
+        go.transform.SetParent(transform, false);
+
+        var canvas = go.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = short.MaxValue;
+
+        var rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+
+        var image = go.GetComponent<Image>();
+        image.color = Color.black;
+
+        _blackoutCanvasGroup = go.GetComponent<CanvasGroup>();
+        _blackoutCanvasGroup.alpha = 0f;
+        _blackoutCanvasGroup.interactable = false;
+        _blackoutCanvasGroup.blocksRaycasts = false;
+    }
+
+    IEnumerator FadeBlackout(float targetAlpha, float duration)
+    {
+        if (_blackoutCanvasGroup == null) yield break;
+
+        float from = _blackoutCanvasGroup.alpha;
+        _blackoutCanvasGroup.blocksRaycasts = true;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            _blackoutCanvasGroup.alpha = Mathf.Lerp(from, targetAlpha,
+                duration > 0f ? Mathf.Clamp01(elapsed / duration) : 1f);
+            yield return null;
+        }
+        _blackoutCanvasGroup.alpha = targetAlpha;
+        _blackoutCanvasGroup.blocksRaycasts = targetAlpha > 0f;
     }
 
     // ====================

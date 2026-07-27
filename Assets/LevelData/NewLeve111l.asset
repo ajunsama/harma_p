@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2eb526b989e8d6b43b8cf14428e0cc84, type: 3}
+  m_Name: NewLeve111l
+  m_EditorClassIdentifier: Assembly-CSharp::LevelData
+  levelName: NewLeve111l
+  difficulty: 1
+  levelLength: 50
+  playerPrefab: {fileID: 0}
+  backgroundSettings:
+    mode: 0
+    singleBackground: {fileID: 0}
+    singleParallaxFactor: 0
+    singleSortingOrder: -10000
+    parallaxLayers: []
+  playerSpawnPosition: {x: -8, y: -3.5}
+  playerFaceRight: 1
+  useCustomInitialCameraPosition: 0
+  initialCameraPosition: {x: 0, y: 0}
+  cameraDeadZone: 0.2
+  levelEndPositionX: 45
+  endConditions: []
+  variables: []
+  storyCollectionJson: {fileID: 0}
+  elements: []
+  storyTriggers: []
+  groups: []
+  enemyPrefabLibrary: []
+  itemPrefabLibrary: []
+  obstaclePrefabLibrary: []
