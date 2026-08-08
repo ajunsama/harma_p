@@ -24,6 +24,9 @@ public class LevelSceneBuilder : MonoBehaviour
     private LevelCameraController _cameraController;
     private LevelFlowRunner _flowRunner;
     private PerformanceRunner _performanceRunner;
+    private PlayerHP _playerHp;
+    private Coroutine _gameOverTransitionCoroutine;
+    private Coroutine _gameClearTransitionCoroutine;
 
     // 生成追踪
     private readonly List<GameObject> _spawnedObjects = new List<GameObject>();
@@ -33,6 +36,7 @@ public class LevelSceneBuilder : MonoBehaviour
     private readonly HashSet<string> _finishedSpawningGroups = new HashSet<string>();
     private readonly HashSet<string> _spawnedElementIds = new HashSet<string>();
     private readonly Dictionary<string, GameObject> _elementInstances = new Dictionary<string, GameObject>();
+    private readonly Dictionary<string, GameObject> _environmentActorInstances = new Dictionary<string, GameObject>();
     private readonly HashSet<string> _finishedStoryTriggers = new HashSet<string>();
 
     // 元素缓存
@@ -59,6 +63,7 @@ public class LevelSceneBuilder : MonoBehaviour
         }
 
         levelData.MigrateLegacyStoryTriggers();
+        levelData.MigrateLegacyBackground();
 
         _variableManager = GetComponent<LevelVariableManager>();
         if (_variableManager == null)
@@ -70,6 +75,7 @@ public class LevelSceneBuilder : MonoBehaviour
         BuildSceneInfrastructure();
         CreateBackground();
         CreatePlayer();
+        CreateEnvironmentActors();
         BuildLevel();
 
         _flowRunner = GetComponent<LevelFlowRunner>();
@@ -244,6 +250,16 @@ public class LevelSceneBuilder : MonoBehaviour
         var bg = levelData.backgroundSettings;
         if (bg == null) return;
 
+        bg.MigrateLegacyData();
+        if (bg.layers != null)
+        {
+            var root = new GameObject("LevelBackgroundLayers");
+            var controller = root.AddComponent<LayeredBackgroundController>();
+            controller.Initialize(mainCamera, bg.layers);
+            _spawnedObjects.Add(root);
+            return;
+        }
+
         if (bg.mode == BackgroundMode.SingleInfiniteScroll && bg.singleBackground != null)
         {
             var bgGo = new GameObject("LevelBackground");
@@ -345,6 +361,9 @@ public class LevelSceneBuilder : MonoBehaviour
         playerTransform = playerGo.transform;
         _spawnedObjects.Add(playerGo);
 
+        if (playerGo.GetComponent<PlayerGameplaySignalHub>() == null)
+            playerGo.AddComponent<PlayerGameplaySignalHub>();
+
         ConfigurePlayerBounds(playerGo.GetComponent<PlayerMovement>());
 
         if (_cameraController != null)
@@ -352,6 +371,24 @@ public class LevelSceneBuilder : MonoBehaviour
 
         // 尝试为 PlayerHP 绑定场景中的 HPBar（即使未激活）
         TryBindPlayerHPBar(playerGo);
+        BindPlayerDeath(playerGo);
+    }
+
+    void BindPlayerDeath(GameObject playerGo)
+    {
+        if (_playerHp != null)
+            _playerHp.Died -= HandlePlayerDied;
+
+        _playerHp = playerGo.GetComponent<PlayerHP>();
+        if (_playerHp == null)
+            _playerHp = playerGo.GetComponentInChildren<PlayerHP>();
+        if (_playerHp != null)
+            _playerHp.Died += HandlePlayerDied;
+    }
+
+    void HandlePlayerDied(PlayerHP playerHp)
+    {
+        FailLevel();
     }
 
     void ConfigurePlayerBounds(PlayerMovement playerMovement)
@@ -392,6 +429,39 @@ public class LevelSceneBuilder : MonoBehaviour
                 Debug.Log($"[LevelSceneBuilder] 已为玩家绑定 HPBar: {slider.gameObject.name}");
                 return;
             }
+        }
+    }
+
+    void CreateEnvironmentActors()
+    {
+        if (levelData.environmentActors == null || playerTransform == null) return;
+        var signalHub = playerTransform.GetComponent<PlayerGameplaySignalHub>();
+
+        foreach (var actorData in levelData.environmentActors)
+        {
+            if (actorData == null || actorData.prefab == null ||
+                string.IsNullOrWhiteSpace(actorData.actorId) ||
+                _environmentActorInstances.ContainsKey(actorData.actorId))
+                continue;
+
+            var actor = Instantiate(actorData.prefab,
+                new Vector3(actorData.position.x, actorData.position.y, 0f),
+                Quaternion.identity);
+            actor.name = string.IsNullOrWhiteSpace(actorData.displayName)
+                ? actorData.prefab.name
+                : actorData.displayName;
+
+            Vector3 scale = actor.transform.localScale;
+            scale.x = (actorData.faceRight ? 1f : -1f) * Mathf.Abs(scale.x);
+            actor.transform.localScale = scale;
+            ApplyCustomParameters(actor, actorData.customParameters);
+
+            var controller = actor.GetComponent<EnvironmentActorController>();
+            if (controller == null) controller = actor.AddComponent<EnvironmentActorController>();
+            controller.Initialize(actorData, playerTransform, _variableManager, signalHub);
+
+            _environmentActorInstances[actorData.actorId] = actor;
+            _spawnedObjects.Add(actor);
         }
     }
 
@@ -501,7 +571,7 @@ public class LevelSceneBuilder : MonoBehaviour
         {
             _activeLockGroup = group;
             if (_cameraController != null)
-                _cameraController.LockAt(playerTransform.position.x);
+                _cameraController.LockCurrentView();
         }
 
         if (_elementsByGroup.TryGetValue(group.groupId, out var elements))
@@ -559,7 +629,7 @@ public class LevelSceneBuilder : MonoBehaviour
         scale.x = el.faceRight ? Mathf.Abs(scale.x) : -Mathf.Abs(scale.x);
         go.transform.localScale = scale;
 
-        ApplyCustomParameters(go, el);
+        ApplyCustomParameters(go, el.customParameters);
         _spawnedObjects.Add(go);
         if (!string.IsNullOrEmpty(el.elementId))
         {
@@ -613,11 +683,11 @@ public class LevelSceneBuilder : MonoBehaviour
         }
     }
 
-    void ApplyCustomParameters(GameObject go, LevelElement el)
+    void ApplyCustomParameters(GameObject go, List<ElementCustomParameter> parameters)
     {
-        if (el.customParameters == null || el.customParameters.Count == 0) return;
+        if (parameters == null || parameters.Count == 0) return;
 
-        foreach (var param in el.customParameters)
+        foreach (var param in parameters)
         {
             if (string.IsNullOrEmpty(param.componentTypeName) || string.IsNullOrEmpty(param.fieldName))
                 continue;
@@ -721,13 +791,22 @@ public class LevelSceneBuilder : MonoBehaviour
         CompleteLevel();
     }
 
-    void CompleteLevel()
+    public void CompleteLevel()
     {
-        if (_levelComplete) return;
+        if (_levelComplete || _levelFailed) return;
         _levelComplete = true;
         Debug.Log($"[LevelSceneBuilder] 关卡完成!");
         _flowRunner?.TriggerMode(StoryTriggerMode.LevelComplete);
         OnLevelComplete?.Invoke();
+
+        if (_gameClearTransitionCoroutine == null)
+            _gameClearTransitionCoroutine = StartCoroutine(TransitionToGameClear());
+    }
+
+    IEnumerator TransitionToGameClear()
+    {
+        yield return new WaitForSecondsRealtime(GameFlowService.GameClearDelay);
+        GameFlowService.LoadGameClear();
     }
 
     public void FailLevel()
@@ -736,6 +815,15 @@ public class LevelSceneBuilder : MonoBehaviour
         _levelFailed = true;
         Debug.Log($"[LevelSceneBuilder] 关卡失败!");
         OnLevelFailed?.Invoke();
+
+        if (_gameOverTransitionCoroutine == null)
+            _gameOverTransitionCoroutine = StartCoroutine(TransitionToGameOver());
+    }
+
+    IEnumerator TransitionToGameOver()
+    {
+        yield return new WaitForSecondsRealtime(GameFlowService.GameOverDelay);
+        GameFlowService.LoadGameOver();
     }
 
     // ================================================================
@@ -746,25 +834,23 @@ public class LevelSceneBuilder : MonoBehaviour
     {
         if (_activeLockGroup == null) return;
 
-        if (_groupEnemyInstances.TryGetValue(_activeLockGroup.groupId, out var enemies))
+        string groupId = _activeLockGroup.groupId;
+        if (!_finishedSpawningGroups.Contains(groupId))
+            return;
+
+        if (_groupEnemyInstances.TryGetValue(groupId, out var enemies))
         {
             enemies.RemoveAll(e => e == null);
-            if (enemies.Count <= 0)
-            {
-                var clearedGroup = _activeLockGroup;
-                _activeLockGroup = null;
-                if (_cameraController != null)
-                    _cameraController.Unlock();
-                Debug.Log($"[LevelSceneBuilder] 组内敌人清除，解锁");
-                ApplyGroupClearedActions(clearedGroup);
-            }
+            if (enemies.Count > 0)
+                return;
         }
-        else
-        {
-            _activeLockGroup = null;
-            if (_cameraController != null)
-                _cameraController.Unlock();
-        }
+
+        var clearedGroup = _activeLockGroup;
+        _activeLockGroup = null;
+        if (_cameraController != null)
+            _cameraController.Unlock();
+        Debug.Log("[LevelSceneBuilder] 组内敌人清除，解锁镜头");
+        ApplyGroupClearedActions(clearedGroup);
     }
 
     // ================================================================
@@ -855,6 +941,8 @@ public class LevelSceneBuilder : MonoBehaviour
 
     void OnDestroy()
     {
+        if (_playerHp != null)
+            _playerHp.Died -= HandlePlayerDied;
         Enemy.OnEnemyDied -= HandleEnemyDeath;
         ClearAll();
     }
@@ -911,6 +999,7 @@ public class LevelSceneBuilder : MonoBehaviour
         _finishedSpawningGroups.Clear();
         _spawnedElementIds.Clear();
         _elementInstances.Clear();
+        _environmentActorInstances.Clear();
         _createdStoryTriggers.Clear();
         _completedStoryTriggers.Clear();
     }
@@ -924,6 +1013,18 @@ public class LevelSceneBuilder : MonoBehaviour
         {
             actor = playerTransform != null ? playerTransform.gameObject : null;
             return actor != null;
+        }
+
+        if (binding.targetType == PerformanceActorTargetType.EnvironmentActor)
+        {
+            if (string.IsNullOrEmpty(binding.environmentActorId)) return false;
+            if (!_environmentActorInstances.TryGetValue(binding.environmentActorId, out actor) || actor == null)
+            {
+                _environmentActorInstances.Remove(binding.environmentActorId);
+                actor = null;
+                return false;
+            }
+            return true;
         }
 
         if (string.IsNullOrEmpty(binding.elementId)) return false;

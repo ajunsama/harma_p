@@ -20,7 +20,8 @@ public enum PerformancePositionMode
 public enum PerformanceActorTargetType
 {
     Player,
-    LevelElement
+    LevelElement,
+    EnvironmentActor
 }
 
 [Serializable]
@@ -98,6 +99,7 @@ public class PerformanceActorBinding
     public string slotId;
     public PerformanceActorTargetType targetType;
     public string elementId;
+    public string environmentActorId;
     public string idleAnimationOverride;
     public string moveAnimationOverride;
 }

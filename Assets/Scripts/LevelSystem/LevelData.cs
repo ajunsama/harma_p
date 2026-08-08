@@ -30,6 +30,47 @@ public enum BackgroundMode
     SequentialTiles
 }
 
+public enum BackgroundDepthBand
+{
+    Far,
+    Mid,
+    Near
+}
+
+public enum BackgroundLayerContentType
+{
+    SingleSprite,
+    RepeatedSprite,
+    SequentialTiles
+}
+
+public enum EnvironmentContinuousSource
+{
+    PlayerX,
+    PlayerY,
+    HorizontalDistance,
+    Distance
+}
+
+public enum EnvironmentTriggerType
+{
+    PlayerXRange,
+    PlayerDistance,
+    LevelConditions,
+    PlayerSignal
+}
+
+public enum EnvironmentActionType
+{
+    PlayAnimation,
+    SetAnimatorFloat,
+    SetAnimatorBool,
+    SetAnimatorTrigger,
+    SetLevelVariable,
+    SetVisualActive,
+    EmitActorSignal
+}
+
 public enum StoryTriggerMode
 {
     Position,
@@ -83,9 +124,56 @@ public class BackgroundSequenceEntry
 }
 
 [Serializable]
+public class BackgroundLayerData
+{
+    public string layerId;
+    public string displayName = "Background Layer";
+    public BackgroundDepthBand depthBand = BackgroundDepthBand.Mid;
+    public BackgroundLayerContentType contentType = BackgroundLayerContentType.SingleSprite;
+    public Sprite sprite;
+    public List<BackgroundSequenceEntry> sequence = new List<BackgroundSequenceEntry>();
+    public Vector2 origin;
+    public Vector2 scale = Vector2.one;
+    public Color color = Color.white;
+    public int sortingOffset;
+    [Range(0f, 2f)] public float nearMotionMultiplier = 1.25f;
+    public bool enableVerticalMotion;
+    [Range(0f, 2f)] public float verticalMotionMultiplier = 1f;
+    public float horizontalScrollSpeed;
+
+    public float MotionMultiplierX => depthBand == BackgroundDepthBand.Far
+        ? 0f
+        : depthBand == BackgroundDepthBand.Mid ? 1f : Mathf.Clamp(nearMotionMultiplier, 0f, 2f);
+
+    public float MotionMultiplierY => enableVerticalMotion
+        ? (depthBand == BackgroundDepthBand.Far
+            ? 0f
+            : depthBand == BackgroundDepthBand.Mid ? 1f : Mathf.Clamp(verticalMotionMultiplier, 0f, 2f))
+        : 1f;
+
+    public int SortingOrder => BackgroundSettings.GetBandSortingBase(depthBand) + sortingOffset;
+
+    public float CalculateSequenceWidth()
+    {
+        if (sequence == null) return 0f;
+        float width = 0f;
+        foreach (var entry in sequence)
+        {
+            if (entry == null || entry.sprite == null || entry.repeatCount <= 0) continue;
+            width += entry.sprite.bounds.size.x * Mathf.Abs(scale.x) * entry.repeatCount;
+        }
+        return width;
+    }
+}
+
+[Serializable]
 public class BackgroundSettings
 {
     public const int DefaultSortingOrder = -10000;
+    public const int CurrentDataVersion = 2;
+
+    public int dataVersion;
+    public List<BackgroundLayerData> layers = new List<BackgroundLayerData>();
 
     public BackgroundMode mode = BackgroundMode.SingleInfiniteScroll;
 
@@ -121,6 +209,88 @@ public class BackgroundSettings
             width += entry.sprite.bounds.size.x * entry.repeatCount;
         }
         return width;
+    }
+
+    public static int GetBandSortingBase(BackgroundDepthBand band)
+    {
+        switch (band)
+        {
+            case BackgroundDepthBand.Far: return -30000;
+            case BackgroundDepthBand.Near: return 10000;
+            default: return DefaultSortingOrder;
+        }
+    }
+
+    public bool MigrateLegacyData()
+    {
+        if (layers == null) layers = new List<BackgroundLayerData>();
+        if (dataVersion >= CurrentDataVersion) return false;
+
+        if (layers.Count == 0)
+        {
+            if (mode == BackgroundMode.SingleInfiniteScroll && singleBackground != null)
+            {
+                float motion = Mathf.Clamp01(1f - singleParallaxFactor);
+                var band = motion <= 0.001f
+                    ? BackgroundDepthBand.Far
+                    : motion >= 0.999f ? BackgroundDepthBand.Mid : BackgroundDepthBand.Near;
+                layers.Add(new BackgroundLayerData
+                {
+                    layerId = Guid.NewGuid().ToString(),
+                    displayName = singleBackground.name,
+                    depthBand = band,
+                    contentType = BackgroundLayerContentType.RepeatedSprite,
+                    sprite = singleBackground,
+                    nearMotionMultiplier = motion,
+                    enableVerticalMotion = band == BackgroundDepthBand.Far,
+                    sortingOffset = singleSortingOrder - GetBandSortingBase(band)
+                });
+            }
+            else if (mode == BackgroundMode.SequentialTiles && sequence != null && sequence.Count > 0)
+            {
+                layers.Add(new BackgroundLayerData
+                {
+                    layerId = Guid.NewGuid().ToString(),
+                    displayName = "Legacy Sequence",
+                    depthBand = BackgroundDepthBand.Mid,
+                    contentType = BackgroundLayerContentType.SequentialTiles,
+                    sequence = sequence.Select(entry => entry == null ? null : new BackgroundSequenceEntry
+                    {
+                        sprite = entry.sprite,
+                        repeatCount = entry.repeatCount
+                    }).ToList(),
+                    origin = new Vector2(sequenceStartX, sequenceCenterY),
+                    sortingOffset = sequenceSortingOrder - GetBandSortingBase(BackgroundDepthBand.Mid)
+                });
+            }
+            else if (mode == BackgroundMode.ParallaxLayers && parallaxLayers != null)
+            {
+                foreach (var legacy in parallaxLayers)
+                {
+                    if (legacy == null || legacy.sprite == null) continue;
+                    float motion = Mathf.Clamp01(1f - legacy.parallaxFactor);
+                    var band = motion <= 0.001f
+                        ? BackgroundDepthBand.Far
+                        : motion >= 0.999f ? BackgroundDepthBand.Mid : BackgroundDepthBand.Near;
+                    layers.Add(new BackgroundLayerData
+                    {
+                        layerId = Guid.NewGuid().ToString(),
+                        displayName = legacy.sprite.name,
+                        depthBand = band,
+                        contentType = legacy.infiniteHorizontal
+                            ? BackgroundLayerContentType.RepeatedSprite
+                            : BackgroundLayerContentType.SingleSprite,
+                        sprite = legacy.sprite,
+                        nearMotionMultiplier = motion,
+                        enableVerticalMotion = band == BackgroundDepthBand.Far,
+                        sortingOffset = legacy.sortingOrder - GetBandSortingBase(band)
+                    });
+                }
+            }
+        }
+
+        dataVersion = CurrentDataVersion;
+        return true;
     }
 }
 
@@ -163,6 +333,61 @@ public class VariableSetAction
 {
     public string variableName;
     public string stringValue;
+}
+
+[Serializable]
+public class EnvironmentContinuousBinding
+{
+    public EnvironmentContinuousSource source = EnvironmentContinuousSource.PlayerX;
+    public string animatorParameter;
+    public float inputMin;
+    public float inputMax = 10f;
+    public float outputMin;
+    public float outputMax = 1f;
+    public bool clamp = true;
+}
+
+[Serializable]
+public class EnvironmentActorAction
+{
+    public EnvironmentActionType actionType = EnvironmentActionType.PlayAnimation;
+    public string name;
+    public string stringValue;
+    public float floatValue;
+    public bool boolValue = true;
+    public bool loop;
+    [Min(0)] public int animationTrack;
+}
+
+[Serializable]
+public class EnvironmentActorTrigger
+{
+    public EnvironmentTriggerType triggerType = EnvironmentTriggerType.PlayerXRange;
+    public float minValue;
+    public float maxValue = 5f;
+    public string signalId;
+    public bool triggerOnce;
+    public List<LevelVariableCondition> conditions = new List<LevelVariableCondition>();
+    public List<EnvironmentActorAction> onEnterActions = new List<EnvironmentActorAction>();
+    public List<EnvironmentActorAction> onExitActions = new List<EnvironmentActorAction>();
+}
+
+[Serializable]
+public class EnvironmentActorData
+{
+    public string actorId;
+    public string displayName;
+    public GameObject prefab;
+    public Vector2 position;
+    public bool faceRight = true;
+    public BackgroundDepthBand depthBand = BackgroundDepthBand.Mid;
+    public int sortingOffset;
+    public List<LevelVariableCondition> activeConditions = new List<LevelVariableCondition>();
+    public List<ElementCustomParameter> customParameters = new List<ElementCustomParameter>();
+    public List<EnvironmentContinuousBinding> continuousBindings = new List<EnvironmentContinuousBinding>();
+    public List<EnvironmentActorTrigger> triggers = new List<EnvironmentActorTrigger>();
+
+    public int SortingOrder => BackgroundSettings.GetBandSortingBase(depthBand) + sortingOffset;
 }
 
 // ============================================================
@@ -356,6 +581,9 @@ public class LevelData : ScriptableObject
     [Header("元素列表")]
     public List<LevelElement> elements = new List<LevelElement>();
 
+    [Header("Environment Actors")]
+    public List<EnvironmentActorData> environmentActors = new List<EnvironmentActorData>();
+
     [HideInInspector]
     public List<StoryTriggerPoint> storyTriggers = new List<StoryTriggerPoint>();
 
@@ -370,6 +598,14 @@ public class LevelData : ScriptableObject
     public List<ElementPrefabEntry> enemyPrefabLibrary = new List<ElementPrefabEntry>();
     public List<ElementPrefabEntry> itemPrefabLibrary = new List<ElementPrefabEntry>();
     public List<ElementPrefabEntry> obstaclePrefabLibrary = new List<ElementPrefabEntry>();
+    public List<ElementPrefabEntry> environmentActorPrefabLibrary = new List<ElementPrefabEntry>();
+
+    public bool MigrateLegacyBackground()
+    {
+        if (backgroundSettings == null)
+            backgroundSettings = new BackgroundSettings();
+        return backgroundSettings.MigrateLegacyData();
+    }
 
     // ========== 查找辅助 ==========
 
@@ -458,11 +694,25 @@ public class LevelData : ScriptableObject
         };
     }
 
+    static IEnumerable<EnvironmentActorAction> EnumerateEnvironmentActions(EnvironmentActorData actor)
+    {
+        if (actor?.triggers == null) yield break;
+        foreach (var trigger in actor.triggers)
+        {
+            if (trigger == null) continue;
+            foreach (var action in trigger.onEnterActions ?? new List<EnvironmentActorAction>())
+                if (action != null) yield return action;
+            foreach (var action in trigger.onExitActions ?? new List<EnvironmentActorAction>())
+                if (action != null) yield return action;
+        }
+    }
+
     // ========== 校验 ==========
 
     public LevelValidationResult Validate()
     {
         MigrateLegacyStoryTriggers();
+        MigrateLegacyBackground();
         var result = new LevelValidationResult();
 
         if (string.IsNullOrEmpty(levelName))
@@ -505,6 +755,32 @@ public class LevelData : ScriptableObject
                 result.AddError($"元素组 '{g.groupName}' 的触发位置X({g.triggerPositionX})超出关卡范围(0~{levelLength})");
         }
 
+        var environmentActorIds = new HashSet<string>();
+        foreach (var actor in environmentActors ?? new List<EnvironmentActorData>())
+        {
+            if (actor == null) continue;
+            if (actor.prefab == null)
+                result.AddError($"Environment actor '{actor.displayName}' has no prefab");
+            if (string.IsNullOrWhiteSpace(actor.actorId))
+                result.AddError($"Environment actor '{actor.displayName}' has no actor ID");
+            else if (!environmentActorIds.Add(actor.actorId))
+                result.AddError($"Duplicate environment actor ID: {actor.actorId}");
+            if (actor.SortingOrder < short.MinValue || actor.SortingOrder > short.MaxValue)
+                result.AddError($"Environment actor '{actor.displayName}' has an out-of-range sorting order");
+            foreach (var binding in actor.continuousBindings ?? new List<EnvironmentContinuousBinding>())
+                if (binding != null && string.IsNullOrWhiteSpace(binding.animatorParameter))
+                    result.AddError($"Environment actor '{actor.displayName}' has an empty Animator parameter");
+            foreach (var trigger in actor.triggers ?? new List<EnvironmentActorTrigger>())
+            {
+                if (trigger == null) continue;
+                if (trigger.maxValue < trigger.minValue)
+                    result.AddError($"Environment actor '{actor.displayName}' has an inverted trigger range");
+                if (trigger.triggerType == EnvironmentTriggerType.PlayerSignal &&
+                    string.IsNullOrWhiteSpace(trigger.signalId))
+                    result.AddError($"Environment actor '{actor.displayName}' has an empty player signal");
+            }
+        }
+
         var variableNames = new HashSet<string>(variables.Select(v => v.variableName));
         foreach (var el in elements)
         {
@@ -512,6 +788,60 @@ public class LevelData : ScriptableObject
             {
                 if (!string.IsNullOrEmpty(cond.variableName) && !variableNames.Contains(cond.variableName))
                     result.AddError($"元素 '{el.displayName}' 引用了未定义的变量'{cond.variableName}'");
+            }
+        }
+        foreach (var actor in environmentActors ?? new List<EnvironmentActorData>())
+        {
+            if (actor == null) continue;
+            var conditions = new List<LevelVariableCondition>();
+            if (actor.activeConditions != null) conditions.AddRange(actor.activeConditions);
+            foreach (var trigger in actor.triggers ?? new List<EnvironmentActorTrigger>())
+                if (trigger?.conditions != null) conditions.AddRange(trigger.conditions);
+            foreach (var cond in conditions)
+                if (cond != null && !string.IsNullOrEmpty(cond.variableName) && !variableNames.Contains(cond.variableName))
+                    result.AddError($"Environment actor '{actor.displayName}' references undefined variable '{cond.variableName}'");
+
+            Animator animator = actor.prefab != null
+                ? actor.prefab.GetComponentInChildren<Animator>(true)
+                : null;
+            var animatorParameters = animator != null
+                ? animator.parameters.ToDictionary(parameter => parameter.name, parameter => parameter.type)
+                : new Dictionary<string, AnimatorControllerParameterType>();
+
+            foreach (var binding in actor.continuousBindings ?? new List<EnvironmentContinuousBinding>())
+            {
+                if (binding == null || string.IsNullOrWhiteSpace(binding.animatorParameter)) continue;
+                if (!animatorParameters.TryGetValue(binding.animatorParameter, out var parameterType) ||
+                    parameterType != AnimatorControllerParameterType.Float)
+                    result.AddError(
+                        $"Environment actor '{actor.displayName}' references missing/non-float Animator parameter '{binding.animatorParameter}'");
+            }
+
+            foreach (var action in EnumerateEnvironmentActions(actor))
+            {
+                if (action.actionType == EnvironmentActionType.SetLevelVariable &&
+                    !string.IsNullOrWhiteSpace(action.name) && !variableNames.Contains(action.name))
+                    result.AddError(
+                        $"Environment actor '{actor.displayName}' action references undefined variable '{action.name}'");
+
+                AnimatorControllerParameterType? expectedType = null;
+                switch (action.actionType)
+                {
+                    case EnvironmentActionType.SetAnimatorFloat:
+                        expectedType = AnimatorControllerParameterType.Float;
+                        break;
+                    case EnvironmentActionType.SetAnimatorBool:
+                        expectedType = AnimatorControllerParameterType.Bool;
+                        break;
+                    case EnvironmentActionType.SetAnimatorTrigger:
+                        expectedType = AnimatorControllerParameterType.Trigger;
+                        break;
+                }
+                if (expectedType.HasValue &&
+                    (!animatorParameters.TryGetValue(action.name ?? "", out var actualType) ||
+                     actualType != expectedType.Value))
+                    result.AddError(
+                        $"Environment actor '{actor.displayName}' references missing/wrong-type Animator parameter '{action.name}'");
             }
         }
         foreach (var cond in endConditions)
@@ -658,6 +988,11 @@ public class LevelData : ScriptableObject
                             result.AddError(
                                 $"Story cast slot '{requiredSlot.scriptId}/{requiredSlot.slotId}' " +
                                 $"references unknown element '{binding.elementId}'");
+                        else if (binding.targetType == PerformanceActorTargetType.EnvironmentActor &&
+                                 !environmentActorIds.Contains(binding.environmentActorId))
+                            result.AddError(
+                                $"Story cast slot '{requiredSlot.scriptId}/{requiredSlot.slotId}' " +
+                                $"references unknown environment actor '{binding.environmentActorId}'");
                     }
                 }
                 else if (step.stepType == LevelFlowStepType.PlayStory && step.storyPerformanceCues != null)
@@ -696,6 +1031,9 @@ public class LevelData : ScriptableObject
                             else if (binding.targetType == PerformanceActorTargetType.LevelElement &&
                                      !elementIds.Contains(binding.elementId))
                                 result.AddError($"Performance cue slot '{slotId}' references unknown element '{binding.elementId}'");
+                            else if (binding.targetType == PerformanceActorTargetType.EnvironmentActor &&
+                                     !environmentActorIds.Contains(binding.environmentActorId))
+                                result.AddError($"Performance cue slot '{slotId}' references unknown environment actor '{binding.environmentActorId}'");
                         }
                         ValidatePerformanceClips(result, script, slotIds);
                     }
@@ -716,6 +1054,43 @@ public class LevelData : ScriptableObject
         if (backgroundSettings == null)
         {
             result.AddWarning("没有配置背景图");
+        }
+        else if (backgroundSettings.layers != null)
+        {
+            if (backgroundSettings.layers.Count == 0)
+                result.AddWarning("No background layers are configured");
+
+            var layerIds = new HashSet<string>();
+            foreach (var layer in backgroundSettings.layers)
+            {
+                if (layer == null) continue;
+                if (string.IsNullOrWhiteSpace(layer.layerId) || !layerIds.Add(layer.layerId))
+                    result.AddError("Background layer IDs must be non-empty and unique");
+                if (layer.scale.x == 0f || layer.scale.y == 0f)
+                    result.AddError($"Background layer '{layer.displayName}' has a zero scale");
+                if (layer.SortingOrder < short.MinValue || layer.SortingOrder > short.MaxValue)
+                    result.AddError($"Background layer '{layer.displayName}' has an out-of-range sorting order");
+                if (layer.contentType == BackgroundLayerContentType.SequentialTiles)
+                {
+                    if (layer.sequence == null || layer.sequence.Count == 0)
+                        result.AddError($"Background layer '{layer.displayName}' has no sequence tiles");
+                    else if (layer.sequence.Any(entry => entry == null || entry.sprite == null || entry.repeatCount < 1))
+                        result.AddError($"Background layer '{layer.displayName}' has an invalid sequence tile");
+                }
+                else if (layer.sprite == null)
+                {
+                    result.AddError($"Background layer '{layer.displayName}' has no sprite");
+                }
+                else if (layer.contentType == BackgroundLayerContentType.RepeatedSprite &&
+                         layer.sprite.bounds.size.x * Mathf.Abs(layer.scale.x) <= Mathf.Epsilon)
+                {
+                    result.AddError($"Repeated background layer '{layer.displayName}' has an invalid repeat width");
+                }
+
+                if (layer.contentType != BackgroundLayerContentType.RepeatedSprite &&
+                    !Mathf.Approximately(layer.horizontalScrollSpeed, 0f))
+                    result.AddError($"Scrolling background layer '{layer.displayName}' must use repeated content");
+            }
         }
         else if (backgroundSettings.mode == BackgroundMode.SingleInfiniteScroll)
         {

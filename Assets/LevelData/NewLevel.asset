@@ -18,10 +18,17 @@ MonoBehaviour:
   playerPrefab: {fileID: 1743930696149737694, guid: 77103445a5cb7cb40ace3957835b2f01, type: 3}
   backgroundSettings:
     mode: 0
+    constrainCameraToBounds: 0
+    cameraBoundsStartX: 0
+    cameraBoundsEndX: 50
     singleBackground: {fileID: -9084149176029018482, guid: fcb81f9c453a6194eb812cfe80ac00ea, type: 3}
     singleParallaxFactor: 0
     singleSortingOrder: -10000
     parallaxLayers: []
+    sequenceStartX: 0
+    sequenceCenterY: 0
+    sequenceSortingOrder: -10000
+    sequence: []
   playerSpawnPosition: {x: 0.12, y: -4.49}
   playerFaceRight: 1
   useCustomInitialCameraPosition: 1
@@ -134,34 +141,71 @@ MonoBehaviour:
     - 8d0a3707-6189-4962-93a1-06711b2281be
     appearConditions: []
     customParameters: []
-  storyTriggers:
-  - triggerMode: 2
+  storyTriggers: []
+  events:
+  - flowId: legacy_story_1_story_20260705_031436
+    triggerMode: 2
     positionX: 3.12
-    storyId: story_20260705_031436
-    triggerOnce: 1
     triggerFromLeft: 1
+    triggerOnce: 1
     triggerConditions: []
-    onStoryStartSetVariables: []
-    onStoryCompleteSetVariables: []
-  - triggerMode: 1
+    steps:
+    - stepType: 6
+      duration: 1
+      targetPosition: {x: 0, y: 0}
+      speed: 3
+      tolerance: 0.05
+      easing: 1
+      setVariable:
+        variableName: 
+        stringValue: 
+      storyId: story_20260705_031436
+      storyCastBindings: []
+      storyPerformanceScripts: []
+      storyPerformanceCues: []
+  - flowId: legacy_story_2_story_20260705_203156
+    triggerMode: 1
     positionX: 3.12
-    storyId: story_20260705_203156
-    triggerOnce: 1
     triggerFromLeft: 1
+    triggerOnce: 1
     triggerConditions:
     - variableName: level1
       mode: 0
       compareValue: true
-    onStoryStartSetVariables: []
-    onStoryCompleteSetVariables: []
-  - triggerMode: 3
+    steps:
+    - stepType: 6
+      duration: 1
+      targetPosition: {x: 0, y: 0}
+      speed: 3
+      tolerance: 0.05
+      easing: 1
+      setVariable:
+        variableName: 
+        stringValue: 
+      storyId: story_20260705_203156
+      storyCastBindings: []
+      storyPerformanceScripts: []
+      storyPerformanceCues: []
+  - flowId: legacy_story_3_story_20260705_203207
+    triggerMode: 3
     positionX: 3.12
-    storyId: story_20260705_203207
-    triggerOnce: 1
     triggerFromLeft: 1
+    triggerOnce: 1
     triggerConditions: []
-    onStoryStartSetVariables: []
-    onStoryCompleteSetVariables: []
+    steps:
+    - stepType: 6
+      duration: 1
+      targetPosition: {x: 0, y: 0}
+      speed: 3
+      tolerance: 0.05
+      easing: 1
+      setVariable:
+        variableName: 
+        stringValue: 
+      storyId: story_20260705_203207
+      storyCastBindings: []
+      storyPerformanceScripts: []
+      storyPerformanceCues: []
   groups:
   - groupId: 79024b4b-19d7-4493-82c6-2fbad067f18b
     groupName: "\u7B2C1\u7EC4"

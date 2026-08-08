@@ -61,14 +61,11 @@ public class LevelUI : MonoBehaviour
 
     public void OnRestartButtonClicked()
     {
-        Time.timeScale = 1f;
-        UnityEngine.SceneManagement.SceneManager.LoadScene(
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+        GameFlowService.RestartLastGameplayScene();
     }
 
     public void OnMainMenuButtonClicked()
     {
-        Time.timeScale = 1f;
-        UnityEngine.SceneManagement.SceneManager.LoadScene(0);
+        GameFlowService.ReturnToMainMenu();
     }
 }

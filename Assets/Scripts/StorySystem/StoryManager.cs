@@ -775,11 +775,19 @@ public class StoryManager : MonoBehaviour
                 break;
 
             case StoryResultAction.ActionType.GameOver:
-                // TODO: Phase 3 — 通过 LevelSceneBuilder 触发关卡失败
+                var levelBuilder = FindObjectOfType<LevelSceneBuilder>();
+                if (levelBuilder != null)
+                    levelBuilder.FailLevel();
+                else
+                    GameFlowService.LoadGameOver();
                 break;
 
             case StoryResultAction.ActionType.LevelComplete:
-                // TODO: Phase 3 — 通过 LevelSceneBuilder 触发关卡完成
+                var completionBuilder = FindObjectOfType<LevelSceneBuilder>();
+                if (completionBuilder != null)
+                    completionBuilder.CompleteLevel();
+                else
+                    GameFlowService.LoadGameClear();
                 break;
 
             case StoryResultAction.ActionType.LoadScene:

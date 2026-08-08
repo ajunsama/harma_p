@@ -23,6 +23,7 @@ public static class LevelDataJsonUtility
 [Serializable]
 public class LevelDataDto
 {
+    public int schemaVersion = 2;
     public string levelName;
     public int difficulty;
     public float levelLength;
@@ -49,9 +50,11 @@ public class LevelDataDto
     public float backgroundSequenceCenterY;
     public int backgroundSequenceSortingOrder;
     public List<BackgroundSequenceEntryDto> backgroundSequence = new List<BackgroundSequenceEntryDto>();
+    public List<BackgroundLayerDto> backgroundLayers = new List<BackgroundLayerDto>();
 
     public List<VariableDto> variables = new List<VariableDto>();
     public List<ElementDto> elements = new List<ElementDto>();
+    public List<EnvironmentActorDto> environmentActors = new List<EnvironmentActorDto>();
     public List<StoryTriggerDto> storyTriggers = new List<StoryTriggerDto>();
     public List<GroupDto> groups = new List<GroupDto>();
     public List<FlowDto> events = new List<FlowDto>();
@@ -74,6 +77,34 @@ public class LevelDataDto
     }
 
     [Serializable]
+    public class BackgroundLayerDto
+    {
+        public string id;
+        public string name;
+        public string depthBand;
+        public string contentType;
+        public string spriteGuid;
+        public List<BackgroundSequenceEntryDto> sequence = new List<BackgroundSequenceEntryDto>();
+        public float originX, originY;
+        public float scaleX = 1f, scaleY = 1f;
+        public Color color = Color.white;
+        public int sortingOffset;
+        public float nearMotionMultiplier;
+        public bool enableVerticalMotion;
+        public float verticalMotionMultiplier;
+        public float horizontalScrollSpeed;
+    }
+
+    [Serializable]
+    public class CustomParameterDto
+    {
+        public string componentTypeName;
+        public string fieldName;
+        public string valueTypeName;
+        public string serializedValue;
+    }
+
+    [Serializable]
     public class ElementDto
     {
         public string id;
@@ -86,6 +117,56 @@ public class LevelDataDto
         public string groupId;
         public List<string> groupIds = new List<string>();
         public List<ConditionDto> conditions = new List<ConditionDto>();
+        public List<CustomParameterDto> customParameters = new List<CustomParameterDto>();
+    }
+
+    [Serializable]
+    public class EnvironmentContinuousBindingDto
+    {
+        public string source;
+        public string animatorParameter;
+        public float inputMin, inputMax, outputMin, outputMax;
+        public bool clamp;
+    }
+
+    [Serializable]
+    public class EnvironmentActionDto
+    {
+        public string actionType;
+        public string name;
+        public string stringValue;
+        public float floatValue;
+        public bool boolValue;
+        public bool loop;
+        public int animationTrack;
+    }
+
+    [Serializable]
+    public class EnvironmentTriggerDto
+    {
+        public string triggerType;
+        public float minValue, maxValue;
+        public string signalId;
+        public bool triggerOnce;
+        public List<ConditionDto> conditions = new List<ConditionDto>();
+        public List<EnvironmentActionDto> onEnterActions = new List<EnvironmentActionDto>();
+        public List<EnvironmentActionDto> onExitActions = new List<EnvironmentActionDto>();
+    }
+
+    [Serializable]
+    public class EnvironmentActorDto
+    {
+        public string id;
+        public string name;
+        public string prefabGuid;
+        public float posX, posY;
+        public bool faceRight;
+        public string depthBand;
+        public int sortingOffset;
+        public List<ConditionDto> activeConditions = new List<ConditionDto>();
+        public List<CustomParameterDto> customParameters = new List<CustomParameterDto>();
+        public List<EnvironmentContinuousBindingDto> continuousBindings = new List<EnvironmentContinuousBindingDto>();
+        public List<EnvironmentTriggerDto> triggers = new List<EnvironmentTriggerDto>();
     }
 
     [Serializable]
@@ -178,6 +259,7 @@ public class LevelDataDto
         public string slotId;
         public string targetType;
         public string elementId;
+        public string environmentActorId;
         public string idleAnimationOverride;
         public string moveAnimationOverride;
     }
@@ -185,6 +267,7 @@ public class LevelDataDto
     public static LevelDataDto FromLevelData(LevelData ld)
     {
         ld.MigrateLegacyStoryTriggers();
+        ld.MigrateLegacyBackground();
         var d = new LevelDataDto
         {
             levelName = ld.levelName,
@@ -228,6 +311,36 @@ public class LevelDataDto
             }
         }
 
+        foreach (var layer in ld.backgroundSettings.layers ?? new List<BackgroundLayerData>())
+        {
+            if (layer == null) continue;
+            var layerDto = new BackgroundLayerDto
+            {
+                id = layer.layerId,
+                name = layer.displayName,
+                depthBand = layer.depthBand.ToString(),
+                contentType = layer.contentType.ToString(),
+                spriteGuid = AssetGuid(layer.sprite),
+                originX = layer.origin.x,
+                originY = layer.origin.y,
+                scaleX = layer.scale.x,
+                scaleY = layer.scale.y,
+                color = layer.color,
+                sortingOffset = layer.sortingOffset,
+                nearMotionMultiplier = layer.nearMotionMultiplier,
+                enableVerticalMotion = layer.enableVerticalMotion,
+                verticalMotionMultiplier = layer.verticalMotionMultiplier,
+                horizontalScrollSpeed = layer.horizontalScrollSpeed
+            };
+            foreach (var entry in layer.sequence ?? new List<BackgroundSequenceEntry>())
+                layerDto.sequence.Add(new BackgroundSequenceEntryDto
+                {
+                    spriteGuid = AssetGuid(entry?.sprite),
+                    repeatCount = entry?.repeatCount ?? 1
+                });
+            d.backgroundLayers.Add(layerDto);
+        }
+
         foreach (var v in ld.variables)
             d.variables.Add(new VariableDto { name = v.variableName, type = v.type.ToString(), defaultValue = v.defaultValue, description = v.description });
 
@@ -245,8 +358,50 @@ public class LevelDataDto
                 prefabGuid = guid, posX = el.position.x, posY = el.position.y,
                 faceRight = el.faceRight, delay = el.appearDelay, groupId = el.groupId,
                 groupIds = el.groupIds != null ? new List<string>(el.groupIds) : new List<string>(),
-                conditions = conds
+                conditions = conds,
+                customParameters = ToCustomParameterDtos(el.customParameters)
             });
+        }
+
+        foreach (var actor in ld.environmentActors ?? new List<EnvironmentActorData>())
+        {
+            if (actor == null) continue;
+            var actorDto = new EnvironmentActorDto
+            {
+                id = actor.actorId,
+                name = actor.displayName,
+                prefabGuid = AssetGuid(actor.prefab),
+                posX = actor.position.x,
+                posY = actor.position.y,
+                faceRight = actor.faceRight,
+                depthBand = actor.depthBand.ToString(),
+                sortingOffset = actor.sortingOffset,
+                activeConditions = ToConditionDtos(actor.activeConditions),
+                customParameters = ToCustomParameterDtos(actor.customParameters)
+            };
+            foreach (var binding in actor.continuousBindings ?? new List<EnvironmentContinuousBinding>())
+            {
+                if (binding == null) continue;
+                actorDto.continuousBindings.Add(new EnvironmentContinuousBindingDto
+                {
+                    source = binding.source.ToString(), animatorParameter = binding.animatorParameter,
+                    inputMin = binding.inputMin, inputMax = binding.inputMax,
+                    outputMin = binding.outputMin, outputMax = binding.outputMax, clamp = binding.clamp
+                });
+            }
+            foreach (var trigger in actor.triggers ?? new List<EnvironmentActorTrigger>())
+            {
+                if (trigger == null) continue;
+                actorDto.triggers.Add(new EnvironmentTriggerDto
+                {
+                    triggerType = trigger.triggerType.ToString(), minValue = trigger.minValue,
+                    maxValue = trigger.maxValue, signalId = trigger.signalId,
+                    triggerOnce = trigger.triggerOnce, conditions = ToConditionDtos(trigger.conditions),
+                    onEnterActions = ToEnvironmentActionDtos(trigger.onEnterActions),
+                    onExitActions = ToEnvironmentActionDtos(trigger.onExitActions)
+                });
+            }
+            d.environmentActors.Add(actorDto);
         }
 
         foreach (var st in ld.storyTriggers)
@@ -319,6 +474,7 @@ public class LevelDataDto
                                     slotId = binding.slotId,
                                     targetType = binding.targetType.ToString(),
                                     elementId = binding.elementId,
+                                    environmentActorId = binding.environmentActorId,
                                     idleAnimationOverride = binding.idleAnimationOverride,
                                     moveAnimationOverride = binding.moveAnimationOverride
                                 });
@@ -349,6 +505,7 @@ public class LevelDataDto
                                             slotId = binding.slotId,
                                             targetType = binding.targetType.ToString(),
                                             elementId = binding.elementId,
+                                            environmentActorId = binding.environmentActorId,
                                             idleAnimationOverride = binding.idleAnimationOverride,
                                             moveAnimationOverride = binding.moveAnimationOverride
                                         });
@@ -411,6 +568,45 @@ public class LevelDataDto
                 });
             }
         }
+        ld.backgroundSettings.layers = new List<BackgroundLayerData>();
+        if (backgroundLayers != null && backgroundLayers.Count > 0)
+        {
+            foreach (var dto in backgroundLayers)
+            {
+                if (dto == null) continue;
+                var layer = new BackgroundLayerData
+                {
+                    layerId = dto.id,
+                    displayName = dto.name,
+                    depthBand = ParseEnum(dto.depthBand, BackgroundDepthBand.Mid),
+                    contentType = ParseEnum(dto.contentType, BackgroundLayerContentType.SingleSprite),
+                    sprite = LoadAsset<Sprite>(dto.spriteGuid),
+                    origin = new Vector2(dto.originX, dto.originY),
+                    scale = new Vector2(dto.scaleX == 0f ? 1f : dto.scaleX, dto.scaleY == 0f ? 1f : dto.scaleY),
+                    color = dto.color,
+                    sortingOffset = dto.sortingOffset,
+                    nearMotionMultiplier = dto.nearMotionMultiplier,
+                    enableVerticalMotion = dto.enableVerticalMotion,
+                    verticalMotionMultiplier = dto.verticalMotionMultiplier,
+                    horizontalScrollSpeed = dto.horizontalScrollSpeed,
+                    sequence = new List<BackgroundSequenceEntry>()
+                };
+                foreach (var entry in dto.sequence ?? new List<BackgroundSequenceEntryDto>())
+                    if (entry != null)
+                        layer.sequence.Add(new BackgroundSequenceEntry
+                        {
+                            sprite = LoadAsset<Sprite>(entry.spriteGuid),
+                            repeatCount = Mathf.Max(1, entry.repeatCount)
+                        });
+                ld.backgroundSettings.layers.Add(layer);
+            }
+            ld.backgroundSettings.dataVersion = BackgroundSettings.CurrentDataVersion;
+        }
+        else
+        {
+            ld.backgroundSettings.dataVersion = 0;
+            ld.backgroundSettings.MigrateLegacyData();
+        }
 
         ld.variables.Clear();
         if (variables != null)
@@ -433,9 +629,53 @@ public class LevelDataDto
                     position = new Vector2(e.posX, e.posY), faceRight = e.faceRight,
                     appearDelay = e.delay, groupId = e.groupId,
                     groupIds = e.groupIds != null ? new List<string>(e.groupIds) : new List<string>(),
-                    appearConditions = conds
+                    appearConditions = conds,
+                    customParameters = FromCustomParameterDtos(e.customParameters)
                 });
             }
+
+        if (ld.environmentActors == null) ld.environmentActors = new List<EnvironmentActorData>();
+        ld.environmentActors.Clear();
+        foreach (var dto in environmentActors ?? new List<EnvironmentActorDto>())
+        {
+            if (dto == null) continue;
+            var actor = new EnvironmentActorData
+            {
+                actorId = dto.id,
+                displayName = dto.name,
+                prefab = LoadAsset<GameObject>(dto.prefabGuid),
+                position = new Vector2(dto.posX, dto.posY),
+                faceRight = dto.faceRight,
+                depthBand = ParseEnum(dto.depthBand, BackgroundDepthBand.Mid),
+                sortingOffset = dto.sortingOffset,
+                activeConditions = FromConditionDtos(dto.activeConditions),
+                customParameters = FromCustomParameterDtos(dto.customParameters)
+            };
+            foreach (var binding in dto.continuousBindings ?? new List<EnvironmentContinuousBindingDto>())
+                if (binding != null)
+                    actor.continuousBindings.Add(new EnvironmentContinuousBinding
+                    {
+                        source = ParseEnum(binding.source, EnvironmentContinuousSource.PlayerX),
+                        animatorParameter = binding.animatorParameter,
+                        inputMin = binding.inputMin, inputMax = binding.inputMax,
+                        outputMin = binding.outputMin, outputMax = binding.outputMax,
+                        clamp = binding.clamp
+                    });
+            foreach (var triggerDto in dto.triggers ?? new List<EnvironmentTriggerDto>())
+            {
+                if (triggerDto == null) continue;
+                actor.triggers.Add(new EnvironmentActorTrigger
+                {
+                    triggerType = ParseEnum(triggerDto.triggerType, EnvironmentTriggerType.PlayerXRange),
+                    minValue = triggerDto.minValue, maxValue = triggerDto.maxValue,
+                    signalId = triggerDto.signalId, triggerOnce = triggerDto.triggerOnce,
+                    conditions = FromConditionDtos(triggerDto.conditions),
+                    onEnterActions = FromEnvironmentActionDtos(triggerDto.onEnterActions),
+                    onExitActions = FromEnvironmentActionDtos(triggerDto.onExitActions)
+                });
+            }
+            ld.environmentActors.Add(actor);
+        }
 
         ld.storyTriggers.Clear();
         if (storyTriggers != null)
@@ -547,6 +787,7 @@ public class LevelDataDto
                                         : (PerformanceActorTargetType)Enum.Parse(
                                             typeof(PerformanceActorTargetType), bindingDto.targetType),
                                     elementId = bindingDto.elementId,
+                                    environmentActorId = bindingDto.environmentActorId,
                                     idleAnimationOverride = bindingDto.idleAnimationOverride,
                                     moveAnimationOverride = bindingDto.moveAnimationOverride
                                 });
@@ -577,6 +818,7 @@ public class LevelDataDto
                                                 ? PerformanceActorTargetType.Player
                                                 : (PerformanceActorTargetType)Enum.Parse(typeof(PerformanceActorTargetType), bindingDto.targetType),
                                             elementId = bindingDto.elementId,
+                                            environmentActorId = bindingDto.environmentActorId,
                                             idleAnimationOverride = bindingDto.idleAnimationOverride,
                                             moveAnimationOverride = bindingDto.moveAnimationOverride
                                         });
@@ -589,6 +831,115 @@ public class LevelDataDto
             }
 
         ld.MigrateLegacyStoryTriggers();
+    }
+
+    static T LoadAsset<T>(string guid) where T : UnityEngine.Object
+    {
+        return !string.IsNullOrEmpty(guid)
+            ? AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(guid))
+            : null;
+    }
+
+    static T ParseEnum<T>(string value, T fallback) where T : struct
+    {
+        return !string.IsNullOrEmpty(value) && Enum.TryParse(value, out T parsed)
+            ? parsed
+            : fallback;
+    }
+
+    static List<LevelVariableCondition> FromConditionDtos(List<ConditionDto> conditions)
+    {
+        var result = new List<LevelVariableCondition>();
+        foreach (var condition in conditions ?? new List<ConditionDto>())
+            if (condition != null)
+                result.Add(new LevelVariableCondition
+                {
+                    variableName = condition.variable,
+                    mode = ParseEnum(condition.mode, LevelVariableCondition.CompareMode.Equals),
+                    compareValue = condition.value
+                });
+        return result;
+    }
+
+    static List<ElementCustomParameter> FromCustomParameterDtos(List<CustomParameterDto> parameters)
+    {
+        var result = new List<ElementCustomParameter>();
+        foreach (var parameter in parameters ?? new List<CustomParameterDto>())
+            if (parameter != null)
+                result.Add(new ElementCustomParameter
+                {
+                    componentTypeName = parameter.componentTypeName,
+                    fieldName = parameter.fieldName,
+                    valueTypeName = parameter.valueTypeName,
+                    serializedValue = parameter.serializedValue
+                });
+        return result;
+    }
+
+    static List<EnvironmentActorAction> FromEnvironmentActionDtos(List<EnvironmentActionDto> actions)
+    {
+        var result = new List<EnvironmentActorAction>();
+        foreach (var action in actions ?? new List<EnvironmentActionDto>())
+            if (action != null)
+                result.Add(new EnvironmentActorAction
+                {
+                    actionType = ParseEnum(action.actionType, EnvironmentActionType.PlayAnimation),
+                    name = action.name, stringValue = action.stringValue,
+                    floatValue = action.floatValue, boolValue = action.boolValue,
+                    loop = action.loop, animationTrack = action.animationTrack
+                });
+        return result;
+    }
+
+    static string AssetGuid(UnityEngine.Object asset)
+    {
+        return asset != null
+            ? AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(asset))
+            : "";
+    }
+
+    static List<ConditionDto> ToConditionDtos(List<LevelVariableCondition> conditions)
+    {
+        var result = new List<ConditionDto>();
+        foreach (var condition in conditions ?? new List<LevelVariableCondition>())
+            if (condition != null)
+                result.Add(new ConditionDto
+                {
+                    variable = condition.variableName,
+                    mode = condition.mode.ToString(),
+                    value = condition.compareValue
+                });
+        return result;
+    }
+
+    static List<CustomParameterDto> ToCustomParameterDtos(List<ElementCustomParameter> parameters)
+    {
+        var result = new List<CustomParameterDto>();
+        foreach (var parameter in parameters ?? new List<ElementCustomParameter>())
+            if (parameter != null)
+                result.Add(new CustomParameterDto
+                {
+                    componentTypeName = parameter.componentTypeName,
+                    fieldName = parameter.fieldName,
+                    valueTypeName = parameter.valueTypeName,
+                    serializedValue = parameter.serializedValue
+                });
+        return result;
+    }
+
+    static List<EnvironmentActionDto> ToEnvironmentActionDtos(List<EnvironmentActorAction> actions)
+    {
+        var result = new List<EnvironmentActionDto>();
+        foreach (var action in actions ?? new List<EnvironmentActorAction>())
+            if (action != null)
+                result.Add(new EnvironmentActionDto
+                {
+                    actionType = action.actionType.ToString(), name = action.name,
+                    stringValue = action.stringValue, floatValue = action.floatValue,
+                    boolValue = action.boolValue, loop = action.loop,
+                    animationTrack = action.animationTrack
+                });
+        return result;
     }
 
     static PerformanceScript FindPerformanceScript(string scriptId)

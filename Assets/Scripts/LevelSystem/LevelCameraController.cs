@@ -110,6 +110,7 @@ public class LevelCameraController : MonoBehaviour
 
     public void LockAt(float x)
     {
+        _flowOverride = false;
         lockPosition = true;
         lockX = x;
         IsLocked = true;
@@ -118,6 +119,11 @@ public class LevelCameraController : MonoBehaviour
             float halfWidth = cam.orthographicSize * cam.aspect;
             UpdateLockedBounds(ClampCameraX(x, halfWidth), halfWidth);
         }
+    }
+
+    public void LockCurrentView()
+    {
+        LockAt(transform.position.x);
     }
 
     public void Unlock()

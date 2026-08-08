@@ -122,7 +122,14 @@ public class PlayerMovement : MonoBehaviour
     void OnMove(InputValue value)
     {
         if (!IsGameplayControlEnabled) return;
+        bool wasMoving = moveInput.sqrMagnitude > 0.0001f;
         moveInput = value.Get<Vector2>();
+        bool isMovingNow = moveInput.sqrMagnitude > 0.0001f;
+        if (wasMoving != isMovingNow)
+            GetComponent<PlayerGameplaySignalHub>()?.Publish(
+                isMovingNow ? PlayerGameplaySignals.MoveStarted : PlayerGameplaySignals.MoveStopped,
+                moveInput.x,
+                gameObject);
     }
 
     public int AcquireControlLock(string owner)
@@ -543,6 +550,7 @@ public class PlayerMovement : MonoBehaviour
         jumpOffset = 0f;
         currentJumpHeight = jumpHeight;
         currentJumpDuration = jumpDuration;
+        GetComponent<PlayerGameplaySignalHub>()?.Publish(PlayerGameplaySignals.JumpStarted, 1f, gameObject);
     }
     
     /// <summary>
@@ -612,6 +620,7 @@ public class PlayerMovement : MonoBehaviour
             rb.position = landedPosition;
             if (groundChecker != null)
                 groundChecker.MovePosition(landedPosition, baseY - transform.localScale.y / 2 + 0.55f);
+            GetComponent<PlayerGameplaySignalHub>()?.Publish(PlayerGameplaySignals.Landed, 1f, gameObject);
         }
         else
         {

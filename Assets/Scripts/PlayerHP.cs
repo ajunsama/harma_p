@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,6 +6,8 @@ using Spine.Unity;                // Spine 动画
 
 public class PlayerHP : MonoBehaviour
 {
+    public event Action<PlayerHP> Died;
+
     [SerializeField] private Slider hpSlider;   // 把 HPBar 拖进来
 
     [SerializeField] private int maxHP = 3;
@@ -62,6 +65,10 @@ public class PlayerHP : MonoBehaviour
             return;
             
         currentHP = Mathf.Max(currentHP - amount, 0);
+        GetComponentInParent<PlayerGameplaySignalHub>()?.Publish(
+            PlayerGameplaySignals.Damaged,
+            amount,
+            gameObject);
         if (hpSlider != null)
             hpSlider.value = currentHP;
 
@@ -134,6 +141,11 @@ public class PlayerHP : MonoBehaviour
         if (isDead) return;
         
         isDead = true;
+        GetComponentInParent<PlayerGameplaySignalHub>()?.Publish(
+            PlayerGameplaySignals.Died,
+            1f,
+            gameObject);
+        Died?.Invoke(this);
         Debug.Log("主角死亡");
 
         // 禁用移动输入和逻辑
