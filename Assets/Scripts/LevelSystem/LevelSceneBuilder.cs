@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Harma.Combat;
 using UnityEngine;
 
 public class LevelSceneBuilder : MonoBehaviour
@@ -18,6 +19,8 @@ public class LevelSceneBuilder : MonoBehaviour
     public UnityEngine.Events.UnityEvent OnLevelReady;
     public UnityEngine.Events.UnityEvent OnLevelComplete;
     public UnityEngine.Events.UnityEvent OnLevelFailed;
+
+    public bool IsLevelReady { get; private set; }
 
     // 内部组件
     private LevelVariableManager _variableManager;
@@ -56,6 +59,7 @@ public class LevelSceneBuilder : MonoBehaviour
 
     void Start()
     {
+        IsLevelReady = false;
         if (levelData == null)
         {
             Debug.LogError("[LevelSceneBuilder] LevelData 为空!");
@@ -94,9 +98,10 @@ public class LevelSceneBuilder : MonoBehaviour
         // 备用：定时检查关卡结束，防止 Update 因异常情况漏检
         StartCoroutine(PeriodicCheckLevelEnd());
 
+        IsLevelReady = true;
         OnLevelReady?.Invoke();
         StartCoroutine(TriggerStoriesByModeNextFrame(StoryTriggerMode.LevelStart));
-        Debug.Log($"[LevelSceneBuilder] 关卡 '{levelData.levelName}' 构建完成");
+        GameLog.Verbose($"[LevelSceneBuilder] 关卡 '{levelData.levelName}' 构建完成");
     }
 
     IEnumerator TriggerStoriesByModeNextFrame(StoryTriggerMode mode)
@@ -426,7 +431,7 @@ public class LevelSceneBuilder : MonoBehaviour
             if (slider != null && slider.gameObject.name == "HPBar")
             {
                 hpSliderField?.SetValue(playerHp, slider);
-                Debug.Log($"[LevelSceneBuilder] 已为玩家绑定 HPBar: {slider.gameObject.name}");
+                GameLog.Verbose($"[LevelSceneBuilder] 已为玩家绑定 HPBar: {slider.gameObject.name}");
                 return;
             }
         }
@@ -565,7 +570,7 @@ public class LevelSceneBuilder : MonoBehaviour
     void TriggerGroup(ElementGroup group)
     {
         _triggeredGroups.Add(group.groupId);
-        Debug.Log($"[LevelSceneBuilder] 触发元素组: {group.groupName}");
+        GameLog.Verbose($"[LevelSceneBuilder] 触发元素组: {group.groupName}");
 
         if (group.mustClearToProceed)
         {
@@ -662,24 +667,10 @@ public class LevelSceneBuilder : MonoBehaviour
 
     void SetPlayerRefOnAI(GameObject go)
     {
-        var ai = go.GetComponent<MuscleP_AI_Movement>();
-        if (ai != null && ai.player == null)
-            ai.player = playerTransform;
-
-        var simpleAi = go.GetComponent<EnemySimpleAI2D>();
-        if (simpleAi != null && simpleAi.player == null)
-            simpleAi.player = playerTransform;
-
-        var punkAi = go.GetComponent<PunkPThrowAttack>();
-        if (punkAi != null && punkAi.player == null)
-            punkAi.player = playerTransform;
-
-        var fatAi = go.GetComponent<FatP_AI_Movement>();
-        if (fatAi != null)
+        foreach (var behaviour in go.GetComponentsInChildren<MonoBehaviour>(true))
         {
-            var playerField = typeof(FatP_AI_Movement).GetField("player", BindingFlags.Public | BindingFlags.Instance);
-            if (playerField != null && playerField.GetValue(fatAi) == null)
-                playerField.SetValue(fatAi, playerTransform);
+            if (behaviour is IPlayerTargetReceiver receiver)
+                receiver.SetPlayerTarget(playerTransform);
         }
     }
 
@@ -795,7 +786,7 @@ public class LevelSceneBuilder : MonoBehaviour
     {
         if (_levelComplete || _levelFailed) return;
         _levelComplete = true;
-        Debug.Log($"[LevelSceneBuilder] 关卡完成!");
+        GameLog.Verbose("[LevelSceneBuilder] 关卡完成!");
         _flowRunner?.TriggerMode(StoryTriggerMode.LevelComplete);
         OnLevelComplete?.Invoke();
 
@@ -813,7 +804,7 @@ public class LevelSceneBuilder : MonoBehaviour
     {
         if (_levelFailed) return;
         _levelFailed = true;
-        Debug.Log($"[LevelSceneBuilder] 关卡失败!");
+        GameLog.Verbose("[LevelSceneBuilder] 关卡失败!");
         OnLevelFailed?.Invoke();
 
         if (_gameOverTransitionCoroutine == null)
@@ -849,7 +840,7 @@ public class LevelSceneBuilder : MonoBehaviour
         _activeLockGroup = null;
         if (_cameraController != null)
             _cameraController.Unlock();
-        Debug.Log("[LevelSceneBuilder] 组内敌人清除，解锁镜头");
+        GameLog.Verbose("[LevelSceneBuilder] 组内敌人清除，解锁镜头");
         ApplyGroupClearedActions(clearedGroup);
     }
 
@@ -984,7 +975,7 @@ public class LevelSceneBuilder : MonoBehaviour
 
         _clearedGroups.Add(group.groupId);
         _variableManager.ApplySetActions(group.onAllEnemiesClearedSetVariables);
-        Debug.Log($"[LevelSceneBuilder] 元素组 '{group.groupName}' 已清空，应用变量变化");
+        GameLog.Verbose($"[LevelSceneBuilder] 元素组 '{group.groupName}' 已清空，应用变量变化");
     }
 
     void ClearAll()

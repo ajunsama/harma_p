@@ -130,7 +130,7 @@ public class EnemyChargeAttack : MonoBehaviour
     {
         // 播放待机动画
         PlayAnimation(idleAnimName, true);
-        Debug.Log($"EnemyChargeAttack: 等待玩家到达 X={triggerXPosition}...");
+        GameLog.Verbose($"EnemyChargeAttack: 等待玩家到达 X={triggerXPosition}...");
         
         // 根据触发方向等待玩家到达
         if (triggerDirection == TriggerDirection.LeftToRight)
@@ -150,7 +150,7 @@ public class EnemyChargeAttack : MonoBehaviour
             }
         }
         
-        Debug.Log("EnemyChargeAttack: 玩家到达触发位置，开始行动！");
+        GameLog.Verbose("EnemyChargeAttack: 玩家到达触发位置，开始行动！");
         
         // 触发后执行行为序列（跳过延迟阶段）
         StartCoroutine(ExecuteBehaviorSequenceNoDelay());
@@ -178,7 +178,7 @@ public class EnemyChargeAttack : MonoBehaviour
         // 4. 完成
         currentState = State.Finished;
         isExecuting = false;
-        Debug.Log("EnemyChargeAttack: 行为序列完成");
+        GameLog.Verbose("EnemyChargeAttack: 行为序列完成");
     }
 
     /// <summary>
@@ -191,7 +191,7 @@ public class EnemyChargeAttack : MonoBehaviour
         // 1. 延迟阶段
         currentState = State.Waiting;
         PlayAnimation(idleAnimName, true);
-        Debug.Log($"EnemyChargeAttack: 等待 {startDelay} 秒...");
+        GameLog.Verbose($"EnemyChargeAttack: 等待 {startDelay} 秒...");
         yield return new WaitForSeconds(startDelay);
 
         // 2. 向左走阶段
@@ -209,7 +209,7 @@ public class EnemyChargeAttack : MonoBehaviour
         // 5. 完成
         currentState = State.Finished;
         isExecuting = false;
-        Debug.Log("EnemyChargeAttack: 行为序列完成");
+        GameLog.Verbose("EnemyChargeAttack: 行为序列完成");
         
         // 可选：冲出屏幕后销毁或禁用对象
         // gameObject.SetActive(false);
@@ -221,7 +221,7 @@ public class EnemyChargeAttack : MonoBehaviour
     /// </summary>
     private IEnumerator WalkLeft()
     {
-        Debug.Log($"EnemyChargeAttack: 开始向左走 {walkDistance} 单位");
+        GameLog.Verbose($"EnemyChargeAttack: 开始向左走 {walkDistance} 单位");
         
         // 确保面向左边
         FaceLeft();
@@ -241,7 +241,7 @@ public class EnemyChargeAttack : MonoBehaviour
 
         // 停止移动
         rb.linearVelocity = Vector2.zero;
-        Debug.Log("EnemyChargeAttack: 走路完成");
+        GameLog.Verbose("EnemyChargeAttack: 走路完成");
     }
 
     /// <summary>
@@ -249,7 +249,7 @@ public class EnemyChargeAttack : MonoBehaviour
     /// </summary>
     private IEnumerator AttackWindup()
     {
-        Debug.Log($"EnemyChargeAttack: 攻击前摇 {attackWindupTime} 秒");
+        GameLog.Verbose($"EnemyChargeAttack: 攻击前摇 {attackWindupTime} 秒");
         
         // 停止移动
         rb.linearVelocity = Vector2.zero;
@@ -262,7 +262,7 @@ public class EnemyChargeAttack : MonoBehaviour
         
         yield return new WaitForSeconds(attackWindupTime);
         
-        Debug.Log("EnemyChargeAttack: 前摇完成，准备冲刺");
+        GameLog.Verbose("EnemyChargeAttack: 前摇完成，准备冲刺");
     }
 
     /// <summary>
@@ -270,7 +270,7 @@ public class EnemyChargeAttack : MonoBehaviour
     /// </summary>
     private IEnumerator ChargeLeft()
     {
-        Debug.Log($"EnemyChargeAttack: 开始冲刺，速度 {chargeSpeed}");
+        GameLog.Verbose($"EnemyChargeAttack: 开始冲刺，速度 {chargeSpeed}");
         
         // 播放攻击动画并固定在某一帧
         if (skeletonAnimation != null)
@@ -318,7 +318,7 @@ public class EnemyChargeAttack : MonoBehaviour
 
         // 停止移动
         rb.linearVelocity = Vector2.zero;
-        Debug.Log("EnemyChargeAttack: 冲刺完成，已到达屏幕外");
+        GameLog.Verbose("EnemyChargeAttack: 冲刺完成，已到达屏幕外");
     }
 
     /// <summary>

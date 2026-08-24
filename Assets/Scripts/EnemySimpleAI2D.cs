@@ -1,8 +1,9 @@
 using System.Collections;
+using Harma.Combat;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class EnemySimpleAI2D : MonoBehaviour
+public class EnemySimpleAI2D : MonoBehaviour, IPlayerTargetReceiver, IEnemyHitReactionReceiver
 {
     [Header("目标")]
     public Transform player;
@@ -29,6 +30,18 @@ public class EnemySimpleAI2D : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+    }
+
+    public void SetPlayerTarget(Transform target)
+    {
+        player = target;
+    }
+
+    public void SetHitReactionActive(bool active)
+    {
+        isKnockedBack = active;
+        if (active && rb != null)
+            rb.linearVelocity = Vector2.zero;
     }
 
     void OnEnable() => StartCoroutine(ThinkLoop());
@@ -127,6 +140,9 @@ public class EnemySimpleAI2D : MonoBehaviour
     // 左右翻转朝向
     void Update()
     {
+        if (player == null)
+            return;
+
         // 只翻转 X 轴方向，保持原有的 scale 大小
         Vector3 scale = transform.localScale;
         if (player.position.x > transform.position.x)

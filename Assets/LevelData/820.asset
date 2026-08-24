@@ -1,0 +1,94 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2eb526b989e8d6b43b8cf14428e0cc84, type: 3}
+  m_Name: 820
+  m_EditorClassIdentifier: Assembly-CSharp::LevelData
+  levelName: 820
+  difficulty: 1
+  levelLength: 50
+  playerPrefab: {fileID: 1743930696149737694, guid: 77103445a5cb7cb40ace3957835b2f01, type: 3}
+  backgroundSettings:
+    dataVersion: 3
+    layers:
+    - layerId: 15529ec6-9bc3-42c6-b741-a4529a443445
+      displayName: "\u8FDC\u666F 1"
+      depthBand: 0
+      contentType: 0
+      sprite: {fileID: 2834588541489862376, guid: 707df613aec1b33469c343561ce7ceec, type: 3}
+      sequence: []
+      origin: {x: 0, y: 0}
+      scale: {x: 1, y: 1}
+      color: {r: 1, g: 1, b: 1, a: 1}
+      sortingOffset: 0
+      nearMotionMultiplier: 1
+      enableVerticalMotion: 1
+      verticalMotionMultiplier: 1
+      autoScrollDirection: 0
+      autoScrollSpeed: 0
+      horizontalScrollSpeed: 0
+    - layerId: f2816841-7d2c-4a5c-8e36-09f4c57b22d9
+      displayName: "\u4E2D\u666F 2"
+      depthBand: 1
+      contentType: 1
+      sprite: {fileID: -9084149176029018482, guid: fcb81f9c453a6194eb812cfe80ac00ea, type: 3}
+      sequence: []
+      origin: {x: 0, y: 0}
+      scale: {x: 1, y: 1}
+      color: {r: 1, g: 1, b: 1, a: 1}
+      sortingOffset: 0
+      nearMotionMultiplier: 1
+      enableVerticalMotion: 0
+      verticalMotionMultiplier: 1
+      autoScrollDirection: 0
+      autoScrollSpeed: 0
+      horizontalScrollSpeed: 0
+    mode: 0
+    constrainCameraToBounds: 0
+    cameraBoundsStartX: 0
+    cameraBoundsEndX: 50
+    singleBackground: {fileID: 0}
+    singleParallaxFactor: 0
+    singleSortingOrder: -10000
+    parallaxLayers: []
+    sequenceStartX: 0
+    sequenceCenterY: 0
+    sequenceSortingOrder: -10000
+    sequence: []
+  playerSpawnPosition: {x: -8, y: -3.5}
+  playerFaceRight: 1
+  useCustomInitialCameraPosition: 0
+  initialCameraPosition: {x: 0, y: 0}
+  cameraDeadZone: 0.2
+  levelEndPositionX: 45
+  endConditions: []
+  variables: []
+  storyCollectionJson: {fileID: 0}
+  elements:
+  - elementId: 546f395e-b9ff-4e76-b22f-5d11127becab
+    displayName: PunkP_Test
+    elementType: 0
+    prefab: {fileID: 3410753177876068644, guid: 58d2df485030bcf4bbdc906332ec6f4e, type: 3}
+    position: {x: 1, y: -3}
+    faceRight: 1
+    appearDelay: 0
+    groupId: 
+    groupIds: []
+    appearConditions: []
+    customParameters: []
+  environmentActors: []
+  storyTriggers: []
+  events: []
+  groups: []
+  enemyPrefabLibrary: []
+  itemPrefabLibrary: []
+  obstaclePrefabLibrary: []
+  environmentActorPrefabLibrary: []

@@ -15,17 +15,15 @@ public class Obstacle : MonoBehaviour
     public bool blocksPlayer = true;
     public bool blocksEnemy;
 
-    void OnCollisionEnter2D(Collision2D collision)
+    public void TakeDamage(float amount)
     {
-        if (obstacleType != ObstacleType.Destructible) return;
+        if (obstacleType != ObstacleType.Destructible || amount <= 0f)
+            return;
 
-        if (collision.gameObject.TryGetComponent<PlayerAttack>(out _))
+        hp -= amount;
+        if (hp <= 0f)
         {
-            hp -= 1f;
-            if (hp <= 0f)
-            {
-                Destroy(gameObject);
-            }
+            Destroy(gameObject);
         }
     }
 }

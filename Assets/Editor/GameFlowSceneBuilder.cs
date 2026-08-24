@@ -16,6 +16,7 @@ public static class GameFlowSceneBuilder
     private const string StartScenePath = "Assets/Scenes/StartGame.unity";
     private const string GameOverScenePath = "Assets/Scenes/GameOver.unity";
     private const string GameClearScenePath = "Assets/Scenes/GameClear.unity";
+    private const string TestSceneRoot = "Assets/Scenes/Tests/";
     private const string ConfigPath = "Assets/Resources/GameFlowConfig.asset";
     private const string ScanlineMaterialPath = "Assets/Materials/RetroScanlineMat.mat";
     private const string EnglishFontPath =
@@ -743,7 +744,6 @@ public static class GameFlowSceneBuilder
         {
             StartScenePath,
             "Assets/Scenes/NewLevel_test.unity",
-            "Assets/Scenes/Bridge_PV.unity",
             GameOverScenePath,
             GameClearScenePath
         };
@@ -761,6 +761,9 @@ public static class GameFlowSceneBuilder
 
         foreach (EditorBuildSettingsScene existing in EditorBuildSettings.scenes)
         {
+            if (existing.path.StartsWith(TestSceneRoot, StringComparison.OrdinalIgnoreCase))
+                continue;
+
             if (seen.Add(existing.path))
                 result.Add(existing);
         }

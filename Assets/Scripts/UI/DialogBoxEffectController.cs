@@ -284,7 +284,7 @@ public class DialogBoxEffectController : MonoBehaviour
 
         float interval = intervalOverride > 0f ? intervalOverride : fadeInInterval;
         float phase2Start = interval * phase1Count + phase1To2Gap;
-        Debug.Log($"[PlayEntrance] fadeInDuration={fadeInDuration:F3}, interval={interval:F3}, phase1Count={phase1Count}, t={Time.unscaledTime:F3}");
+        GameLog.Verbose($"[PlayEntrance] fadeInDuration={fadeInDuration:F3}, interval={interval:F3}, phase1Count={phase1Count}, t={Time.unscaledTime:F3}");
 
         // ---- Phase 1: 从说话者侧依次淡入（色块在最终排列位置，仅 alpha 变化） ----
         // index 0 为左溢出块、index _visibleTileCount-1 为右溢出块，圆心在容器外会被 Mask 裁切
@@ -311,15 +311,8 @@ public class DialogBoxEffectController : MonoBehaviour
             block.color = c;
 
             float delay = interval * i;
-            Debug.Log($"[PlayEntrance] Phase1 block[{i}] blockIdx={blockIdx} delay={delay:F3}s interval={interval:F3}");
+            GameLog.Verbose($"[PlayEntrance] Phase1 block[{i}] blockIdx={blockIdx} delay={delay:F3}s interval={interval:F3}");
             var fadeTween = block.DOFade(1f, fadeInDuration).SetEase(Ease.Linear);
-            if (i == 0)
-            {
-                var b0 = block;
-                fadeTween
-                    .OnStart(() => Debug.Log($"[PlayEntrance] block[0] DOFade OnStart alpha={b0.color.a:F3} t={Time.unscaledTime:F3}"))
-                    .OnComplete(() => Debug.Log($"[PlayEntrance] block[0] DOFade OnComplete alpha={b0.color.a:F3} t={Time.unscaledTime:F3}"));
-            }
             seq.Insert(delay, fadeTween);
 
             // 同步触发外部 callback（字符显示）
@@ -329,7 +322,7 @@ public class DialogBoxEffectController : MonoBehaviour
                 System.Action cb = phase1ShowCallbacks[captured];
                 seq.InsertCallback(delay, () =>
                 {
-                    Debug.Log($"[PlayEntrance] callback触发: char[{captured}] 实际时刻 t={Time.unscaledTime:F3}s");
+                    GameLog.Verbose($"[PlayEntrance] callback触发: char[{captured}] 实际时刻 t={Time.unscaledTime:F3}s");
                     cb();
                 });
             }

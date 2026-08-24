@@ -13,7 +13,18 @@ Shader "UI/BlockColor"
     {
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
+
+        // MaskableGraphic checks the standard Unity UI stencil contract before
+        // creating its runtime material. This shader keeps the custom bit-1
+        // protocol below, but still declares the complete contract so nested
+        // Canvas masks can prepare materials without warnings.
+        [HideInInspector] _StencilComp ("Stencil Comparison", Float) = 8
+        [HideInInspector] _Stencil ("Stencil ID", Float) = 0
+        [HideInInspector] _StencilOp ("Stencil Operation", Float) = 0
+        [HideInInspector] _StencilWriteMask ("Stencil Write Mask", Float) = 255
+        [HideInInspector] _StencilReadMask ("Stencil Read Mask", Float) = 255
         _ColorMask ("Color Mask", Float) = 15
+        [HideInInspector] _UseUIAlphaClip ("Use Alpha Clip", Float) = 0
     }
 
     SubShader

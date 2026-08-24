@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Harma.Combat;
 using UnityEngine;
 using UnityEngine.InputSystem;   // 新 InputSystem 命名空间
 using Spine.Unity;                // Spine 动画
@@ -19,6 +20,11 @@ public class PlayerMovement : MonoBehaviour
     [Header("反弹跳跃")]
     [SerializeField] float bounceHeight = 1.5f;    // 反弹跳跃高度
     [SerializeField] float bounceDuration = 0.4f; // 反弹跳跃持续时间
+
+    [Header("踩踏判定")]
+    [SerializeField, Min(0f)] float stompHorizontalTolerance = 1.2f;
+    [SerializeField, Min(0f)] float stompDepthTolerance = 0.6f;
+    [SerializeField, Min(0f)] float stompHeightTolerance = 0.35f;
 
     [Header("过场准备")]
     [SerializeField, Min(0f), InspectorName("站立过渡时间（秒）")]
@@ -67,11 +73,14 @@ public class PlayerMovement : MonoBehaviour
     float jumpTimer = 0f;       // 跳跃计时器
     float baseY = 0f;           // 基准Y坐标(平地位置,不含跳跃偏移)
     float jumpOffset = 0f;      // 当前跳跃的Y轴偏移量(相对于基准位置)
+    float previousJumpOffset;
     float currentJumpHeight;    // 当前跳跃高度（普通跳或反弹）
     float currentJumpDuration;  // 当前跳跃时长
     float bounceStartOffset = 0f; // 反弹跳跃的起始高度偏移
     float bounceGravity;        // 反弹跳跃的重力
     float bounceVelocity;       // 反弹跳跃的初始速度
+    float skeletonGroundY;
+    bool spineJumpOffsetRegistered;
     
     // 受伤击退状态
     bool isKnockedBack = false;
@@ -99,6 +108,11 @@ public class PlayerMovement : MonoBehaviour
     // 公共属性供外部访问
     public bool IsJumping => isJumping;
     public bool IsKnockedBack => isKnockedBack;
+    public Vector2 GroundPosition => rb != null ? rb.position : (Vector2)transform.position;
+    public float GroundY => baseY;
+    public float JumpHeight => Mathf.Max(0f, jumpOffset);
+    public bool IsFalling => IsDescending();
+    // Kept for existing scene/editor integrations. GroundY is the clearer name.
     public float BaseY => baseY;
     public bool IsSafeForStory =>
         !isJumping &&
@@ -181,7 +195,7 @@ public class PlayerMovement : MonoBehaviour
         tolerance = Mathf.Max(0.001f, tolerance);
         speed = Mathf.Max(0.01f, speed);
         target.x = ClampHorizontalPosition(target.x);
-        Vector2 current = new Vector2(rb.position.x, baseY);
+        Vector2 current = rb.position;
         Vector2 next = Vector2.MoveTowards(current, target, speed * Time.deltaTime);
         Vector2 delta = next - current;
 
@@ -189,7 +203,7 @@ public class PlayerMovement : MonoBehaviour
             lastFaceDir = Mathf.Sign(delta.x);
 
         baseY = next.y;
-        rb.position = new Vector2(next.x, next.y + jumpOffset);
+        rb.position = next;
         isScriptedMoving = true;
         if (!isJumping) PlayAnimation(runAnimName, true);
         ApplyFacing();
@@ -197,7 +211,7 @@ public class PlayerMovement : MonoBehaviour
         if (Vector2.Distance(next, target) > tolerance) return false;
 
         baseY = target.y;
-        rb.position = new Vector2(target.x, target.y + jumpOffset);
+        rb.position = target;
         StopScriptedMovement();
         return true;
     }
@@ -212,7 +226,7 @@ public class PlayerMovement : MonoBehaviour
     {
         position.x = ClampHorizontalPosition(position.x);
         baseY = position.y;
-        jumpOffset = 0f;
+        LandImmediately();
         if (rb != null)
             rb.position = position;
         transform.position = new Vector3(position.x, position.y, transform.position.z);
@@ -267,16 +281,87 @@ public class PlayerMovement : MonoBehaviour
             originalScale.z);
     }
 
+    private void InitializeJumpVisual()
+    {
+        if (skeletonAnimation == null)
+            skeletonAnimation = GetComponent<SkeletonAnimation>();
+        if (skeletonAnimation == null || skeletonAnimation.Skeleton == null)
+            return;
+
+        skeletonGroundY = skeletonAnimation.Skeleton.Y;
+        RegisterSpineJumpOffset();
+        ApplyJumpVisualOffset(skeletonAnimation);
+    }
+
+    private void RegisterSpineJumpOffset()
+    {
+        if (spineJumpOffsetRegistered || skeletonAnimation == null)
+            return;
+
+        skeletonAnimation.UpdateLocal += ApplyJumpVisualOffset;
+        spineJumpOffsetRegistered = true;
+    }
+
+    private void UnregisterSpineJumpOffset()
+    {
+        if (!spineJumpOffsetRegistered || skeletonAnimation == null)
+            return;
+
+        skeletonAnimation.UpdateLocal -= ApplyJumpVisualOffset;
+        spineJumpOffsetRegistered = false;
+    }
+
+    private void ApplyJumpVisualOffset(Spine.Unity.ISkeletonAnimation animated)
+    {
+        if (animated?.Skeleton != null)
+        {
+            float skeletonJumpHeight = WorldHeightToSkeletonUnits(
+                skeletonAnimation != null ? skeletonAnimation.transform : transform,
+                Mathf.Max(0f, jumpOffset));
+            animated.Skeleton.Y = skeletonGroundY + skeletonJumpHeight;
+        }
+    }
+
+    private static float WorldHeightToSkeletonUnits(
+        Transform skeletonTransform,
+        float worldHeight)
+    {
+        float safeHeight = Mathf.Max(0f, worldHeight);
+        if (skeletonTransform == null)
+            return safeHeight;
+
+        // Skeleton.X/Y are expressed before the GameObject transform scale.
+        // Convert the gameplay height (world units) back to skeleton-local
+        // units so scaled characters keep the authored jump height.
+        return skeletonTransform
+            .InverseTransformVector(Vector3.up * safeHeight)
+            .y;
+    }
+
+    public void LandImmediately()
+    {
+        isJumping = false;
+        isBouncing = false;
+        jumpTimer = 0f;
+        jumpOffset = 0f;
+        previousJumpOffset = 0f;
+        bounceStartOffset = 0f;
+        canJumpAttack = true;
+
+        if (skeletonAnimation != null && skeletonAnimation.Skeleton != null)
+            skeletonAnimation.Skeleton.Y = skeletonGroundY;
+    }
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         originalScale = transform.localScale;   // 开局拍一张"标准照"
-        // playerAttack = GetComponent<PlayerAttack>(); // 已移除
     }
 
     void Start()
     {
         baseY = transform.position.y;
+        InitializeJumpVisual();
 
         // 从 LevelManager 获取边界
         if (LevelManager.Instance != null)
@@ -398,32 +483,12 @@ public class PlayerMovement : MonoBehaviour
 
         if (!IsGameplayControlEnabled || isScriptedMoving)
         {
-            // A control lock only disables gameplay input. Existing jump/bounce
-            // simulation must still be applied to the rigidbody so the player
-            // can visibly finish the trajectory before a story starts.
-            if (!isScriptedMoving && isJumping)
-            {
-                Vector2 lockedPos = rb.position;
-                lockedPos.x = ClampHorizontalPosition(lockedPos.x);
-                lockedPos.y = baseY + jumpOffset;
-                rb.MovePosition(lockedPos);
-                if (groundChecker != null)
-                    groundChecker.MovePosition(lockedPos, baseY - transform.localScale.y / 2 + 0.55f);
-            }
+            // Input locks stop planar movement only. Jump height is simulated
+            // independently in Update and never changes the ground body.
             return;
         }
-        
-        // 检查是否在攻击中，如果在攻击中则不移动
-        // bool canMove = playerAttack == null || !playerAttack.IsAttacking; // 已移除
-        bool canMove = true;
-        
-        if (!canMove)
-        {
-            // 攻击中不移动，保持当前位置
-            return;
-        }
-        
-        // 处理上下左右移动，更新基准位置
+
+        // X/Y 始终表示地面平面。跳跃高度不参与 Rigidbody2D 位移。
         Vector2 velocity = new Vector2(
             moveInput.x * horizontalSpeed,
             moveInput.y * verticalSpeed);
@@ -446,28 +511,12 @@ public class PlayerMovement : MonoBehaviour
         // 战斗锁屏时限制玩家在相机视野内
 
         Vector2 pos = rb.position + velocity * Time.fixedDeltaTime;
-        if (isJumping)
-        {
-            // 跳跃中：更新基准位置，限制在边界内
-            baseY += velocity.y * Time.fixedDeltaTime;
-            baseY = Mathf.Clamp(baseY, bottomBound, topBound);
-            // 实际位置 = 基准位置 + 跳跃偏移
-            pos = new Vector2(pos.x, baseY + jumpOffset);
-
-            pos.x = Mathf.Clamp(pos.x, effectiveLeftBound, effectiveRightBound);
-            pos.y = Mathf.Max(pos.y, bottomBound); // 只限制下边界
-        }
-        else
-        {
-            // 非跳跃：正常移动，左右基于屏幕，上下基于地图
-            pos.x = Mathf.Clamp(pos.x, effectiveLeftBound, effectiveRightBound);
-            pos.y = Mathf.Clamp(pos.y, bottomBound, topBound);
-
-            // 更新基准位置
-            baseY = pos.y;
-        }
+        pos.x = Mathf.Clamp(pos.x, effectiveLeftBound, effectiveRightBound);
+        pos.y = Mathf.Clamp(pos.y, bottomBound, topBound);
+        baseY = pos.y;
         rb.MovePosition(pos);
-        groundChecker.MovePosition(pos, baseY - transform.localScale.y / 2 + 0.55f);
+        if (groundChecker != null)
+            groundChecker.MovePosition(pos, baseY - transform.localScale.y / 2 + 0.55f);
     }
 
     void GetEffectiveHorizontalBounds(out float effectiveLeftBound, out float effectiveRightBound)
@@ -502,6 +551,18 @@ public class PlayerMovement : MonoBehaviour
                 effectiveRightBound = fallback;
             }
         }
+    }
+
+    void OnEnable()
+    {
+        if (skeletonAnimation != null && skeletonAnimation.Skeleton != null)
+            RegisterSpineJumpOffset();
+    }
+
+    void OnDisable()
+    {
+        UnregisterSpineJumpOffset();
+        LandImmediately();
     }
 
     float ClampHorizontalPosition(float positionX)
@@ -548,8 +609,9 @@ public class PlayerMovement : MonoBehaviour
         jumpTimer = 0f;
         baseY = rb.position.y; // 记录起跳时的平地位置
         jumpOffset = 0f;
+        previousJumpOffset = 0f;
         currentJumpHeight = jumpHeight;
-        currentJumpDuration = jumpDuration;
+        currentJumpDuration = Mathf.Max(0.01f, jumpDuration);
         GetComponent<PlayerGameplaySignalHub>()?.Publish(PlayerGameplaySignals.JumpStarted, 1f, gameObject);
     }
     
@@ -561,6 +623,7 @@ public class PlayerMovement : MonoBehaviour
         storyStandingPosePrepared = false;
         // 保存当前的跳跃高度偏移，反弹将从这个高度开始
         bounceStartOffset = jumpOffset;
+        previousJumpOffset = jumpOffset;
         
         isJumping = true;
         isBouncing = true;
@@ -573,9 +636,11 @@ public class PlayerMovement : MonoBehaviour
         // 重新计算反弹跳跃的物理参数，使其更自然
         // 使用 bounceHeight 和 bounceDuration 计算重力和初速度
         // g = 8 * h / t^2
-        bounceGravity = 8f * bounceHeight / (bounceDuration * bounceDuration);
+        float safeBounceDuration = Mathf.Max(0.01f, bounceDuration);
+        float safeBounceHeight = Mathf.Max(0.01f, bounceHeight);
+        bounceGravity = 8f * safeBounceHeight / (safeBounceDuration * safeBounceDuration);
         // v0 = 4 * h / t
-        bounceVelocity = 4f * bounceHeight / bounceDuration;
+        bounceVelocity = 4f * safeBounceHeight / safeBounceDuration;
         
         // 计算这次反弹实际需要的时长（因为起始高度 bounceStartOffset 可能不为0）
         // t = (v0 + sqrt(v0^2 + 2gy0)) / g
@@ -589,6 +654,7 @@ public class PlayerMovement : MonoBehaviour
     
     void UpdateJump()
     {
+        previousJumpOffset = jumpOffset;
         jumpTimer += Time.deltaTime;
         
         // 计算跳跃进度 (0 到 1)
@@ -610,16 +676,12 @@ public class PlayerMovement : MonoBehaviour
             }
             jumpTimer = 0f;
             jumpOffset = 0f;  // 重置偏移量
+            previousJumpOffset = 0f;
             bounceStartOffset = 0f; // 重置反弹起始高度
             
             // 重置下落攻击冷却，允许下次跳跃再次攻击
             canJumpAttack = true;
             
-            // 强制修正位置到地面，防止下一帧 FixedUpdate 使用高空坐标
-            Vector2 landedPosition = new Vector2(rb.position.x, baseY);
-            rb.position = landedPosition;
-            if (groundChecker != null)
-                groundChecker.MovePosition(landedPosition, baseY - transform.localScale.y / 2 + 0.55f);
             GetComponent<PlayerGameplaySignalHub>()?.Publish(PlayerGameplaySignals.Landed, 1f, gameObject);
         }
         else
@@ -661,6 +723,15 @@ public class PlayerMovement : MonoBehaviour
             }
         }
     }
+
+    bool IsDescending()
+    {
+        if (!isJumping)
+            return false;
+        if (isBouncing)
+            return bounceVelocity - bounceGravity * jumpTimer <= 0f;
+        return currentJumpDuration > 0f && jumpTimer / currentJumpDuration >= 0.5f;
+    }
     
     // 触发受伤击退（由 PlayerHP 调用，或者碰撞检测调用）
     // sourcePos: 伤害来源位置，如果为 null 则默认向后退
@@ -670,7 +741,9 @@ public class PlayerMovement : MonoBehaviour
             return; // 已经在击退中，不重复触发
 
         storyStandingPosePrepared = false;
-            
+
+        isJumping = false;
+        isBouncing = false;
         isKnockedBack = true;
         knockbackTimer = 0f;
         
@@ -706,18 +779,9 @@ public class PlayerMovement : MonoBehaviour
         knockbackTargetPos.x = Mathf.Clamp(knockbackTargetPos.x, effectiveLeftBound, effectiveRightBound);
         knockbackTargetPos.y = Mathf.Clamp(knockbackTargetPos.y, bottomBound, topBound);
         
-        // 记录基准Y坐标 (重要：防止瞬移到 0)
-        // 如果是在空中被打，baseY 应该保持原来的地面基准，而不是当前的空中Y
-        // 但为了简化，我们假设击退是在当前平面上进行的，或者沿用当前的 baseY
-        // 注意：FixedUpdate 里会用到这个 baseY
-        // 如果当前是跳跃状态，baseY 已经是地面位置了，不需要改
-        // 如果当前是走路状态，baseY 是当前 Y
-        if (!isJumping)
-        {
-            baseY = knockbackStartPos.y;
-        }
+        baseY = knockbackStartPos.y;
         
-        Debug.Log($"触发击退：从 {knockbackStartPos} 到 {knockbackTargetPos}, BaseY: {baseY}");
+        GameLog.Verbose($"触发击退：从 {knockbackStartPos} 到 {knockbackTargetPos}, BaseY: {baseY}");
     }
     
     // 更新击退逻辑
@@ -732,11 +796,14 @@ public class PlayerMovement : MonoBehaviour
             isKnockedBack = false;
             knockbackTimer = 0f;
             jumpOffset = 0f;
+            previousJumpOffset = 0f;
             
             // 设置最终位置
             Vector2 finalPos = knockbackTargetPos;
             rb.MovePosition(finalPos);
-            groundChecker.MovePosition(finalPos, baseY - transform.localScale.y / 2 + 0.55f);
+            baseY = finalPos.y;
+            if (groundChecker != null)
+                groundChecker.MovePosition(finalPos, baseY - transform.localScale.y / 2 + 0.55f);
         }
         else
         {
@@ -746,16 +813,15 @@ public class PlayerMovement : MonoBehaviour
             // 使用抛物线公式计算击退跳跃高度，比线性升降更自然
             jumpOffset = knockbackJumpHeight * 4 * progress * (1 - progress);
             
-            // 应用跳跃偏移
-            currentPos.y = baseY + jumpOffset;
-            
             // 限制位置在边界内
             GetEffectiveHorizontalBounds(out float effectiveLeftBound, out float effectiveRightBound);
             currentPos.x = Mathf.Clamp(currentPos.x, effectiveLeftBound, effectiveRightBound);
-            currentPos.y = Mathf.Max(currentPos.y, bottomBound);
-            
+            currentPos.y = Mathf.Clamp(currentPos.y, bottomBound, topBound);
+            baseY = currentPos.y;
+
             rb.MovePosition(currentPos);
-            groundChecker.MovePosition(currentPos, baseY - transform.localScale.y / 2 + 0.55f);
+            if (groundChecker != null)
+                groundChecker.MovePosition(currentPos, baseY - transform.localScale.y / 2 + 0.55f);
         }
     }
 
@@ -773,114 +839,53 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleCollision(Collider2D other)
     {
-        // 调试日志：打印所有触发对象 (为了避免 Stay 刷屏，可以注释掉或者加限制)
-        // Debug.Log($"[PlayerMovement] 触发 Trigger! 对象: {other.gameObject.name}...");
+        IStompTarget target = FindStompTarget(other);
+        if (target == null || !target.CanReceiveStomp)
+            return;
+        if (!isJumping || !canJumpAttack || !IsDescending())
+            return;
 
-        if (other.CompareTag("Enemy"))
+        Transform targetTransform = target.StompTransform;
+        if (targetTransform == null)
+            return;
+
+        Vector2 targetGroundPosition = targetTransform.position;
+        if (!StompRules.IsPlanarContact(
+                GroundPosition,
+                targetGroundPosition,
+                stompHorizontalTolerance,
+                stompDepthTolerance))
         {
-            // 0. 检查敌人是否处于受击状态
-            Enemy hitEnemy = other.GetComponent<Enemy>();
-            if (hitEnemy != null && hitEnemy.IsHit)
-            {
-                // 敌人正在受击（闪烁/击退中），不造成伤害，也不受到伤害
-                return;
-            }
-
-            // 1. 深度检测 (Y轴检测)
-            // 这是一个横版动作游戏，Y轴代表深度（前后位置）。只有深度相近才算真正接触。
-            // 
-            // 关键点：玩家的"深度"是 baseY（地面位置，不受跳跃影响）
-            // 敌人的"深度"应该使用其 transform.position.y（敌人没有跳跃，position就是地面位置）
-            // 
-            // 之前的问题：使用 bounds.min.y（碰撞体底部）作为敌人深度，
-            // 这会导致只有玩家接触到敌人碰撞体底部时才判定成功。
-            
-            // 获取敌人的深度：使用敌人的 transform.position.y
-            // 这样无论敌人碰撞体怎么设置，深度比较都是基于角色的实际"脚底位置"
-            float enemyDepth = other.transform.position.y;
-            
-            // 获取玩家的脚底位置（baseY 就是玩家的地面深度）
-            float playerDepth = baseY;
-            
-            float depthDiff = Mathf.Abs(playerDepth - enemyDepth);
-            float depthThreshold = 0.6f; // 深度容差：收紧到 0.6 单位，避免隔空判定
-
-            // Debug.Log($"[PlayerMovement] 深度检测: PlayerBaseY={playerDepth:F2}, EnemyPosY={enemyDepth:F2}, Diff={depthDiff:F2}, Threshold={depthThreshold}");
-
-            if (depthDiff > depthThreshold)
-            {
-                // Debug.Log("[PlayerMovement] 深度差距过大，忽略碰撞");
-                return;
-            }
-            
-            // 2. 水平距离检测 (X轴检测)
-            // 碰撞体设置得很大（用于触发检测），但实际伤害判定需要更近的距离
-            // 使用固定的"视觉接触距离"，而不是碰撞体尺寸
-            Collider2D playerCol = GetComponent<Collider2D>();
-            Collider2D enemyCol = other;
-            
-            // 计算两个角色中心点的水平距离
-            float centerDistance = Mathf.Abs(transform.position.x - other.transform.position.x);
-            
-            // 设定一个合理的视觉接触距离（两个角色贴在一起时的中心距离）
-            // 根据角色的实际视觉大小调整，通常角色宽度约 0.5~1.0
-            float visualTouchDistance = 1.2f; // 两个角色中心距离小于 1.2 才算贴近
-            
-            // Debug.Log($"[PlayerMovement] 水平检测: 中心距离={centerDistance:F2}, 视觉接触距离={visualTouchDistance:F2}");
-            
-            if (centerDistance > visualTouchDistance)
-            {
-                // Debug.Log("[PlayerMovement] 水平距离过远，忽略碰撞");
-                return;
-            }
-            
-            // 踩头攻击判定：检测玩家脚底是否高于敌人上半身（放宽判定范围）
-            // 玩家脚底位置：使用碰撞体底部，如果没有碰撞体则用transform位置
-            float playerFeetY = playerCol != null ? playerCol.bounds.min.y : transform.position.y;
-            
-            // 敌人判定高度：改为使用敌人碰撞体的中心位置（即上半身都算踩中）
-            // 这样斜着跳过来碰到胸部也能触发踩踏
-            float enemyStompThreshold = enemyCol.bounds.center.y; 
-            
-            // 踩中判定：玩家脚底高于敌人判定高度
-            bool isStompingHead = playerFeetY >= enemyStompThreshold;
-
-            // 判断是否处于下落阶段
-            bool isFalling = false;
-            if (isBouncing)
-            {
-                // 反弹跳跃：顶点时间是 bounceDuration / 2
-                isFalling = jumpTimer > (bounceDuration / 2f);
-            }
-            else
-            {
-                // 普通跳跃：进度超过 0.5 即为下落
-                isFalling = (jumpTimer / currentJumpDuration) > 0.5f;
-            }
-
-            // 踩头攻击：只要玩家在跳跃状态且脚底高于敌人头部，并且处于下落阶段
-            if (isJumping && isStompingHead && canJumpAttack && isFalling)
-            {
-                // 踩踏攻击成功
-                if (hitEnemy != null)
-                {
-                    hitEnemy.TakeJumpDamage(transform.position);
-                    
-                    // 触发冷却
-                    canJumpAttack = false;
-                    jumpAttackCooldownTimer = jumpAttackCooldown;
-                    
-                    // 触发反弹跳跃
-                    TriggerBounce();
-                }
-                // 踩踏成功后，直接返回，不执行受伤逻辑
-                return;
-            }
-            
-
-            // 玩家主动碰到敌人不算受伤
-            // 玩家受伤逻辑已移至 EnemyAttackCollider，只有敌人主动冲击时才会造成伤害
+            return;
         }
+
+        if (!StompRules.IsStompableHeightWhileDescending(
+                previousJumpOffset,
+                jumpOffset,
+                target.StompHeight,
+                stompHeightTolerance))
+        {
+            return;
+        }
+
+        target.ReceiveStomp(GroundPosition);
+        canJumpAttack = false;
+        jumpAttackCooldownTimer = jumpAttackCooldown;
+        TriggerBounce();
+    }
+
+    static IStompTarget FindStompTarget(Collider2D other)
+    {
+        if (other == null)
+            return null;
+
+        foreach (MonoBehaviour behaviour in other.GetComponentsInParent<MonoBehaviour>(true))
+        {
+            if (behaviour is IStompTarget target)
+                return target;
+        }
+
+        return null;
     }
 
     // System.Collections.IEnumerator KnockbackCoroutine(Vector2 sourcePos) // 已移除，改用 TriggerHitKnockback

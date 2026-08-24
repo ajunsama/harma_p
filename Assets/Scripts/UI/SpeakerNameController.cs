@@ -128,7 +128,7 @@ public class SpeakerNameController : MonoBehaviour
         // 必须归零，让 Sequence 完全接管逐字显示的控制权
         var tmp = CurrentText;
         if (tmp != null) tmp.maxVisibleCharacters = 0;
-        Debug.Log($"[CancelCharReveal] wasActive={wasActive}, maxVisible(before)={maxVis}, maxVisible(after)={CurrentText?.maxVisibleCharacters} t={Time.unscaledTime:F3}");
+        GameLog.Verbose($"[CancelCharReveal] wasActive={wasActive}, maxVisible(before)={maxVis}, maxVisible(after)={CurrentText?.maxVisibleCharacters} t={Time.unscaledTime:F3}");
     }
 
     /// <summary>
@@ -144,7 +144,7 @@ public class SpeakerNameController : MonoBehaviour
             return;
         }
         tmp.maxVisibleCharacters = charIndex + 1;
-        Debug.Log($"[RevealChar] char[{charIndex}] maxVisible={charIndex + 1} text='{tmp.text}' t={Time.unscaledTime:F3}s");
+        GameLog.Verbose($"[RevealChar] char[{charIndex}] maxVisible={charIndex + 1} text='{tmp.text}' t={Time.unscaledTime:F3}s");
     }
 
     public void ApplyStyle(Color shadowColor, float fontSize)
@@ -203,7 +203,7 @@ public class SpeakerNameController : MonoBehaviour
         }
 
         _charRevealCoroutine = StartCoroutine(CharRevealCoroutine(current));
-        Debug.Log($"[ShowImmediate] coroutine启动后 maxVisible={current.maxVisibleCharacters} text='{current.text}' t={Time.unscaledTime:F3}");
+        GameLog.Verbose($"[ShowImmediate] coroutine启动后 maxVisible={current.maxVisibleCharacters} text='{current.text}' t={Time.unscaledTime:F3}");
     }
 
     /// <summary>

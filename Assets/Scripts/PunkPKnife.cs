@@ -48,7 +48,10 @@ public class PunkPKnife : MonoBehaviour
 
     void Update()
     {
-        transform.Translate(moveDirection * speed * Time.deltaTime, Space.World);
+        float step = speed * Time.deltaTime;
+        transform.Translate(moveDirection * step, Space.World);
+        if (hasLaneY)
+            laneY += moveDirection.y * step;
         UpdateSortingOrder();
 
         if (playerCollider != null && IsPlayerOnKnifeLane(playerMovement, playerCollider.transform.position.y))
@@ -82,7 +85,7 @@ public class PunkPKnife : MonoBehaviour
     bool IsPlayerOnKnifeLane(PlayerMovement targetMovement, float fallbackY)
     {
         float compareY = hasLaneY ? laneY : transform.position.y;
-        float playerLaneY = targetMovement != null ? targetMovement.BaseY : fallbackY;
+        float playerLaneY = targetMovement != null ? targetMovement.GroundY : fallbackY;
         return Mathf.Abs(playerLaneY - compareY) <= yHitTolerance;
     }
 
@@ -96,7 +99,7 @@ public class PunkPKnife : MonoBehaviour
 
         if (playerMovement != null)
         {
-            float playerY = playerMovement.BaseY;
+            float playerY = playerMovement.GroundY;
             if (Mathf.Abs(sortingY - playerY) < 0.01f)
                 order = Mathf.RoundToInt(-playerY * 100f) + sortingBaseOrder + 1;
         }

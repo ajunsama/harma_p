@@ -134,7 +134,6 @@ GameObject:
   - component: {fileID: 56514155}
   - component: {fileID: 56514154}
   - component: {fileID: 56514153}
-  - component: {fileID: 56514152}
   - component: {fileID: 56514151}
   - component: {fileID: 56514150}
   - component: {fileID: 56514149}
@@ -186,23 +185,6 @@ MonoBehaviour:
   skeletonAnimation: {fileID: 0}
   hitedAnimName: hited
   dieAnimName: die
---- !u!114 &56514152
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 56514148}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 702e4b81a7a64b14e857450ff3842704, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerAttack
-  attack1Duration: 0.5
-  attack2Duration: 0.5
-  attack3Duration: 0.5
-  comboWindow: 1
-  skeletonAnimation: {fileID: 0}
 --- !u!114 &56514153
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -222,7 +204,13 @@ MonoBehaviour:
   hangTimeFactor: 0.3
   bounceHeight: 1.5
   bounceDuration: 0.5
+  stompHorizontalTolerance: 1.2
+  stompDepthTolerance: 0.6
+  stompHeightTolerance: 0.35
+  storyStandingBlendDuration: 0.15
+  storyStandingDelay: 0.25
   groundChecker: {fileID: 1538403432}
+  boundaryCollider: {fileID: 0}
   skeletonAnimation: {fileID: 56514157}
   idleAnimName: idle
   runAnimName: run
@@ -1044,6 +1032,8 @@ MonoBehaviour:
   backgroundSprite: {fileID: 325643479}
   cameraTransform: {fileID: 291194713}
   fixedY: 0
+  parallaxFactor: 0
+  initialX: 0
   verboseLogging: 1
 --- !u!1 &346919472
 GameObject:
@@ -1194,7 +1184,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 580229311}
-  - component: {fileID: 580229310}
   m_Layer: 0
   m_Name: BattleWaveManager
   m_TagString: Untagged
@@ -1202,37 +1191,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &580229310
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 580229309}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c3fe4ed10b9396a4198d635191fa18d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BattleWaveManager
-  playerTransform: {fileID: 1902002450}
-  currentLevelData: {fileID: 11400000, guid: fd1ca078871a1b9499ed706a843f9b04, type: 2}
-  currentWaveIndex: -1
-  isInBattle: 0
-  remainingEnemies: 0
-  currentBattleLeftBound: 0
-  currentBattleRightBound: 0
-  OnWaveStart:
-    m_PersistentCalls:
-      m_Calls: []
-  OnWaveComplete:
-    m_PersistentCalls:
-      m_Calls: []
-  OnAllWavesComplete:
-    m_PersistentCalls:
-      m_Calls: []
-  OnShowMessage:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!4 &580229311
 Transform:
   m_ObjectHideFlags: 0
@@ -1257,7 +1215,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 861144805}
-  - component: {fileID: 861144804}
   m_Layer: 0
   m_Name: BattleAreaVisualizer
   m_TagString: Untagged
@@ -1265,25 +1222,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &861144804
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 861144803}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 875f7113dbb7caa48a45cbacd504a18d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BattleAreaVisualizer
-  showInEditor: 1
-  showInGame: 0
-  battleAreaColor: {r: 1, g: 0.5, b: 0, a: 0.3}
-  boundaryColor: {r: 1, g: 0, b: 0, a: 0.8}
-  createBoundaryWalls: 1
-  leftWall: {fileID: 0}
-  rightWall: {fileID: 0}
 --- !u!4 &861144805
 Transform:
   m_ObjectHideFlags: 0
@@ -1314,7 +1252,6 @@ GameObject:
   - component: {fileID: 904017080}
   - component: {fileID: 904017079}
   - component: {fileID: 904017078}
-  - component: {fileID: 904017077}
   - component: {fileID: 904017076}
   - component: {fileID: 904017075}
   - component: {fileID: 904017074}
@@ -1366,23 +1303,6 @@ MonoBehaviour:
   skeletonAnimation: {fileID: 0}
   hitedAnimName: hited
   dieAnimName: die
---- !u!114 &904017077
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 904017073}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 702e4b81a7a64b14e857450ff3842704, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerAttack
-  attack1Duration: 0.5
-  attack2Duration: 0.5
-  attack3Duration: 0.5
-  comboWindow: 1
-  skeletonAnimation: {fileID: 0}
 --- !u!114 &904017078
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1402,7 +1322,13 @@ MonoBehaviour:
   hangTimeFactor: 0.3
   bounceHeight: 1.5
   bounceDuration: 0.5
+  stompHorizontalTolerance: 1.2
+  stompDepthTolerance: 0.6
+  stompHeightTolerance: 0.35
+  storyStandingBlendDuration: 0.15
+  storyStandingDelay: 0.25
   groundChecker: {fileID: 2131479140}
+  boundaryCollider: {fileID: 0}
   skeletonAnimation: {fileID: 904017082}
   idleAnimName: idle
   runAnimName: run
@@ -1868,7 +1794,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1436360038}
-  - component: {fileID: 1436360037}
   m_Layer: 0
   m_Name: LevelProgressManager
   m_TagString: Untagged
@@ -1876,42 +1801,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1436360037
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1436360036}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8b1aa35dd42fd9a4a87262417700831f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LevelProgressManager
-  battleWaveManager: {fileID: 580229310}
-  parallaxBackground: {fileID: 0}
-  playerTransform: {fileID: 1902002450}
-  currentLevelData: {fileID: 11400000, guid: fd1ca078871a1b9499ed706a843f9b04, type: 2}
-  currentState: 0
-  levelStartTime: 0
-  defeatedEnemies: 0
-  mainCamera: {fileID: 291194712}
-  cameraFixedY: 0
-  cameraZ: -10
-  scrollTriggerZone: 0.2
-  cameraSmoothSpeed: 5
-  OnLevelStart:
-    m_PersistentCalls:
-      m_Calls: []
-  OnLevelComplete:
-    m_PersistentCalls:
-      m_Calls: []
-  OnLevelFailed:
-    m_PersistentCalls:
-      m_Calls: []
-  OnProgressUpdate:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!4 &1436360038
 Transform:
   m_ObjectHideFlags: 0
@@ -2383,7 +2272,6 @@ GameObject:
   - component: {fileID: 1902002447}
   - component: {fileID: 1902002452}
   - component: {fileID: 1902002446}
-  - component: {fileID: 1902002455}
   - component: {fileID: 1902002457}
   - component: {fileID: 1902002460}
   - component: {fileID: 1902002461}
@@ -2413,7 +2301,13 @@ MonoBehaviour:
   hangTimeFactor: 0.3
   bounceHeight: 1.5
   bounceDuration: 0.5
+  stompHorizontalTolerance: 1.2
+  stompDepthTolerance: 0.6
+  stompHeightTolerance: 0.35
+  storyStandingBlendDuration: 0.15
+  storyStandingDelay: 0.25
   groundChecker: {fileID: 271097942}
+  boundaryCollider: {fileID: 0}
   skeletonAnimation: {fileID: 1902002458}
   idleAnimName: idle
   runAnimName: run
@@ -2628,23 +2522,6 @@ MonoBehaviour:
   m_DefaultActionMap: 
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!114 &1902002455
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1902002445}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 702e4b81a7a64b14e857450ff3842704, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerAttack
-  attack1Duration: 0.5
-  attack2Duration: 0.5
-  attack3Duration: 0.5
-  comboWindow: 1
-  skeletonAnimation: {fileID: 0}
 --- !u!114 &1902002457
 MonoBehaviour:
   m_ObjectHideFlags: 0

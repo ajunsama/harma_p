@@ -22,7 +22,15 @@ Shader "UI/StripeOverlay"
 
         _GradientPower ("Gradient Power", Float) = 1
 
+        // Required by MaskableGraphic/StencilMaterial even though this shader
+        // performs its own bit-1 read/clear protocol in the Stencil block.
+        [HideInInspector] _StencilComp ("Stencil Comparison", Float) = 8
+        [HideInInspector] _Stencil ("Stencil ID", Float) = 0
+        [HideInInspector] _StencilOp ("Stencil Operation", Float) = 0
+        [HideInInspector] _StencilWriteMask ("Stencil Write Mask", Float) = 255
+        [HideInInspector] _StencilReadMask ("Stencil Read Mask", Float) = 255
         _ColorMask ("Color Mask", Float) = 15
+        [HideInInspector] _UseUIAlphaClip ("Use Alpha Clip", Float) = 0
     }
 
     SubShader

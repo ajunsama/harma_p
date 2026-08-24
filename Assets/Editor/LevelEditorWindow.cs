@@ -896,7 +896,8 @@ public class LevelEditorWindow : EditorWindow
         float initialCameraX = _level.useCustomInitialCameraPosition ? _level.initialCameraPosition.x : 0f;
         float cameraDelta = _backgroundPreviewCameraX - initialCameraX;
         Vector2 offset = new Vector2(cameraDelta * (1f - layer.MotionMultiplierX), 0f);
-        Vector2 origin = layer.origin + offset + Vector2.right * (layer.horizontalScrollSpeed * _backgroundPreviewTime);
+        Vector2 origin = layer.origin + offset +
+                         Vector2.right * layer.CalculateAutoScrollOffset(_backgroundPreviewTime);
         Color oldColor = GUI.color;
         GUI.color = new Color(layer.color.r, layer.color.g, layer.color.b, layer.color.a * 0.55f);
 
@@ -1945,9 +1946,24 @@ public class LevelEditorWindow : EditorWindow
             layer.sprite = (Sprite)EditorGUILayout.ObjectField("图片", layer.sprite, typeof(Sprite), false);
 
         if (layer.contentType == BackgroundLayerContentType.RepeatedSprite)
-            layer.horizontalScrollSpeed = EditorGUILayout.FloatField("卷轴速度", layer.horizontalScrollSpeed);
+        {
+            string[] directionLabels = { "不滚动", "从右向左", "从左向右" };
+            layer.autoScrollDirection = (BackgroundScrollDirection)EditorGUILayout.Popup(
+                "固定卷轴方向", (int)layer.autoScrollDirection, directionLabels);
+            if (layer.autoScrollDirection != BackgroundScrollDirection.None)
+                layer.autoScrollSpeed = Mathf.Max(0f,
+                    EditorGUILayout.FloatField("固定卷轴速率", layer.autoScrollSpeed));
+            else
+                layer.autoScrollSpeed = 0f;
+            EditorGUILayout.HelpBox("卷轴只按时间播放，不读取玩家位置；远景层会自动补偿相机位移，保持画面基底固定。",
+                MessageType.None);
+        }
         else
-            layer.horizontalScrollSpeed = 0f;
+        {
+            layer.autoScrollDirection = BackgroundScrollDirection.None;
+            layer.autoScrollSpeed = 0f;
+        }
+        layer.horizontalScrollSpeed = 0f;
 
         EditorGUILayout.LabelField("最终排序", layer.SortingOrder.ToString(), EditorStyles.miniLabel);
         EditorGUILayout.EndVertical();

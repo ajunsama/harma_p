@@ -193,7 +193,6 @@ GameObject:
   - component: {fileID: 9162375671813461010}
   - component: {fileID: 2834935872457260621}
   - component: {fileID: 2544710754062622542}
-  - component: {fileID: 5976461314651474467}
   - component: {fileID: 1106540620413626590}
   - component: {fileID: 3950550253477008173}
   - component: {fileID: 1988514998987463150}
@@ -519,6 +518,7 @@ MonoBehaviour:
   storyStandingBlendDuration: 0.15
   storyStandingDelay: 0.25
   groundChecker: {fileID: 4278164982984701588}
+  boundaryCollider: {fileID: 0}
   skeletonAnimation: {fileID: 6362422595469369606}
   idleAnimName: idle
   runAnimName: run
@@ -526,23 +526,6 @@ MonoBehaviour:
   knockbackDistance: 2
   knockbackDuration: 0.4
   knockbackJumpHeight: 1.5
---- !u!114 &5976461314651474467
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1743930696149737694}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 702e4b81a7a64b14e857450ff3842704, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerAttack
-  attack1Duration: 0.5
-  attack2Duration: 0.5
-  attack3Duration: 0.5
-  comboWindow: 1
-  skeletonAnimation: {fileID: 0}
 --- !u!114 &1106540620413626590
 MonoBehaviour:
   m_ObjectHideFlags: 0

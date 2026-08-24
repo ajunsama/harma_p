@@ -193,7 +193,6 @@ GameObject:
   - component: {fileID: 6904478666413306059}
   - component: {fileID: 5037129851769096665}
   - component: {fileID: 6675431302123422609}
-  - component: {fileID: 4888964129082783515}
   - component: {fileID: 4238016558999171803}
   - component: {fileID: 3763827442670110573}
   - component: {fileID: -6505881619983779295}
@@ -391,6 +390,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
   maxHp: 1
+  useCustomStompHeight: 0
+  stompHeight: 1
   skeletonAnimation: {fileID: 0}
   hitAnimName: 
   deathAnimName: die
@@ -430,30 +431,19 @@ MonoBehaviour:
   dashSpeed: 10
   playerBodyWidth: 1
   postAttackDelay: 0.5
+  enableDance: 1
+  danceStartDistance: 10
+  danceExitDistance: 8
+  danceChance: 30
+  danceCooldown: 8
+  danceMaxDuration: 6
   skeletonAnimation: {fileID: 0}
   idleAnimName: idle
   walkAnimName: walk
   attackAnimName: attack
-  isKnockedBack: 0
---- !u!114 &4888964129082783515
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9121894431470579864}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 48dd0d7aae593024daa7de1ecd13d603, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EnemySimpleAI2D
-  player: {fileID: 0}
-  speed: 1.2
-  stopDistance: 1.5
-  minMoveTime: 0.6
-  maxMoveTime: 1.8
-  minWaitTime: 0.5
-  maxWaitTime: 1.5
+  danceIntroAnimation: dance03
+  danceTransitionAnimation: dance to dance02
+  danceLoopAnimation: dance02
   isKnockedBack: 0
 --- !u!33 &4238016558999171803
 MeshFilter:

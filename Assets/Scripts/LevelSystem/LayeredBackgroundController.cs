@@ -136,7 +136,9 @@ public sealed class LayeredBackgroundController : MonoBehaviour
         {
             if (runtime?.root == null || runtime.data == null) continue;
             Vector2 offset = CalculateCameraOffset(cameraDelta, runtime.data);
-            float x = runtime.data.origin.x + offset.x + runtime.data.horizontalScrollSpeed * elapsed;
+            // Camera compensation controls the layer's screen/world anchoring. Auto-scroll is a
+            // separate time-only offset, so cloud speed never depends on player or camera motion.
+            float x = runtime.data.origin.x + offset.x + runtime.data.CalculateAutoScrollOffset(elapsed);
             float y = runtime.data.origin.y + offset.y;
 
             if (runtime.data.contentType == BackgroundLayerContentType.RepeatedSprite &&

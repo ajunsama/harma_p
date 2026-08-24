@@ -1,9 +1,11 @@
 using System.Collections;
+using Harma.Combat;
 using UnityEngine;
 using Spine.Unity;
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class FatP_AI_Movement : MonoBehaviour
+public class FatP_AI_Movement : MonoBehaviour, IPlayerTargetReceiver,
+    IEnemyAttackState, IEnemyHitReactionReceiver
 {
     [Header("目标")]
     public Transform player;
@@ -65,6 +67,21 @@ public class FatP_AI_Movement : MonoBehaviour
     public bool isKnockedBack = false;
 
     public bool IsAttacking => isDashing;
+    public bool IsAttackActive => IsAttacking;
+    public float AttackLaneTolerance => yAxisTolerance;
+
+    public void SetPlayerTarget(Transform target)
+    {
+        player = target;
+    }
+
+    public void SetHitReactionActive(bool active)
+    {
+        if (active)
+            OnHit();
+        else
+            isKnockedBack = false;
+    }
 
     public void OnHit()
     {
@@ -552,7 +569,7 @@ public class FatP_AI_Movement : MonoBehaviour
             scale.x = Mathf.Abs(scale.x);
         transform.localScale = scale;
 
-        Debug.Log("FatP 蓄力中...");
+        GameLog.Verbose("FatP 蓄力中...");
         ForcePlayAnimation(attackAnimName, false);
         yield return new WaitForSeconds(chargeTime);
 
@@ -567,7 +584,7 @@ public class FatP_AI_Movement : MonoBehaviour
 
         targetPos.x = Mathf.Clamp(targetPos.x, leftBound, rightBound);
 
-        Debug.Log($"FatP 发起滚动攻击！方向: {dashDirection}, 距离: {dashDistance}");
+        GameLog.Verbose($"FatP 发起滚动攻击！方向: {dashDirection}, 距离: {dashDistance}");
 
         isDashing = true;
         float dashedDistance = 0f;
@@ -594,7 +611,7 @@ public class FatP_AI_Movement : MonoBehaviour
             {
                 rb.position = currentPos;
                 rb.linearVelocity = Vector2.zero;
-                Debug.Log("滚动攻击碰到边界，提前结束");
+                GameLog.Verbose("滚动攻击碰到边界，提前结束");
                 break;
             }
 
@@ -608,7 +625,7 @@ public class FatP_AI_Movement : MonoBehaviour
         isDashing = false;
         StopMovement();
 
-        Debug.Log("FatP 攻击结束，暂停中...");
+        GameLog.Verbose("FatP 攻击结束，暂停中...");
         yield return new WaitForSeconds(postAttackDelay);
 
         isAttacking = false;

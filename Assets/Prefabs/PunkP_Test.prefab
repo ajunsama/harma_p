@@ -154,15 +154,25 @@ MonoBehaviour:
   maxWanderDistance: 5
   minIdleTime: 0.2
   maxIdleTime: 0.6
+  closeRetreatDistance: 4
+  closeRetreatPriority: 80
+  retreatSpeedMultiplier: 1.35
   yAxisTolerance: 0.5
   maxYAxisOffset: 0.8
   knifePrefab: {fileID: 5818875302855904155, guid: 223d996800c5023469e6ecd2d72e42e3, type: 3}
   throwCooldown: 0.8
   throwWindupTime: 0.3
+  doubleThrowInterval: 0.25
+  postThrowRecoveryTime: 0.3
   knifeSpawnOffsetX: 0.8
   knifeSpawnOffsetY: 2
   attackDesire: 100
   forceAttackTime: 1.2
+  specialAttackChance: 40
+  specialAttackCooldown: 4
+  bodyWidth: 2
+  specialRetreatBodyLengths: 4
+  specialRetreatDuration: 0.6
   skeletonAnimation: {fileID: 0}
   idleAnimName: idle
   walkAnimName: walk

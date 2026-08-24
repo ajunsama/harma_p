@@ -21,10 +21,10 @@ public class YSortSprite : MonoBehaviour
         float sortingY = transform.position.y;
 
         // 如果能找到 PlayerMovement，说明是玩家（或类似机制的角色）
-        // 使用 BaseY（地面基准高度）来排序，避免跳跃时层级错误
+        // 始终使用地面纵深排序；独立跳跃高度不参与 YSort。
         if (playerMovement != null)
         {
-            sortingY = playerMovement.BaseY;
+            sortingY = playerMovement.GroundY;
         }
 
         // 1 像素 = 0.01 单位时，乘 -100 正好 1 单位对应 1 个 order

@@ -67,9 +67,9 @@ public class InfiniteScrollBackground : MonoBehaviour
         
         if (verboseLogging)
         {
-            Debug.Log($"[InfiniteScrollBackground] Found background sprite: {backgroundSprite.sprite.name}");
-            Debug.Log($"[InfiniteScrollBackground] Sprite bounds: {backgroundSprite.sprite.bounds.size}, localScale: {backgroundSprite.transform.localScale}");
-            Debug.Log($"[InfiniteScrollBackground] Calculated spriteWidth: {spriteWidth}");
+            GameLog.Verbose($"[InfiniteScrollBackground] Found background sprite: {backgroundSprite.sprite.name}");
+            GameLog.Verbose($"[InfiniteScrollBackground] Sprite bounds: {backgroundSprite.sprite.bounds.size}, localScale: {backgroundSprite.transform.localScale}");
+            GameLog.Verbose($"[InfiniteScrollBackground] Calculated spriteWidth: {spriteWidth}");
         }
 
         // 创建左右副本实现无缝循环
@@ -77,7 +77,7 @@ public class InfiniteScrollBackground : MonoBehaviour
 
         if (verboseLogging)
         {
-            Debug.Log($"[InfiniteScrollBackground] 初始化完成，精灵宽度: {spriteWidth}");
+            GameLog.Verbose($"[InfiniteScrollBackground] 初始化完成，精灵宽度: {spriteWidth}");
         }
     }
     
@@ -97,7 +97,7 @@ public class InfiniteScrollBackground : MonoBehaviour
         CopySpriteRenderer(backgroundSprite, leftClone);
         if (verboseLogging)
         {
-            Debug.Log($"[InfiniteScrollBackground] Created left clone at {leftObj.transform.position}");
+            GameLog.Verbose($"[InfiniteScrollBackground] Created left clone at {leftObj.transform.position}");
         }
         
         // 创建右副本
@@ -114,7 +114,7 @@ public class InfiniteScrollBackground : MonoBehaviour
         CopySpriteRenderer(backgroundSprite, rightClone);
         if (verboseLogging)
         {
-            Debug.Log($"[InfiniteScrollBackground] Created right clone at {rightObj.transform.position}");
+            GameLog.Verbose($"[InfiniteScrollBackground] Created right clone at {rightObj.transform.position}");
         }
     }
     
@@ -134,7 +134,7 @@ public class InfiniteScrollBackground : MonoBehaviour
         if (cameraTransform == null || backgroundSprite == null) return;
         if (verboseLogging && Time.frameCount % 120 == 0)
         {
-            Debug.Log($"[InfiniteScrollBackground] LateUpdate status: cameraPos={cameraTransform.position}, bgPos={backgroundSprite.transform.position}, spriteWidth={spriteWidth}, fixedY={fixedY}");
+            GameLog.Verbose($"[InfiniteScrollBackground] LateUpdate status: cameraPos={cameraTransform.position}, bgPos={backgroundSprite.transform.position}, spriteWidth={spriteWidth}, fixedY={fixedY}");
         }
         
         // 根据视差系数移动背景：
@@ -153,7 +153,7 @@ public class InfiniteScrollBackground : MonoBehaviour
 
         if (verboseLogging && Time.frameCount % 120 == 0)
         {
-            Debug.Log($"[InfiniteScrollBackground] CameraX={cameraX}, targetBgX={targetBgX}, bgX={newPos.x}");
+            GameLog.Verbose($"[InfiniteScrollBackground] CameraX={cameraX}, targetBgX={targetBgX}, bgX={newPos.x}");
         }
         
         // 更新副本位置（始终在主背景左右两侧）
@@ -166,7 +166,7 @@ public class InfiniteScrollBackground : MonoBehaviour
             );
             if (verboseLogging && Time.frameCount % 120 == 0)
             {
-                Debug.Log($"[InfiniteScrollBackground] Updated left clone position to {leftClone.transform.position}");
+                GameLog.Verbose($"[InfiniteScrollBackground] Updated left clone position to {leftClone.transform.position}");
             }
         }
         
@@ -179,7 +179,7 @@ public class InfiniteScrollBackground : MonoBehaviour
             );
             if (verboseLogging && Time.frameCount % 120 == 0)
             {
-                Debug.Log($"[InfiniteScrollBackground] Updated right clone position to {rightClone.transform.position}");
+                GameLog.Verbose($"[InfiniteScrollBackground] Updated right clone position to {rightClone.transform.position}");
             }
         }
         

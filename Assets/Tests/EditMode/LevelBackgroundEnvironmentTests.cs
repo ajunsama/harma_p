@@ -24,7 +24,7 @@ public sealed class LevelBackgroundEnvironmentTests
             Set(settings, "singleParallaxFactor", 0f);
 
             Assert.That((bool)Invoke(settings, "MigrateLegacyData"), Is.True);
-            Assert.That(Get<int>(settings, "dataVersion"), Is.EqualTo(2));
+            Assert.That(Get<int>(settings, "dataVersion"), Is.EqualTo(3));
             IList layers = List(settings, "layers");
             Assert.That(layers, Has.Count.EqualTo(1));
             Assert.That(Get(layers[0], "contentType").ToString(), Is.EqualTo("RepeatedSprite"));
@@ -75,7 +75,8 @@ public sealed class LevelBackgroundEnvironmentTests
             Set(layer, "displayName", "Clouds");
             Set(layer, "depthBand", EnumRuntime("BackgroundDepthBand", "Far"));
             Set(layer, "contentType", EnumRuntime("BackgroundLayerContentType", "RepeatedSprite"));
-            Set(layer, "horizontalScrollSpeed", 1.25f);
+            Set(layer, "autoScrollDirection", EnumRuntime("BackgroundScrollDirection", "RightToLeft"));
+            Set(layer, "autoScrollSpeed", 1.25f);
             Set(layer, "enableVerticalMotion", true);
             List(background, "layers").Add(layer);
 
@@ -110,7 +111,8 @@ public sealed class LevelBackgroundEnvironmentTests
 
             IList importedLayers = List(Get(target, "backgroundSettings"), "layers");
             Assert.That(importedLayers, Has.Count.EqualTo(1));
-            Assert.That(Get<float>(importedLayers[0], "horizontalScrollSpeed"), Is.EqualTo(1.25f));
+            Assert.That(Get(importedLayers[0], "autoScrollDirection").ToString(), Is.EqualTo("RightToLeft"));
+            Assert.That(Get<float>(importedLayers[0], "autoScrollSpeed"), Is.EqualTo(1.25f));
             IList importedElements = List(target, "elements");
             Assert.That(Get<string>(List(importedElements[0], "customParameters")[0], "serializedValue"),
                 Is.EqualTo("2.5"));
@@ -205,7 +207,8 @@ public sealed class LevelBackgroundEnvironmentTests
             Set(layer, "layerId", "bad-scroll");
             Set(layer, "displayName", "Bad Scroll");
             Set(layer, "contentType", EnumRuntime("BackgroundLayerContentType", "SingleSprite"));
-            Set(layer, "horizontalScrollSpeed", 1f);
+            Set(layer, "autoScrollDirection", EnumRuntime("BackgroundScrollDirection", "LeftToRight"));
+            Set(layer, "autoScrollSpeed", 1f);
             List(background, "layers").Add(layer);
 
             object firstActor = NewRuntime("EnvironmentActorData");
@@ -231,6 +234,50 @@ public sealed class LevelBackgroundEnvironmentTests
             UnityEngine.Object.DestroyImmediate(prefab);
             UnityEngine.Object.DestroyImmediate(level);
         }
+    }
+
+    [Test]
+    public void AutoScroll_UsesDirectionSpeedAndTimeOnly()
+    {
+        object layer = NewLayer("Far", true, 1.25f);
+        Set(layer, "autoScrollDirection", EnumRuntime("BackgroundScrollDirection", "RightToLeft"));
+        Set(layer, "autoScrollSpeed", 2f);
+
+        float atThreeSeconds = (float)layer.GetType()
+            .GetMethod("CalculateAutoScrollOffset", InstanceMembers)
+            .Invoke(layer, new object[] { 3f });
+        MethodInfo calculateCamera = RuntimeType("LayeredBackgroundController")
+            .GetMethod("CalculateCameraOffset", BindingFlags.Public | BindingFlags.Static);
+        Vector2 stillCameraOffset = (Vector2)calculateCamera.Invoke(
+            null, new[] { (object)Vector2.zero, layer });
+        Vector2 movedCameraOffset = (Vector2)calculateCamera.Invoke(
+            null, new[] { (object)new Vector2(10f, 0f), layer });
+        float stillCameraScrollDelta = (stillCameraOffset.x + atThreeSeconds) - stillCameraOffset.x;
+        float movedCameraScrollDelta = (movedCameraOffset.x + atThreeSeconds) - movedCameraOffset.x;
+
+        Assert.That(atThreeSeconds, Is.EqualTo(-6f).Within(0.001f));
+        Assert.That(movedCameraScrollDelta, Is.EqualTo(stillCameraScrollDelta).Within(0.001f));
+
+        Set(layer, "autoScrollDirection", EnumRuntime("BackgroundScrollDirection", "LeftToRight"));
+        float oppositeDirection = (float)layer.GetType()
+            .GetMethod("CalculateAutoScrollOffset", InstanceMembers)
+            .Invoke(layer, new object[] { 3f });
+        Assert.That(oppositeDirection, Is.EqualTo(6f).Within(0.001f));
+    }
+
+    [Test]
+    public void VersionTwoSignedScroll_MigratesToExplicitDirectionAndSpeed()
+    {
+        object settings = NewRuntime("BackgroundSettings");
+        Set(settings, "dataVersion", 2);
+        object layer = NewRuntime("BackgroundLayerData");
+        Set(layer, "horizontalScrollSpeed", -3.5f);
+        List(settings, "layers").Add(layer);
+
+        Assert.That((bool)Invoke(settings, "MigrateLegacyData"), Is.True);
+        Assert.That(Get(layer, "autoScrollDirection").ToString(), Is.EqualTo("RightToLeft"));
+        Assert.That(Get<float>(layer, "autoScrollSpeed"), Is.EqualTo(3.5f));
+        Assert.That(Get<float>(layer, "horizontalScrollSpeed"), Is.Zero);
     }
 
     private static object NewLayer(string band, bool vertical, float nearMultiplier)

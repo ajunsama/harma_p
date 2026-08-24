@@ -1,9 +1,11 @@
 ﻿using System.Collections;
+using Harma.Combat;
 using UnityEngine;
 using Spine.Unity;
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class MuscleP_AI_Movement : MonoBehaviour
+public class MuscleP_AI_Movement : MonoBehaviour, IPlayerTargetReceiver,
+    IEnemyAttackState, IEnemyHitReactionReceiver
 {
     [Header("目标")]
     public Transform player;
@@ -45,6 +47,14 @@ public class MuscleP_AI_Movement : MonoBehaviour
     public float playerBodyWidth = 2f;  // 玩家身位宽度（增加冲刺距离）
     public float postAttackDelay = 0.3f; // 攻击后延迟（缩短以便更快恢复）
 
+    [Header("远距离舞蹈")]
+    [SerializeField] bool enableDance = false;
+    [SerializeField, Min(0f)] float danceStartDistance = 10f;
+    [SerializeField, Min(0f)] float danceExitDistance = 8f;
+    [SerializeField, Range(0f, 100f)] float danceChance = 30f;
+    [SerializeField, Min(0f)] float danceCooldown = 8f;
+    [SerializeField, Min(0f)] float danceMaxDuration = 6f;
+
     [Header("Spine动画")]
     [SerializeField] SkeletonAnimation skeletonAnimation;
     
@@ -52,15 +62,20 @@ public class MuscleP_AI_Movement : MonoBehaviour
     [SpineAnimation] public string idleAnimName = "idle";
     [SpineAnimation] public string walkAnimName = "walk";
     [SpineAnimation] public string attackAnimName = "attack";
+    [SpineAnimation, SerializeField] string danceIntroAnimation = "dance03";
+    [SpineAnimation, SerializeField] string danceTransitionAnimation = "dance to dance02";
+    [SpineAnimation, SerializeField] string danceLoopAnimation = "dance02";
     
     private Spine.TrackEntry currentTrack;
 
     Rigidbody2D rb;
     bool isAttacking = false;           // 是否正在攻击（用于禁止转头）
     bool isDashing = false;             // 是否正在冲刺（用于碰撞检测）
+    bool isDancing = false;             // 是否正在原地跳舞（不算攻击状态）
+    float nextDanceAllowedTime;          // 下一次允许进行舞蹈判定的时间
 
     // AI 状态
-    enum AIState { Wander, Idle, Approach, Attack }
+    enum AIState { Wander, Idle, Approach, Attack, Dance }
     AIState lastState = AIState.Idle;
     float lastAttackTime;               // 上次攻击时间
     bool canIdle = true;                // 是否可以进入静止状态
@@ -71,6 +86,22 @@ public class MuscleP_AI_Movement : MonoBehaviour
     
     // 公共属性供外部访问（用于碰撞检测）
     public bool IsAttacking => isDashing;
+    public bool IsAttackActive => IsAttacking;
+    public float AttackLaneTolerance => yAxisTolerance;
+
+    public void SetPlayerTarget(Transform target)
+    {
+        player = target;
+        if (target == null)
+            InterruptDance(true);
+    }
+
+    public void SetHitReactionActive(bool active)
+    {
+        isKnockedBack = active;
+        if (active)
+            StopMovementForEnemy();
+    }
     
     // 入场相关
     private bool hasEntranceTarget = false;  // 是否有入场目标
@@ -84,6 +115,15 @@ public class MuscleP_AI_Movement : MonoBehaviour
 
         if (skeletonAnimation == null)
             skeletonAnimation = GetComponentInChildren<SkeletonAnimation>();
+    }
+
+    void OnValidate()
+    {
+        danceStartDistance = Mathf.Max(0f, danceStartDistance);
+        danceExitDistance = Mathf.Clamp(danceExitDistance, 0f, danceStartDistance);
+        danceChance = Mathf.Clamp(danceChance, 0f, 100f);
+        danceCooldown = Mathf.Max(0f, danceCooldown);
+        danceMaxDuration = Mathf.Max(0f, danceMaxDuration);
     }
 
     void Start()
@@ -108,7 +148,15 @@ public class MuscleP_AI_Movement : MonoBehaviour
     void OnEnable()
     {
         lastAttackTime = Time.time; // 初始化为当前时间，让AI先徘徊一段时间再攻击
+        nextDanceAllowedTime = Time.time + Mathf.Max(0f, danceCooldown);
         StartCoroutine(ThinkLoop());
+    }
+
+    void OnDisable()
+    {
+        StopAllCoroutines();
+        InterruptDance(false);
+        StopMovementForEnemy();
     }
     
     /// <summary>
@@ -154,6 +202,14 @@ public class MuscleP_AI_Movement : MonoBehaviour
         
         while (true)
         {
+            // 目标可能在战斗过程中被销毁或解绑，等待新目标并停止当前动作。
+            if (player == null)
+            {
+                StopMovement();
+                yield return new WaitForSeconds(0.1f);
+                continue;
+            }
+
             // 受击期间暂停AI
             if (isKnockedBack)
             {
@@ -181,25 +237,7 @@ public class MuscleP_AI_Movement : MonoBehaviour
             bool inAttackRange = dist <= attackRange;
 
             AIState nextState;
-
-            // 强制攻击逻辑：5秒未攻击则必须走近并攻击
-            if (timeSinceAttack >= forceAttackTime)
-            {
-                // 需要先对齐y轴并走到攻击范围内
-                if (!isYAligned || !inAttackRange)
-                {
-                    nextState = AIState.Approach;
-                }
-                else
-                {
-                    nextState = AIState.Attack;
-                }
-            }
-            else
-            {
-                // 正常行为选择
-                nextState = ChooseNextState(isYAligned, inAttackRange);
-            }
+            nextState = ChooseDecisionState(dist, isYAligned, inAttackRange, timeSinceAttack);
 
             // 执行选中的状态
             switch (nextState)
@@ -228,10 +266,43 @@ public class MuscleP_AI_Movement : MonoBehaviour
                     canIdle = true; // 攻击后可以静止
                     canAttack = false; // 攻击后短暂不能连续攻击（需要先做其他动作）
                     break;
+
+                case AIState.Dance:
+                    yield return Dance();
+                    canIdle = true;
+                    canAttack = true;
+                    break;
             }
 
             lastState = nextState;
         }
+    }
+
+    AIState ChooseDecisionState(float dist, bool isYAligned, bool inAttackRange, float timeSinceAttack)
+    {
+        // 舞蹈判定在强制攻击之前执行，但每次状态决策只抽取一次概率。
+        if (ShouldStartDance(dist))
+            return AIState.Dance;
+
+        // 强制攻击逻辑：长时间未攻击则必须先走近、对齐并攻击。
+        if (timeSinceAttack >= forceAttackTime)
+            return !isYAligned || !inAttackRange ? AIState.Approach : AIState.Attack;
+
+        return ChooseNextState(isYAligned, inAttackRange);
+    }
+
+    bool ShouldStartDance(float dist)
+    {
+        if (!enableDance || isDancing || isAttacking || isDashing || isKnockedBack)
+            return false;
+
+        if (player == null || !IsOnScreen() || dist < danceStartDistance)
+            return false;
+
+        if (Time.time < nextDanceAllowedTime || danceChance <= 0f)
+            return false;
+
+        return danceChance >= 100f || Random.value < danceChance / 100f;
     }
 
     // 选择下一个状态
@@ -497,6 +568,93 @@ public class MuscleP_AI_Movement : MonoBehaviour
         yield return new WaitForSeconds(Random.Range(minWaitTime, maxWaitTime));
     }
 
+    IEnumerator Dance()
+    {
+        if (player == null)
+            yield break;
+
+        isDancing = true;
+        StopMovement();
+        FacePlayer();
+        PlayDanceSequence();
+
+        float danceStartedAt = Time.time;
+        while (isDancing)
+        {
+            if (isKnockedBack || player == null || !IsOnScreen())
+                break;
+
+            if (Vector2.Distance(transform.position, player.position) <= danceExitDistance)
+                break;
+
+            if (Time.time - danceStartedAt >= danceMaxDuration)
+                break;
+
+            // 动画期间持续归零，防止此前动作或外力残留造成滑动。
+            rb.linearVelocity = Vector2.zero;
+            yield return null;
+        }
+
+        // 外部中断会先完成清理；这里只处理距离、时限和屏外导致的自然退出。
+        if (isDancing)
+            FinishDance(!isKnockedBack);
+    }
+
+    void PlayDanceSequence()
+    {
+        if (skeletonAnimation == null)
+            return;
+
+        Spine.AnimationState animationState = skeletonAnimation.AnimationState;
+        animationState.ClearTrack(0);
+        currentTrack = null;
+
+        bool hasQueuedAnimation = false;
+        hasQueuedAnimation = QueueDanceAnimation(animationState, danceIntroAnimation, false, hasQueuedAnimation);
+        hasQueuedAnimation = QueueDanceAnimation(animationState, danceTransitionAnimation, false, hasQueuedAnimation);
+        QueueDanceAnimation(animationState, danceLoopAnimation, true, hasQueuedAnimation);
+    }
+
+    bool QueueDanceAnimation(
+        Spine.AnimationState animationState,
+        string animationName,
+        bool loop,
+        bool hasQueuedAnimation)
+    {
+        if (string.IsNullOrEmpty(animationName) || !HasAnimation(animationName))
+            return hasQueuedAnimation;
+
+        currentTrack = hasQueuedAnimation
+            ? animationState.AddAnimation(0, animationName, loop, 0f)
+            : animationState.SetAnimation(0, animationName, loop);
+        return true;
+    }
+
+    void FinishDance(bool restoreIdleAnimation)
+    {
+        if (!isDancing)
+            return;
+
+        isDancing = false;
+        nextDanceAllowedTime = Time.time + Mathf.Max(0f, danceCooldown);
+        ClearDanceAnimation();
+
+        if (restoreIdleAnimation && !isKnockedBack)
+            PlayAnimation(idleAnimName, true);
+    }
+
+    void InterruptDance(bool restoreIdleAnimation)
+    {
+        FinishDance(restoreIdleAnimation);
+    }
+
+    void ClearDanceAnimation()
+    {
+        if (skeletonAnimation != null)
+            skeletonAnimation.AnimationState.ClearTrack(0);
+        currentTrack = null;
+    }
+
     // 走近玩家：确定目标位置，直线走过去
     IEnumerator Approach()
     {
@@ -645,14 +803,9 @@ public class MuscleP_AI_Movement : MonoBehaviour
         StopMovement();
         
         // 1. 蓄力阶段：面向玩家
-        Vector3 scale = transform.localScale;
-        if (player.position.x > transform.position.x)
-            scale.x = -Mathf.Abs(scale.x);  // 面向右侧（负值）
-        else
-            scale.x = Mathf.Abs(scale.x); // 面向左侧（正值）
-        transform.localScale = scale;
+        FacePlayer();
         
-        Debug.Log("MuscleP 蓄力中...");
+        GameLog.Verbose("MuscleP 蓄力中...");
         // 播放攻击动画（不循环）
         ForcePlayAnimation(attackAnimName, false);
         yield return new WaitForSeconds(chargeTime);
@@ -672,7 +825,7 @@ public class MuscleP_AI_Movement : MonoBehaviour
         // 限制目标位置在边界内
         targetPos.x = Mathf.Clamp(targetPos.x, leftBound, rightBound);
         
-        Debug.Log($"MuscleP 发起攻击冲刺！方向: {dashDirection}, 距离: {dashDistance}");
+        GameLog.Verbose($"MuscleP 发起攻击冲刺！方向: {dashDirection}, 距离: {dashDistance}");
         
         // 执行冲刺
         isDashing = true; // 标记为正在冲刺（用于碰撞检测）
@@ -706,7 +859,7 @@ public class MuscleP_AI_Movement : MonoBehaviour
             {
                 rb.position = currentPos;
                 rb.linearVelocity = Vector2.zero;
-                Debug.Log("冲刺碰到边界，提前结束");
+                GameLog.Verbose("冲刺碰到边界，提前结束");
                 break;
             }
             
@@ -723,7 +876,7 @@ public class MuscleP_AI_Movement : MonoBehaviour
         StopMovement();
         
         // 4. 攻击后延迟
-        Debug.Log("MuscleP 攻击结束，暂停中...");
+        GameLog.Verbose("MuscleP 攻击结束，暂停中...");
         yield return new WaitForSeconds(postAttackDelay);
         
         isAttacking = false; // 攻击结束，允许转头
@@ -796,10 +949,24 @@ public class MuscleP_AI_Movement : MonoBehaviour
 
     void StopMovementForEnemy()
     {
+        InterruptDance(false);
         isAttacking = false;
         isDashing = false;
         if (rb != null)
             rb.linearVelocity = Vector2.zero;
+    }
+
+    void FacePlayer()
+    {
+        if (player == null)
+            return;
+
+        Vector3 scale = transform.localScale;
+        if (player.position.x > transform.position.x)
+            scale.x = -Mathf.Abs(scale.x);  // 面向右侧，保持负值
+        else
+            scale.x = Mathf.Abs(scale.x);  // 面向左侧，保持正值
+        transform.localScale = scale;
     }
     
     // 限制位置在边界内
@@ -830,16 +997,10 @@ public class MuscleP_AI_Movement : MonoBehaviour
     // 左右翻转朝向
     void Update()
     {
-        // 攻击过程中或受击时不允许转头
-        if (isAttacking || isKnockedBack)
+        // 攻击、舞蹈或受击期间不允许转头
+        if (player == null || isAttacking || isDancing || isKnockedBack)
             return;
-            
-        // 只翻转 X 轴方向，保持原有的 scale 大小
-        Vector3 scale = transform.localScale;
-        if (player.position.x > transform.position.x)
-            scale.x = -Mathf.Abs(scale.x);  // 面向右侧，保持负值
-        else
-            scale.x = Mathf.Abs(scale.x); // 面向左侧，保持正值
-        transform.localScale = scale;
+
+        FacePlayer();
     }
 }

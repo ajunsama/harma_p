@@ -48,7 +48,7 @@ public class EnemyKillStoryFlag : MonoBehaviour
         }
         totalRequired = _pendingEnemies.Count;
         killedCount = 0;
-        Debug.Log($"[EnemyKillStoryFlag] 初始化: 需击杀 {totalRequired} 个特定敌人 (flag: {flagName})");
+        GameLog.Verbose($"[EnemyKillStoryFlag] 初始化: 需击杀 {totalRequired} 个特定敌人 (flag: {flagName})");
     }
 
     void OnEnemyKilled(Enemy deadEnemy)
@@ -60,7 +60,7 @@ public class EnemyKillStoryFlag : MonoBehaviour
         if (!_pendingEnemies.Remove(deadEnemy)) return;
 
         killedCount++;
-        Debug.Log($"[EnemyKillStoryFlag] 目标击杀: {killedCount}/{totalRequired} (flag: {flagName})");
+        GameLog.Verbose($"[EnemyKillStoryFlag] 目标击杀: {killedCount}/{totalRequired} (flag: {flagName})");
 
         if (_pendingEnemies.Count == 0)
         {
@@ -79,7 +79,7 @@ public class EnemyKillStoryFlag : MonoBehaviour
         if (StoryManager.Instance != null)
         {
             StoryManager.Instance.SetFlag(flagName);
-            Debug.Log($"[EnemyKillStoryFlag] 全部目标已击杀，延时0.5秒后设置标志位: {flagName}");
+            GameLog.Verbose($"[EnemyKillStoryFlag] 全部目标已击杀，延时0.5秒后设置标志位: {flagName}");
         }
         else
         {

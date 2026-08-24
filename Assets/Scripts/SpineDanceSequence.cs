@@ -47,7 +47,7 @@ public class SpineDanceSequence : MonoBehaviour
         var entry = skeletonAnimation.AnimationState.SetAnimation(trackIndex, dance03Animation, false);
         if (entry != null)
         {
-            Debug.Log($"开始播放: {dance03Animation}");
+            GameLog.Verbose($"开始播放: {dance03Animation}");
             // 等待动画播放完成
             yield return new WaitForSpineAnimationComplete(entry);
         }
@@ -60,7 +60,7 @@ public class SpineDanceSequence : MonoBehaviour
         entry = skeletonAnimation.AnimationState.SetAnimation(trackIndex, transitionAnimation, false);
         if (entry != null)
         {
-            Debug.Log($"开始播放: {transitionAnimation}");
+            GameLog.Verbose($"开始播放: {transitionAnimation}");
             // 等待动画播放完成
             yield return new WaitForSpineAnimationComplete(entry);
         }
@@ -73,7 +73,7 @@ public class SpineDanceSequence : MonoBehaviour
         entry = skeletonAnimation.AnimationState.SetAnimation(trackIndex, dance02Animation, true);
         if (entry != null)
         {
-            Debug.Log($"开始循环播放: {dance02Animation}");
+            GameLog.Verbose($"开始循环播放: {dance02Animation}");
         }
         else
         {

@@ -1,5 +1,5 @@
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -76,20 +76,24 @@ public class StoryTrigger : MonoBehaviour
     private bool _hasTriggered;
     private Transform _playerTransform;
     private bool _subscribedToEvents;
+    private LevelSceneBuilder _levelSceneBuilder;
+    private Coroutine _levelStartFallback;
 
     void Awake()
     {
-        Debug.Log($"[StoryTrigger] Awake: {gameObject.name}, 类型={triggerType}, 剧情ID={storyId}");
+        GameLog.Verbose($"[StoryTrigger] Awake: {gameObject.name}, 类型={triggerType}, 剧情ID={storyId}");
     }
 
     void Start()
     {
-        // 获取玩家引用
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
-            _playerTransform = player.transform;
-        else
-            Debug.LogWarning($"[StoryTrigger] {gameObject.name}: 找不到Player标签的对象");
+        if (triggerType == TriggerType.Position)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+                _playerTransform = player.transform;
+            else
+                Debug.LogWarning($"[StoryTrigger] {gameObject.name}: 找不到Player标签的对象");
+        }
 
         // 订阅对应事件（事件驱动型触发延迟到 runtime 重连）
         TrySubscribeEvents();
@@ -103,42 +107,44 @@ public class StoryTrigger : MonoBehaviour
         switch (triggerType)
         {
             case TriggerType.LevelStart:
-                TrySubscribe("LevelProgressManager", "OnLevelStart", () => OnLevelStarted());
+                _levelSceneBuilder = FindFirstObjectByType<LevelSceneBuilder>();
+                if (_levelSceneBuilder != null)
+                {
+                    if (_levelSceneBuilder.IsLevelReady)
+                        _levelStartFallback = StartCoroutine(TriggerLevelStartNextFrame());
+                    else if (_levelSceneBuilder.OnLevelReady != null)
+                        _levelSceneBuilder.OnLevelReady.AddListener(OnLevelStarted);
+                    else
+                        _levelStartFallback = StartCoroutine(TriggerLevelStartNextFrame());
+                }
+                else
+                {
+                    // Legacy/test scenes may not use the data-driven builder.
+                    // Preserve their explicit LevelStart trigger on the next frame.
+                    _levelStartFallback = StartCoroutine(TriggerLevelStartNextFrame());
+                }
                 break;
             case TriggerType.WaveComplete:
-                TrySubscribe("BattleWaveManager", "OnWaveComplete", () => { });
-                break;
             case TriggerType.AllWavesComplete:
-                TrySubscribe("BattleWaveManager", "OnAllWavesComplete", () => { });
+                Debug.LogWarning(
+                    $"[StoryTrigger] {gameObject.name}: {triggerType} 属于已移除的旧波次系统，请迁移到 LevelData 的 StoryTriggerPoint/Flow。");
                 break;
         }
     }
 
-    void TrySubscribe(string managerTypeName, string eventName, System.Action callback)
+    IEnumerator TriggerLevelStartNextFrame()
     {
-        // 通过反射动态订阅，避免硬依赖 BattleWaveManager/LevelProgressManager 类型
-        var type = System.Type.GetType(managerTypeName) ??
-                   System.AppDomain.CurrentDomain.GetAssemblies()
-                       .Select(a => a.GetType(managerTypeName))
-                       .FirstOrDefault(t => t != null);
-        if (type == null)
-        {
-            Debug.LogWarning($"[StoryTrigger] {gameObject.name}: 找不到类型'{managerTypeName}'");
-            return;
-        }
-        var instanceProp = type.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-        if (instanceProp == null) return;
-        var instance = instanceProp.GetValue(null) as MonoBehaviour;
-        if (instance == null) return;
-        var evtField = type.GetField(eventName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-        if (evtField == null) return;
-        var evt = evtField.GetValue(instance) as UnityEngine.Events.UnityEvent;
-        if (evt != null) evt.AddListener(() => callback());
+        yield return null;
+        _levelStartFallback = null;
+        OnLevelStarted();
     }
 
     void OnDestroy()
     {
-        // 事件订阅随对象销毁自动清理，无需显式取消
+        if (_levelSceneBuilder != null && _levelSceneBuilder.OnLevelReady != null)
+            _levelSceneBuilder.OnLevelReady.RemoveListener(OnLevelStarted);
+        if (_levelStartFallback != null)
+            StopCoroutine(_levelStartFallback);
     }
 
     void Update()
@@ -198,7 +204,7 @@ public class StoryTrigger : MonoBehaviour
     /// </summary>
     void OnLevelStarted()
     {
-        Debug.Log($"[StoryTrigger] {gameObject.name}: OnLevelStarted收到! _hasTriggered={_hasTriggered}, triggerOnce={triggerOnce}");
+        GameLog.Verbose($"[StoryTrigger] {gameObject.name}: OnLevelStarted收到! _hasTriggered={_hasTriggered}, triggerOnce={triggerOnce}");
         if (_hasTriggered && triggerOnce) return;
         TriggerStory();
     }
@@ -239,11 +245,11 @@ public class StoryTrigger : MonoBehaviour
     /// </summary>
     void TriggerStory()
     {
-        Debug.Log($"[StoryTrigger] {gameObject.name}: TriggerStory调用, _hasTriggered={_hasTriggered}, triggerOnce={triggerOnce}");
+        GameLog.Verbose($"[StoryTrigger] {gameObject.name}: TriggerStory调用, _hasTriggered={_hasTriggered}, triggerOnce={triggerOnce}");
 
         if (_hasTriggered && triggerOnce)
         {
-            Debug.Log($"[StoryTrigger] {gameObject.name}: 已触发过且triggerOnce=true，跳过");
+            GameLog.Verbose($"[StoryTrigger] {gameObject.name}: 已触发过且triggerOnce=true，跳过");
             return;
         }
 
@@ -261,7 +267,7 @@ public class StoryTrigger : MonoBehaviour
 
         _hasTriggered = true;
 
-        Debug.Log($"[StoryTrigger] {gameObject.name}: >>> 开始触发剧情: {storyId} (类型: {triggerType})");
+        GameLog.Verbose($"[StoryTrigger] {gameObject.name}: >>> 开始触发剧情: {storyId} (类型: {triggerType})");
 
         OnBeforeStory?.Invoke();
 

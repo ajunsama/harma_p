@@ -35,6 +35,7 @@ public class LevelCameraController : MonoBehaviour
     public static bool IsLocked { get; private set; }
     public static float LockedLeftBound { get; private set; }
     public static float LockedRightBound { get; private set; }
+    private static LevelCameraController lockOwner;
 
     private Camera _cam;
     private bool _didInitCenter;
@@ -113,6 +114,7 @@ public class LevelCameraController : MonoBehaviour
         _flowOverride = false;
         lockPosition = true;
         lockX = x;
+        lockOwner = this;
         IsLocked = true;
         if (TryGetComponent<Camera>(out var cam))
         {
@@ -129,7 +131,28 @@ public class LevelCameraController : MonoBehaviour
     public void Unlock()
     {
         lockPosition = false;
+        if (lockOwner == this)
+            ClearSharedLockState();
+    }
+
+    void OnDisable()
+    {
+        if (lockOwner == this)
+            ClearSharedLockState();
+    }
+
+    void OnDestroy()
+    {
+        if (lockOwner == this)
+            ClearSharedLockState();
+    }
+
+    static void ClearSharedLockState()
+    {
+        lockOwner = null;
         IsLocked = false;
+        LockedLeftBound = 0f;
+        LockedRightBound = 0f;
     }
 
     public Vector2 CurrentPosition => new Vector2(transform.position.x, transform.position.y);

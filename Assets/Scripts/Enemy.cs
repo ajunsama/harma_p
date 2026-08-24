@@ -1,11 +1,19 @@
+using Harma.Combat;
 using UnityEngine;
 using Spine.Unity;
 using System.Collections;
+using System.Collections.Generic;
 
-public class Enemy : MonoBehaviour
+public class Enemy : MonoBehaviour, IStompTarget
 {
     [Header("----- 基础属性 -----")]
     public int maxHp = 5;
+
+    [Header("----- 踩踏判定 -----")]
+    [SerializeField, Tooltip("开启后使用下方手动高度；旧资源默认关闭并沿用重构前的碰撞体中心高度")]
+    bool useCustomStompHeight;
+    [SerializeField, Min(0f), Tooltip("独立跳跃高度轴上的手动可踩踏高度")]
+    float stompHeight = 1f;
 
     [Header("----- Spine动画 -----")]
     [SerializeField] SkeletonAnimation skeletonAnimation;
@@ -20,15 +28,19 @@ public class Enemy : MonoBehaviour
     // 运行时变量
     int curHp;
     MeshRenderer meshRenderer;      // Spine使用MeshRenderer
-    EnemySimpleAI2D ai;
-    MuscleP_AI_Movement muscleAi;
-    PunkPThrowAttack punkAi;
-    FatP_AI_Movement fatAi;
+    readonly List<IEnemyHitReactionReceiver> hitReactionReceivers =
+        new List<IEnemyHitReactionReceiver>();
     Rigidbody2D rb;
     Collider2D[] colliders;
+    float automaticStompHeight = 1f;
     bool isDead;
 
     public bool IsHit { get; private set; }
+    public Transform StompTransform => transform;
+    public float StompHeight => useCustomStompHeight
+        ? Mathf.Max(0f, stompHeight)
+        : automaticStompHeight;
+    public bool CanReceiveStomp => !IsHit && !isDead;
 
     // 死亡事件（传递死亡的敌人实例）
     public static event System.Action<Enemy> OnEnemyDied;
@@ -37,16 +49,35 @@ public class Enemy : MonoBehaviour
     {
         curHp = maxHp;
         meshRenderer = GetComponentInChildren<MeshRenderer>();
-        ai = GetComponent<EnemySimpleAI2D>();
-        muscleAi = GetComponent<MuscleP_AI_Movement>();
-        punkAi = GetComponent<PunkPThrowAttack>();
-        fatAi = GetComponent<FatP_AI_Movement>();
+        foreach (var behaviour in GetComponents<MonoBehaviour>())
+        {
+            if (behaviour is IEnemyHitReactionReceiver receiver)
+                hitReactionReceivers.Add(receiver);
+        }
         rb = GetComponent<Rigidbody2D>();
         colliders = GetComponents<Collider2D>();
+        CacheAutomaticStompHeight();
 
         // 如果没有手动指定，尝试自动获取 SkeletonAnimation
         if (skeletonAnimation == null)
             skeletonAnimation = GetComponentInChildren<SkeletonAnimation>();
+    }
+
+    void CacheAutomaticStompHeight()
+    {
+        float highestColliderCenter = 0f;
+        foreach (Collider2D enemyCollider in colliders)
+        {
+            if (enemyCollider == null || !enemyCollider.enabled)
+                continue;
+
+            highestColliderCenter = Mathf.Max(
+                highestColliderCenter,
+                enemyCollider.bounds.center.y - transform.position.y);
+        }
+
+        if (highestColliderCenter > 0.001f)
+            automaticStompHeight = highestColliderCenter;
     }
 
     /// <summary>
@@ -57,7 +88,7 @@ public class Enemy : MonoBehaviour
         if (IsHit || isDead) return; // 受击中不重复受伤
 
         curHp--;
-        Debug.Log($"[Enemy] 受到踩踏伤害! 剩余HP: {curHp}");
+        GameLog.Verbose($"[Enemy] 受到踩踏伤害! 剩余HP: {curHp}");
 
         bool willDie = curHp <= 0;
         if (willDie)
@@ -99,7 +130,7 @@ public class Enemy : MonoBehaviour
         if (isDead)
         {
             StopMovement();
-            Debug.Log("[Enemy] 死亡");
+            GameLog.Verbose("[Enemy] 死亡");
             OnEnemyDied?.Invoke(this);
             Destroy(gameObject);
             yield break;
@@ -151,6 +182,11 @@ public class Enemy : MonoBehaviour
         return skeletonAnimation.AnimationState.SetAnimation(trackIndex, animName, loop);
     }
 
+    public void ReceiveStomp(Vector2 sourceGroundPosition)
+    {
+        TakeJumpDamage(sourceGroundPosition);
+    }
+
     Spine.TrackEntry PlayFirstExistingAnimation(bool loop, params string[] animNames)
     {
         foreach (string animName in animNames)
@@ -178,8 +214,6 @@ public class Enemy : MonoBehaviour
             rb.linearVelocity = Vector2.zero;
             rb.angularVelocity = 0f;
         }
-
-        SendMessage("StopMovementForEnemy", SendMessageOptions.DontRequireReceiver);
     }
 
     void SetCollidersEnabled(bool enabled)
@@ -199,15 +233,7 @@ public class Enemy : MonoBehaviour
     /// </summary>
     void SetAIKnockedBack(bool value)
     {
-        if (ai != null) ai.isKnockedBack = value;
-        if (muscleAi != null) muscleAi.isKnockedBack = value;
-        if (punkAi != null) punkAi.isKnockedBack = value;
-        if (fatAi != null)
-        {
-            if (value)
-                fatAi.OnHit();
-            else
-                fatAi.isKnockedBack = false;
-        }
+        foreach (var receiver in hitReactionReceivers)
+            receiver.SetHitReactionActive(value);
     }
 }

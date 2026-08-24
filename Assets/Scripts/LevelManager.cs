@@ -46,4 +46,10 @@ public class LevelManager : MonoBehaviour
             TopBound = 10f;
         }
     }
+
+    void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
+    }
 }

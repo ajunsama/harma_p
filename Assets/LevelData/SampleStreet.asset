@@ -29,9 +29,9 @@ MonoBehaviour:
   variables: []
   elements:
   - elementId: e1
-    displayName: Punk
+    displayName: PunkP_Test
     elementType: 0
-    prefab: {fileID: 4861361074467312248, guid: cf349b0c917589041b0680537d5a141a, type: 3}
+    prefab: {fileID: 3410753177876068644, guid: 58d2df485030bcf4bbdc906332ec6f4e, type: 3}
     position: {x: 12, y: 0}
     faceRight: 0
     appearDelay: 0

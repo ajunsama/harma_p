@@ -1,4 +1,5 @@
 using System.Collections;
+using Harma.Combat;
 using UnityEngine;
 
 public class EnemySpawner : MonoBehaviour
@@ -77,22 +78,17 @@ public class EnemySpawner : MonoBehaviour
 
         GameObject newEnemy = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
         
-        // 设置新敌人的目标为玩家
-        // 尝试获取 MuscleP_AI_Movement
-        MuscleP_AI_Movement muscleAI = newEnemy.GetComponent<MuscleP_AI_Movement>();
-        if (muscleAI != null && playerTransform != null)
+        // 通过统一接口设置目标，不依赖具体敌人 AI 类型。
+        if (playerTransform != null)
         {
-            muscleAI.player = playerTransform;
-        }
-        
-        // 如果有其他类型的AI脚本，也可以在这里赋值
-        EnemySimpleAI2D simpleAI = newEnemy.GetComponent<EnemySimpleAI2D>();
-        if (simpleAI != null && playerTransform != null)
-        {
-            simpleAI.player = playerTransform;
+            foreach (var behaviour in newEnemy.GetComponentsInChildren<MonoBehaviour>(true))
+            {
+                if (behaviour is IPlayerTargetReceiver receiver)
+                    receiver.SetPlayerTarget(playerTransform);
+            }
         }
 
         currentEnemyCount++;
-        Debug.Log($"生成了新敌人，当前数量: {currentEnemyCount}");
+        GameLog.Verbose($"生成了新敌人，当前数量: {currentEnemyCount}");
     }
 }

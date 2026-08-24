@@ -146,27 +146,13 @@ public class PlayerHP : MonoBehaviour
             1f,
             gameObject);
         Died?.Invoke(this);
-        Debug.Log("主角死亡");
+        GameLog.Verbose("主角死亡");
 
         // 禁用移动输入和逻辑
         if (playerMovement != null)
         {
-            // 如果在空中，强制落地，防止死在半空中
-            if (playerMovement.IsJumping)
-            {
-                Vector3 pos = transform.position;
-                pos.y = playerMovement.BaseY;
-                transform.position = pos;
-            }
-            
+            playerMovement.LandImmediately();
             playerMovement.enabled = false;
-        }
-
-        // 禁用攻击输入和逻辑
-        var playerAttack = GetComponent<PlayerAttack>();
-        if (playerAttack != null)
-        {
-            playerAttack.enabled = false;
         }
 
         // 停止刚体运动

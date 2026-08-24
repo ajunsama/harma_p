@@ -23,7 +23,7 @@ public static class LevelDataJsonUtility
 [Serializable]
 public class LevelDataDto
 {
-    public int schemaVersion = 2;
+    public int schemaVersion = 3;
     public string levelName;
     public int difficulty;
     public float levelLength;
@@ -92,6 +92,8 @@ public class LevelDataDto
         public float nearMotionMultiplier;
         public bool enableVerticalMotion;
         public float verticalMotionMultiplier;
+        public string autoScrollDirection;
+        public float autoScrollSpeed;
         public float horizontalScrollSpeed;
     }
 
@@ -330,7 +332,9 @@ public class LevelDataDto
                 nearMotionMultiplier = layer.nearMotionMultiplier,
                 enableVerticalMotion = layer.enableVerticalMotion,
                 verticalMotionMultiplier = layer.verticalMotionMultiplier,
-                horizontalScrollSpeed = layer.horizontalScrollSpeed
+                autoScrollDirection = layer.autoScrollDirection.ToString(),
+                autoScrollSpeed = layer.autoScrollSpeed,
+                horizontalScrollSpeed = 0f
             };
             foreach (var entry in layer.sequence ?? new List<BackgroundSequenceEntry>())
                 layerDto.sequence.Add(new BackgroundSequenceEntryDto
@@ -588,6 +592,8 @@ public class LevelDataDto
                     nearMotionMultiplier = dto.nearMotionMultiplier,
                     enableVerticalMotion = dto.enableVerticalMotion,
                     verticalMotionMultiplier = dto.verticalMotionMultiplier,
+                    autoScrollDirection = ParseEnum(dto.autoScrollDirection, BackgroundScrollDirection.None),
+                    autoScrollSpeed = Mathf.Max(0f, dto.autoScrollSpeed),
                     horizontalScrollSpeed = dto.horizontalScrollSpeed,
                     sequence = new List<BackgroundSequenceEntry>()
                 };
@@ -600,7 +606,10 @@ public class LevelDataDto
                         });
                 ld.backgroundSettings.layers.Add(layer);
             }
-            ld.backgroundSettings.dataVersion = BackgroundSettings.CurrentDataVersion;
+            ld.backgroundSettings.dataVersion = schemaVersion >= 3
+                ? BackgroundSettings.CurrentDataVersion
+                : 2;
+            ld.backgroundSettings.MigrateLegacyData();
         }
         else
         {
